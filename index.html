@@ -1,0 +1,3242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Local Like a Local</title>
+    <link rel="manifest" href="manifest.json">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Local Like a Local">
+  <meta name="theme-color" content="#D4550A">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  
+  
+  <!-- Leaflet.js for Interactive Map View -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,900&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    /* =============================================
+       LOCAL LIKE A LOCAL — Single File PWA Styles
+       ============================================= */
+
+    /* ---- PWA & OFFLINE STYLES ---- */
+    .offline-status-bar {
+      background: #FEF3C7;
+      color: #92400E;
+      border-bottom: 1px solid #FDE68A;
+      padding: 8px 16px;
+      font-size: 12px;
+      font-weight: 700;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.3s ease;
+    }
+    .offline-status-bar.online-restored {
+      background: #D1FAE5;
+      color: #065F46;
+      border-color: #A7F3D0;
+    }
+
+    .pwa-banner {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .pwa-banner-text strong {
+      display: block;
+      font-size: 13px;
+      color: var(--text);
+    }
+    .pwa-banner-text span {
+      font-size: 11px;
+      color: var(--text2);
+    }
+    .pwa-banner-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      shrink: 0;
+    }
+    .pwa-install-btn {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 16px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .pwa-dismiss-btn {
+      background: none;
+      border: none;
+      color: var(--text3);
+      font-size: 16px;
+      cursor: pointer;
+      padding: 4px;
+    }
+
+    :root {
+      --bg: #F5F4EF;
+      --card: #FFFFFF;
+      --primary: #D4550A;
+      --primary-dark: #A13E06;
+      --primary-light: #FFF3E8;
+      --teal: #0C7A8A;
+      --teal-light: #E0F5F7;
+      --teal-dark: #065A66;
+      --text: #1A1A1A;
+      --text2: #6B7280;
+      --text3: #9CA3AF;
+      --border: #E5E5E0;
+      --red: #DC2626;
+      --green: #16A34A;
+      --orange: #EA580C;
+      --yellow: #F59E0B;
+      --radius: 14px;
+      --shadow: 0 2px 12px rgba(0,0,0,0.07);
+      --shadow-lg: 0 8px 30px rgba(0,0,0,0.12);
+      --font-d: 'Fraunces', serif;
+      --font-u: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: var(--font-u);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    /* ---- SCREENS ---- */
+    .screen {
+      display: none;
+      min-height: 100vh;
+      padding-bottom: 60px;
+    }
+    .screen.active {
+      display: block;
+      animation: screenIn 0.3s ease;
+    }
+
+    @keyframes screenIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ---- WELCOME SCREEN ---- */
+    .welcome-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 40px 24px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .welcome-bg {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      background: radial-gradient(ellipse at 30% 20%, #FDDCB5 0%, transparent 50%),
+                  radial-gradient(ellipse at 70% 80%, #D4ECE7 0%, transparent 50%),
+                  var(--bg);
+    }
+
+    .welcome-wrap > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .welcome-icon {
+      font-size: 56px;
+      margin-bottom: 20px;
+      color: var(--primary);
+      filter: drop-shadow(0 4px 8px rgba(212,85,10,0.2));
+    }
+
+    .welcome-wrap h1 {
+      font-family: var(--font-d);
+      font-size: 32px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+      color: var(--primary-dark);
+    }
+
+    .tagline {
+      font-size: 17px;
+      color: var(--text2);
+      margin-bottom: 32px;
+      max-width: 320px;
+      line-height: 1.5;
+    }
+
+    .btn-cta {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 15px 40px;
+      border-radius: 28px;
+      font-size: 17px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      width: 100%;
+      max-width: 320px;
+      font-family: var(--font-u);
+      box-shadow: 0 4px 14px rgba(212,85,10,0.3);
+    }
+
+    .btn-cta:hover {
+      background: var(--primary-dark);
+      transform: translateY(-1px);
+    }
+
+    .btn-cta:active {
+      transform: scale(0.97);
+    }
+
+    .legal-note {
+      margin-top: 30px;
+      font-size: 11px;
+      color: var(--text3);
+      max-width: 300px;
+      line-height: 1.5;
+    }
+
+    /* ---- DIAGNOSTIC LOAD LOG ---- */
+    #load-log {
+      margin-top: 20px;
+      padding: 10px;
+      background: #1A1A1A;
+      border-radius: 8px;
+      max-width: 320px;
+      width: 100%;
+      text-align: left;
+      font-family: monospace;
+      font-size: 11px;
+      max-height: 140px;
+      overflow-y: auto;
+      display: none;
+    }
+
+    #load-log.has-content {
+      display: block;
+    }
+
+    .log-line { padding: 2px 0; color: #9CA3AF; }
+    .log-ok { color: #34C759; }
+    .log-err { color: #FF453A; }
+    .log-info { color: #5AC8FA; }
+
+    /* ---- HEADER BAR ---- */
+    .header-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px 10px;
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-bar h2 {
+      font-size: 17px;
+      font-weight: 700;
+    }
+
+    .btn-back {
+      background: none;
+      border: none;
+      color: var(--primary);
+      font-size: 14px;
+      cursor: pointer;
+      padding: 6px 8px;
+      font-weight: 600;
+      font-family: var(--font-u);
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .btn-header {
+      background: none;
+      border: none;
+      color: var(--primary);
+      font-size: 13px;
+      cursor: pointer;
+      padding: 6px 10px;
+      font-weight: 600;
+      font-family: var(--font-u);
+      border-radius: 8px;
+      transition: all 0.15s;
+    }
+
+    .btn-header:hover {
+      background: var(--primary-light);
+    }
+
+    /* Near Me Active Pulsing Green Animation */
+    .btn-header.nearme-active {
+      color: #047857;
+      background: #D1FAE5;
+      animation: pulseGreen 2s infinite;
+    }
+
+    @keyframes pulseGreen {
+      0% { background-color: #D1FAE5; color: #047857; }
+      50% { background-color: #A7F3D0; color: #065F46; }
+      100% { background-color: #D1FAE5; color: #047857; }
+    }
+
+    /* ---- NEAR ME BAR ---- */
+    .nearme-bar {
+      display: none;
+      padding: 10px 16px;
+      background: var(--teal-light);
+      color: var(--teal-dark);
+      font-size: 13px;
+      font-weight: 600;
+      border-bottom: 1px solid #B2DFDB;
+      align-items: center;
+      gap: 8px;
+    }
+    .nearme-bar.visible {
+      display: flex;
+    }
+
+    /* ---- REGION HEADERS ---- */
+    .region-header {
+      font-family: var(--font-u);
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text2);
+      margin: 20px 0 10px 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .region-header:first-of-type {
+      margin-top: 4px;
+    }
+
+    /* ---- CITY GRID ---- */
+    .city-screen-content {
+      padding: 16px 12px;
+    }
+
+    .city-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .city-btn {
+      position: relative;
+      border: none;
+      border-radius: var(--radius);
+      height: 130px;
+      cursor: pointer;
+      overflow: hidden;
+      display: flex;
+      align-items: flex-end;
+      transition: transform 0.2s, box-shadow 0.2s;
+      font-family: var(--font-u);
+      background-size: cover;
+      background-position: center;
+    }
+
+    .city-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .city-gradient-0 { background-image: linear-gradient(135deg, #E8590B, #F59E0B); }
+    .city-gradient-1 { background-image: linear-gradient(135deg, #0C7A8A, #06B6D4); }
+    .city-gradient-2 { background-image: linear-gradient(135deg, #7C3AED, #DB2777); }
+    .city-gradient-3 { background-image: linear-gradient(135deg, #16A34A, #84CC16); }
+    .city-gradient-4 { background-image: linear-gradient(135deg, #DC2626, #F59E0B); }
+    .city-gradient-5 { background-image: linear-gradient(135deg, #2563EB, #06B6D4); }
+    .city-gradient-6 { background-image: linear-gradient(135deg, #9333EA, #EC4899); }
+    .city-gradient-7 { background-image: linear-gradient(135deg, #0D9488, #2DD4BF); }
+
+    .city-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.15) 60%, transparent 100%);
+    }
+
+    .city-text {
+      position: relative;
+      z-index: 2;
+      padding: 12px;
+      color: #fff;
+      width: 100%;
+      text-align: left;
+    }
+
+    .city-name {
+      font-size: 15px;
+      font-weight: 700;
+      display: block;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    }
+
+    
+    /* ---- SKELETON SHIMMER LOADING ---- */
+    .skeleton-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 16px;
+      border: 1px solid var(--border);
+      margin-bottom: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+    .skeleton-line {
+      height: 14px;
+      background: #E5E7EB;
+      border-radius: 4px;
+      margin-bottom: 8px;
+      position: relative;
+      overflow: hidden;
+    }
+    .skeleton-line.title { height: 18px; width: 65%; }
+    .skeleton-line.badge { height: 12px; width: 35%; }
+    .skeleton-line.text { height: 12px; width: 90%; }
+    .skeleton-line.text-short { height: 12px; width: 45%; }
+    .skeleton-img {
+      height: 130px;
+      background: #E5E7EB;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+    .skeleton-shimmer::after {
+      content: '';
+      position: absolute;
+      top: 0; right: 0; bottom: 0; left: 0;
+      transform: translateX(-100%);
+      background-image: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0) 0,
+        rgba(255, 255, 255, 0.6) 20%,
+        rgba(255, 255, 255, 0.5) 60%,
+        rgba(255, 255, 255, 0)
+      );
+      animation: shimmer 1.6s infinite;
+    }
+    @keyframes shimmer {
+      100% { transform: translateX(100%); }
+    }
+
+    /* ---- VISUAL ASPECT-RATIO CARD IMAGES ---- */
+    .card-img-wrap {
+      width: 100%;
+      height: 84px;
+      border-radius: 12px 12px 8px 8px;
+      overflow: hidden;
+      margin-bottom: 8px;
+      background: #F3F4F6;
+      position: relative;
+    }
+    .card-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.3s ease;
+    }
+    .place-card:hover .card-img {
+      transform: scale(1.04);
+    }
+    .fallback-img-banner {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 14px;
+      font-weight: 700;
+      font-size: 12px;
+      color: #FFFFFF;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      background: linear-gradient(135deg, #2D3748, #1A202C);
+      box-sizing: border-box;
+    }
+    .fallback-img-banner span.banner-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,0.18);
+      backdrop-filter: blur(4px);
+      padding: 4px 10px;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.25);
+      font-size: 11px;
+    }
+    .fallback-img-banner.category-food { background: linear-gradient(135deg, #E8590B, #D97706); }
+    .fallback-img-banner.category-culture { background: linear-gradient(135deg, #0C7A8A, #0284C7); }
+    .fallback-img-banner.category-nightlife { background: linear-gradient(135deg, #7C3AED, #C026D3); }
+    .fallback-img-banner.category-active { background: linear-gradient(135deg, #059669, #10B981); }
+
+    /* ---- LIST VS MAP VIEW TOGGLE ---- */
+    .view-toggle-bar {
+      display: flex;
+      gap: 6px;
+      background: var(--bg);
+      padding: 3px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+    }
+    .view-toggle-btn {
+      background: transparent;
+      border: none;
+      padding: 5px 12px;
+      border-radius: 16px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text2);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .view-toggle-btn.active {
+      background: var(--card);
+      color: var(--primary);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    /* Leaflet popup styling override */
+    .leaflet-popup-content-wrapper {
+      border-radius: 12px !important;
+      padding: 4px !important;
+      font-family: var(--font-u) !important;
+    }
+    .leaflet-popup-content {
+      margin: 10px 12px !important;
+      line-height: 1.4 !important;
+    }
+
+    
+    .toggle-filter-btn {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text2);
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      shrink: 0;
+    }
+
+    .toggle-filter-btn.active {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+      box-shadow: 0 2px 8px rgba(212, 85, 10, 0.25);
+    }
+
+    .travel-connector {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 10px 0;
+      position: relative;
+    }
+
+    .travel-connector::before {
+      content: '';
+      position: absolute;
+      top: -10px;
+      bottom: -10px;
+      left: 50%;
+      width: 2px;
+      border-left: 2px dashed #0C7A8A;
+      z-index: 0;
+    }
+
+    .travel-badge {
+      position: relative;
+      z-index: 1;
+      background: var(--teal-light);
+      color: var(--teal-dark);
+      border: 1px solid #B2DFDB;
+      padding: 4px 12px;
+      border-radius: 14px;
+      font-size: 11px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    }
+
+    /* ---- BROWSE SCREEN FILTER & SORT BAR ---- */
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 16px;
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+    }
+
+    .category-tabs {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      scroll-behavior: smooth;
+    }
+
+    .tab-btn {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text2);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .tab-btn.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+
+    .sort-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      shrink: 0;
+    }
+
+    .sort-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text3);
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .sort-btn {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text2);
+      padding: 5px 10px;
+      border-radius: 16px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+
+    .sort-btn.active {
+      background: #1A1A1A;
+      color: #FFFFFF;
+      border-color: #1A1A1A;
+    }
+
+    /* ---- BROWSE RESULTS GRID ---- */
+    .browse-results {
+      padding: 16px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 900px) {
+      .browse-results {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 600px) {
+      .browse-results {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .place-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+
+    .place-card:active {
+      transform: scale(0.98);
+    }
+
+    .place-row-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+
+    .place-main {
+      flex: 1;
+    }
+
+    .place-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.3;
+    }
+
+    .place-cat-badge {
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--primary);
+      background: var(--primary-light);
+      padding: 2px 8px;
+      border-radius: 6px;
+      display: inline-block;
+      margin-top: 4px;
+    }
+
+    .place-score {
+      text-align: right;
+      shrink: 0;
+    }
+
+    .place-score-num {
+      background: #FEF3C7;
+      color: #92400E;
+      border: 1px solid #FDE68A;
+      font-size: 12px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 8px;
+      display: inline-block;
+    }
+
+    .place-address {
+      font-size: 12px;
+      color: var(--text2);
+      margin-top: 4px;
+    }
+
+    .place-why {
+      font-size: 12px;
+      color: var(--text2);
+      line-height: 1.4;
+      margin-top: 8px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .place-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 10px;
+    }
+
+    .tag-chip {
+      font-size: 10px;
+      background: var(--bg);
+      color: var(--text2);
+      padding: 2px 8px;
+      border-radius: 12px;
+    }
+
+    /* ---- CUSTOMIZE TRIP SCREEN ---- */
+    .prefs-container {
+      padding: 16px;
+    }
+
+    .prefs-quick-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      background: var(--card);
+      padding: 12px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+
+    .pref-compact-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .pref-compact-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text3);
+      text-transform: uppercase;
+    }
+
+    .stepper {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-step {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .budget-dots {
+      display: flex;
+      gap: 4px;
+    }
+
+    .budget-btn {
+      padding: 4px 8px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text2);
+      cursor: pointer;
+    }
+
+    .budget-btn.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+
+    .select-input {
+      padding: 6px 8px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .btn-build-mini {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .pref-section {
+      margin-bottom: 20px;
+    }
+
+    .pref-section-title {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+
+    .interests-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 10px;
+    }
+
+    @media (max-width: 900px) {
+      .interests-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    @media (max-width: 500px) {
+      .interests-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .interest-chip {
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 6px 12px;
+      border-radius: 16px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text2);
+      cursor: pointer;
+    }
+
+    .interest-chip.active {
+      background: var(--teal-light);
+      color: var(--teal-dark);
+      border-color: var(--teal);
+      font-weight: 700;
+    }
+
+    /* ---- ITINERARY SCREEN ---- */
+    .itin-days-bar {
+      display: flex;
+      gap: 8px;
+      padding: 12px 16px;
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+    }
+
+    .itin-day-tab {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .itin-day-tab.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+
+    .itin-content {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .slot-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--primary);
+    }
+
+    .slot-time {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--primary);
+      margin-bottom: 4px;
+    }
+
+    .slot-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .slot-address {
+      font-size: 12px;
+      color: var(--text2);
+      margin-top: 2px;
+    }
+
+    /* ---- MODAL DETAIL ---- */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      background: rgba(0,0,0,0.5);
+      align-items: flex-end;
+      justify-content: center;
+    }
+
+    .modal.open {
+      display: flex;
+    }
+
+    .modal-content {
+      background: var(--card);
+      width: 100%;
+      max-width: 500px;
+      border-top-left-radius: 20px;
+      border-top-right-radius: 20px;
+      padding: 20px;
+      max-height: 85vh;
+      overflow-y: auto;
+      position: relative;
+      animation: slideUp 0.25s ease;
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+
+    .btn-close-modal {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      font-weight: 800;
+      cursor: pointer;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    .detail-row {
+      margin-top: 10px;
+      font-size: 13px;
+    }
+
+    .detail-label {
+      font-weight: 700;
+      color: var(--text3);
+      display: block;
+      font-size: 11px;
+      text-transform: uppercase;
+    }
+
+    .detail-btn-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .btn-action {
+      flex: 1;
+      padding: 12px;
+      border-radius: 12px;
+      text-align: center;
+      font-weight: 700;
+      font-size: 13px;
+      text-decoration: none;
+    }
+
+    .btn-map { background: var(--teal); color: #fff; }
+    .btn-web { background: var(--primary); color: #fff; }
+
+    /* ---- TOAST ---- */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #1A1A1A;
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      transition: transform 0.25s ease;
+      z-index: 300;
+    }
+
+    .toast.visible {
+      transform: translateX(-50%) translateY(0);
+    }
+  
+    /* ---- BOTTOM NAVIGATION BAR ---- */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      z-index: 1000;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .nav-item {
+      background: none;
+      border: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--text2);
+      font-family: var(--font-u);
+      font-size: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      position: relative;
+      padding: 4px 12px;
+      transition: color 0.15s;
+    }
+
+    .nav-item.active {
+      color: var(--primary);
+    }
+
+    .nav-icon {
+      font-size: 18px;
+      margin-bottom: 2px;
+    }
+
+    .fav-badge {
+      position: absolute;
+      top: 2px;
+      right: 12px;
+      background: var(--red);
+      color: #fff;
+      font-size: 9px;
+      font-weight: 800;
+      padding: 1px 5px;
+      border-radius: 10px;
+      min-width: 16px;
+      text-align: center;
+    }
+
+    
+    /* ---- FAVORITES FILTER & SEARCH BAR ---- */
+    .favs-filter-bar {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .favs-search-box {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .favs-search-box .search-icon {
+      position: absolute;
+      left: 12px;
+      font-size: 14px;
+      color: var(--text3);
+      pointer-events: none;
+    }
+
+    .fav-search-input {
+      width: 100%;
+      padding: 8px 12px 8px 34px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-size: 13px;
+      font-family: var(--font-u);
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .fav-search-input:focus {
+      border-color: var(--primary);
+    }
+
+    .favs-controls-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .fav-category-tabs {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      scroll-behavior: smooth;
+    }
+
+    .fav-city-select {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 5px 10px;
+      border-radius: 16px;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: var(--font-u);
+      outline: none;
+      shrink: 0;
+    }
+
+    /* ---- FAVORITES SCREEN & PRINT CSS ---- */
+    .favs-container {
+      padding: 16px;
+      padding-bottom: 80px;
+    }
+
+    .fav-city-section {
+      margin-bottom: 24px;
+    }
+
+    .fav-city-title {
+      font-family: var(--font-u);
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--primary-dark);
+      margin-bottom: 12px;
+      padding-bottom: 6px;
+      border-bottom: 2px solid var(--primary-light);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .btn-fav-card {
+      background: none;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      padding: 4px 8px;
+      transition: transform 0.15s;
+    }
+
+    .btn-fav-card:active {
+      transform: scale(1.3);
+    }
+
+    @media print {
+      body {
+        background: #ffffff !important;
+        color: #000000 !important;
+      }
+      .header-bar, .bottom-nav, .favs-filter-bar, .filter-bar, .header-actions, .btn-header, .btn-back, .btn-action, .toast, .no-print, .btn-fav-card {
+        display: none !important;
+      }
+      .screen { display: none !important; }
+      #screen-favorites { display: block !important; padding: 0 !important; }
+      .fav-city-section { page-break-inside: avoid; margin-bottom: 20px; }
+      .place-card { border: 1px solid #ddd !important; box-shadow: none !important; page-break-inside: avoid; margin-bottom: 10px; }
+    }
+
+
+    /* ---- CATEGORY BADGE PILLS (v1.9) ---- */
+    .cat-badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1.3;
+      margin-top: 4px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    }
+    .cat-badge-pill.cat-food {
+      background: #FFF3E8;
+      color: #C2410C;
+      border: 1px solid #FDBA74;
+    }
+    .cat-badge-pill.cat-culture {
+      background: #E0F5F7;
+      color: #0F766E;
+      border: 1px solid #99F6E4;
+    }
+    .cat-badge-pill.cat-nightlife {
+      background: #F3E8FF;
+      color: #7E22CE;
+      border: 1px solid #E9D5FF;
+    }
+    .cat-badge-pill.cat-active {
+      background: #ECFDF5;
+      color: #047857;
+      border: 1px solid #A7F3D0;
+    }
+    .cat-badge-pill.cat-general {
+      background: #F3F4F6;
+      color: #374151;
+      border: 1px solid #E5E7EB;
+    }
+
+
+/* ==========================================================
+EDITORIAL REDESIGN — Boutique travel magazine
+========================================================== */
+:root {
+  --bg: #F8F6F0 !important;
+  --card: #FFFEFB !important;
+  --primary: #B85F43 !important;
+  --primary-dark: #8B4C37 !important;
+  --primary-light: #F6ECE7 !important;
+  --teal: #456B61 !important;
+  --teal-light: #E8EFEB !important;
+  --teal-dark: #263D36 !important;
+  --text: #222B28 !important;
+  --text2: #52605B !important;
+  --text3: #82908B !important;
+  --border: #E5E0D5 !important;
+  --radius: 8px !important;
+  --shadow: 0 4px 20px rgba(38,61,54,.06) !important;
+  --shadow-lg: 0 12px 32px rgba(38,61,54,.12) !important;
+}
+
+#screen-welcome { background: #263D36 !important; }
+.welcome-wrap {
+  min-height: 100vh; padding: clamp(28px, 7vh, 76px) 24px 36px;
+  display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start; text-align: left; color: white;
+  position: relative; overflow: hidden; isolation: isolate;
+}
+.welcome-wrap::before {
+  content: 'A FIELD GUIDE TO THE GOOD STUFF'; position: absolute; top: 30px; left: 26px;
+  font-size: 10px; font-weight: 700; letter-spacing: .2em; color: rgba(255,255,255,.72);
+}
+.welcome-bg {
+  position: absolute; inset: 0; z-index: 0;
+  background-color: #263D36;
+  background-image: linear-gradient(180deg, rgba(23,35,30,.12) 0%, rgba(23,35,30,.18) 34%, rgba(23,35,30,.90) 100%),
+  url('https://images.unsplash.com/photo-1516483638261-f4dbaf036963?auto=format&fit=crop&w=2000&q=85');
+  background-size: cover; background-position: center;
+  transform: scale(1.015);
+}
+.welcome-icon { display: none !important; }
+.welcome-wrap h1 {
+  font-family: var(--font-d); font-size: clamp(48px, 11vw, 76px); font-weight: 900;
+  letter-spacing: -.03em; line-height: .92; margin-bottom: 14px; text-shadow: 0 4px 20px rgba(0,0,0,.35);
+}
+.tagline {
+  font-size: clamp(15px, 2.2vw, 18px); color: rgba(255,255,255,.88); font-weight: 400;
+  line-height: 1.45; margin-bottom: 28px; max-width: 380px; text-shadow: 0 2px 10px rgba(0,0,0,.3);
+}
+.btn-cta {
+  background: var(--primary) !important; color: #fff !important; border-radius: 6px !important; padding: 16px 28px !important;
+  font-size: 15px !important; font-weight: 700 !important; letter-spacing: .02em !important; max-width: 340px !important;
+  box-shadow: 0 8px 24px rgba(184,95,67,.38) !important;
+}
+
+.cat-badge-pill {
+  display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 4px;
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+}
+.cat-badge-pill.cat-food { background: #FDF2EE; color: #B85F43; border: 1px solid #F6CEC1; }
+.cat-badge-pill.cat-culture { background: #E8EFEB; color: #263D36; border: 1px solid #B8CFC5; }
+.cat-badge-pill.cat-nightlife { background: #F3EFF5; color: #52435B; border: 1px solid #D6CCE0; }
+.cat-badge-pill.cat-active { background: #F1F4EE; color: #3E5948; border: 1px solid #C4D3BB; }
+.cat-badge-pill.cat-general { background: #F4F2EC; color: #52605B; border: 1px solid #DDD8CC; }
+
+</style>
+</head>
+<body>
+
+  <!-- 1. WELCOME SCREEN -->
+  <div id="screen-welcome" class="screen active">
+    <div class="welcome-wrap">
+      <div class="welcome-bg"></div>
+      <div class="welcome-icon">🗺️</div>
+      <h1>Local Like a Local</h1>
+      <p class="tagline" id="welcome-tagline">Explore <span id="dynamic-city-count">--</span> available destinations through authentic local spots and curated itineraries.</p>
+      <button id="btn-start" class="btn-cta">Choose Your City</button>
+
+      <!-- Diagnostic Load Log (visible if errors occur) -->
+      <div id="load-log"></div>
+
+      <p class="legal-note">Best efforts for informational purposes only. Local Like a Local is a travel discovery tool.</p>
+    </div>
+  </div>
+
+  <!-- 2. CITIES SELECT SCREEN -->
+  <div id="screen-cities" class="screen">
+    <div class="header-bar">
+      <h2>Select Destination <span id="cities-header-count" style="font-size:12px;font-weight:700;background:var(--primary-light);color:var(--primary-dark);padding:3px 10px;border-radius:12px;margin-left:6px;"></span></h2>
+      <button id="btn-cities-back" class="btn-back">← Home</button>
+    </div>
+    <div class="city-screen-content" id="cities-container"></div>
+  </div>
+
+  <!-- 3. BROWSE CITY SCREEN -->
+  <div id="screen-browse" class="screen">
+    <div class="header-bar">
+      <h2 id="browse-title">City Directory</h2>
+      <div class="header-actions">
+        <button id="btn-browse-nearme" class="btn-header">📍 Near Me</button>
+        <button id="btn-browse-prefs" class="btn-header">⚙️ Customize</button>
+        <button id="btn-browse-back" class="btn-back">Cities</button>
+      </div>
+    </div>
+
+    <!-- Near Me Status Bar -->
+    <div id="browse-nearme-bar" class="nearme-bar">
+      <span>📍</span>
+      <span id="browse-nearme-text">Getting location...</span>
+    </div>
+
+    <!-- Category Tabs & Sort Controls Bar -->
+    <div class="filter-bar">
+      <div class="category-tabs" id="browse-tabs"></div>
+      <div class="sort-controls">
+        <span class="sort-label">Sort By:</span>
+        <button id="sort-btn-locals" class="sort-btn active" onclick="setSortMode('locals')">By Locals</button>
+        <button id="sort-btn-alpha" class="sort-btn" onclick="setSortMode('alpha')">Alpha</button>
+      </div>
+    </div>
+
+    <!-- Smart Filters Bar: Open Now & Hidden Gems Only -->
+    <div class="filter-bar" style="border-top: none; padding-top: 4px; gap: 8px; justify-content: flex-start; overflow-x: auto;">
+      <button id="btn-filter-opennow" class="toggle-filter-btn" onclick="toggleOpenNowFilter()">🟢 Open Now</button>
+      <button id="btn-filter-hiddengems" class="toggle-filter-btn" onclick="toggleHiddenGemsFilter()">💎 Hidden Gems Only</button>
+      <button id="btn-toggle-view" class="toggle-filter-btn" style="margin-left:auto; background:var(--teal-light); color:var(--teal-dark);" onclick="toggleBrowseView()">🗺️ Map View</button>
+    </div>
+
+    <!-- Results Grid -->
+    <div class="browse-results" id="browse-results"></div>
+    <div id="browse-map-container" style="display:none; height: calc(100vh - 210px); width: 100%; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); box-shadow: var(--shadow); margin-top: 10px;">
+      <div id="leaflet-map" style="height: 100%; width: 100%; z-index: 1;"></div>
+    </div>
+  </div>
+
+  <!-- 4. CUSTOMIZE TRIP SCREEN -->
+  <div id="screen-prefs" class="screen">
+    <div class="header-bar">
+      <h2>Customize Trip</h2>
+      <button id="btn-prefs-back" class="btn-back">← Back</button>
+    </div>
+    <div class="prefs-container">
+      
+      <!-- Top Quick-Controls Bar (Days, Budget, Travel Style, Build) -->
+      <div class="prefs-quick-controls">
+        <div class="pref-compact-group">
+          <span class="pref-compact-label">Days</span>
+          <div class="stepper">
+            <button id="btn-days-minus" class="btn-step">-</button>
+            <span id="days-val" style="font-weight:700;font-size:13px;">3</span>
+            <button id="btn-days-plus" class="btn-step">+</button>
+          </div>
+        </div>
+
+        <div class="pref-compact-group">
+          <span class="pref-compact-label">Budget</span>
+          <div class="budget-dots" id="pref-budget-container">
+            <button class="budget-btn active" onclick="setBudgetPref(1)">$</button>
+            <button class="budget-btn" onclick="setBudgetPref(2)">$$</button>
+            <button class="budget-btn" onclick="setBudgetPref(3)">$$$</button>
+            <button class="budget-btn" onclick="setBudgetPref(4)">$$$$</button>
+          </div>
+        </div>
+
+        <div class="pref-compact-group">
+          <span class="pref-compact-label">Style</span>
+          <select id="pref-style" class="select-input"></select>
+        </div>
+
+        <button id="btn-build-itinerary" class="btn-build-mini">Build</button>
+      </div>
+
+      <!-- Neighborhood Section (Half Width) -->
+      <div class="pref-section" style="max-width: 50%;">
+        <div class="pref-section-title">Neighborhood</div>
+        <select id="pref-neighborhood" class="select-input" style="width:100%;"></select>
+      </div>
+
+      <!-- Interests Section -->
+      <div class="pref-section">
+        <div class="pref-section-title">Interests</div>
+        <div class="interests-grid" id="pref-interests"></div>
+      </div>
+
+      <p class="legal-note">Best efforts disclaimer: Recommendations generated automatically for travel planning.</p>
+    </div>
+  </div>
+
+  <!-- 5. ITINERARY SCREEN -->
+  <div id="screen-itinerary" class="screen">
+    <div class="header-bar">
+      <h2>Your Itinerary</h2>
+      <div class="header-actions">
+        <button id="btn-share-trip" onclick="shareTripItinerary()" class="btn-header" style="background:var(--primary);color:#fff;border-radius:10px;padding:6px 12px;" title="Share Trip">📤 Share</button>
+        <button id="btn-export-ics" onclick="exportItineraryICS(currentDayIndex)" class="btn-header" style="background:var(--teal);color:#fff;border-radius:10px;padding:6px 12px;" title="Add to Calendar">📅 Calendar</button>
+        <button id="btn-itin-back" class="btn-back">← Back</button>
+      </div>
+    </div>
+    <div class="itin-days-bar" id="itin-days-bar"></div>
+    <div id="itin-summary-bar" style="padding: 8px 16px; background: var(--card); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; font-weight: 700; color: var(--text2);">
+      <span id="itin-summary-text">📍 0 Stops</span>
+      <button id="btn-itin-map-route" onclick="mapDayRoute(currentDayIndex)" style="background: var(--primary); color: #fff; border: none; padding: 5px 12px; border-radius: 14px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;">🗺️ Map Day Route</button>
+    </div>
+    <div class="itin-content" id="itin-content"></div>
+  </div>
+
+  
+  <!-- 6. FAVORITES SCREEN -->
+  <div id="screen-favorites" class="screen">
+    <div class="header-bar">
+      <h2>My Saved Favorites</h2>
+      <div class="header-actions">
+        <button id="btn-share-favs" onclick="shareFavorites()" class="btn-header" style="background:var(--teal);color:#fff;border-radius:10px;padding:6px 12px;" title="Share Favorites">📤 Share</button>
+        <button id="btn-export-pdf" onclick="exportFavoritesPDF()" class="btn-header" style="background:var(--primary);color:#fff;border-radius:10px;padding:6px 12px;">📄 PDF</button>
+        <button onclick="showScreen('screen-browse')" class="btn-back">← Directory</button>
+      </div>
+    </div>
+
+    <!-- Interactive Search & Filter Bar -->
+    <div class="favs-filter-bar no-print">
+      <div class="favs-search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="fav-search-input" oninput="filterFavoritesView()" placeholder="Search saved places by keyword..." class="fav-search-input">
+      </div>
+      <div class="favs-controls-row">
+        <div class="fav-category-tabs" id="fav-category-tabs"></div>
+        <select id="fav-city-select" onchange="filterFavoritesView()" class="fav-city-select">
+          <option value="ALL">All Cities</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="favs-container" id="favs-container"></div>
+  </div>
+
+  <!-- MODAL DETAIL VIEW -->
+  <div id="modal-detail" class="modal">
+    <div class="modal-content">
+      <button id="btn-modal-detail-close" class="btn-close-modal">✕</button>
+      <div id="modal-detail-body"></div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast" class="toast"></div>
+
+  <!-- =============================================
+       JAVASCRIPT LOGIC
+       ============================================= -->
+  <script>
+    // ---- DATA REGISTRY (36 Cities + Dive Bars) ----
+    const CITIES_BY_REGION = [
+      {
+        region: "🇺🇸 United States",
+        cities: [
+          { name: "Baltimore, MD", file: "baltimore" },
+          { name: "Boston, MA", file: "boston" },
+          { name: "Charleston, SC", file: "charleston" },
+          { name: "Chicago, IL", file: "chicago" },
+          { name: "Dallas, TX", file: "dallas" },
+          { name: "Denver, CO", file: "denver" },
+          { name: "East Village, NYC", file: "east_village" },
+          { name: "Las Vegas, NV", file: "las_vegas" },
+          { name: "Los Angeles, CA", file: "los_angeles" },
+          { name: "Miami, FL", file: "miami" },
+          { name: "New Orleans, LA", file: "new_orleans" },
+          { name: "New York, NY", file: "new_york" },
+          { name: "Palm Springs, CA", file: "palm_springs" },
+          { name: "Philadelphia, PA", file: "philadelphia" },
+          { name: "Portland, ME", file: "portland_me" },
+          { name: "San Francisco, CA", file: "san_francisco" },
+          { name: "Seattle, WA", file: "seattle" },
+          { name: "Washington, DC", file: "washington_dc" },
+          { name: "Oldest & Best Dive Bars", file: "oldest_and_best_dive_bars" }
+        ]
+      },
+      {
+        region: "🇪🇺 Europe",
+        cities: [
+          { name: "Barcelona, Spain", file: "barcelona" },
+          { name: "Berlin, Germany", file: "berlin" },
+          { name: "Budapest, Hungary", file: "budapest" },
+          { name: "Edinburgh, Scotland", file: "edinburgh" },
+          { name: "London, England", file: "london" },
+          { name: "Madrid, Spain", file: "madrid" },
+          { name: "Munich, Germany", file: "munich" },
+          { name: "Naples, Italy", file: "naples" },
+          { name: "Paris, France", file: "paris" },
+          { name: "Prague, Czech Republic", file: "prague" },
+          { name: "Rome, Italy", file: "rome" },
+          { name: "Valencia, Spain", file: "valencia" },
+          { name: "Vienna, Austria", file: "vienna" }
+        ]
+      },
+      {
+        region: "🇨🇦 Canada",
+        cities: [
+          { name: "Montreal, Quebec", file: "montreal" },
+          { name: "Quebec City, Quebec", file: "quebec" },
+          { name: "Toronto, Ontario", file: "toronto" },
+          { name: "Vancouver, BC", file: "vancouver" }
+        ]
+      }
+    ];
+
+    const TRAVEL_STYLES = [
+      'Local & authentic',
+      'Off-the-beaten-path',
+      'Food-focused',
+      'Culture & history',
+      'Nightlife & social',
+      'Relaxed & scenic'
+    ];
+
+    // ---- APP STATE ----
+    let currentCity = null;
+    let currentCityName = '';
+    let allPlaces = [];
+    let itinerary = [];
+    let currentFilter = 'All';
+    let currentSortMode = 'locals'; // 'locals' or 'alpha'
+    let discoveredNeighborhoods = [];
+    let discoveredInterests = [];
+    let discoveredCategories = [];
+    let userLocation = null;
+    let nearMePrefActive = false;
+    let openNowFilterActive = false;
+    let hiddenGemsFilterActive = false;
+    let browseViewMode = 'list'; // 'list' or 'map'
+    let leafletMap = null;
+    let leafletMarkersLayer = null;
+
+    
+    // ---- SKELETON SHIMMER GENERATOR ----
+    function getSkeletonHTML(count = 3) {
+      let html = '';
+      for (let i = 0; i < count; i++) {
+        html += `
+          <div class="skeleton-card skeleton-shimmer">
+            <div class="skeleton-img skeleton-shimmer"></div>
+            <div class="skeleton-line title skeleton-shimmer"></div>
+            <div class="skeleton-line badge skeleton-shimmer"></div>
+            <div class="skeleton-line text skeleton-shimmer"></div>
+            <div class="skeleton-line text-short skeleton-shimmer"></div>
+          </div>
+        `;
+      }
+      return html;
+    }
+
+    function handleImageError(imgEl, category) {
+      const parent = imgEl.parentElement;
+      if (!parent) return;
+      const cat = String(category || '').toLowerCase();
+      let catClass = 'gen';
+      let emoji = '📍';
+      if (cat.includes('food') || cat.includes('restaurant') || cat.includes('cafe')) { catClass = 'food'; emoji = '🍽️'; }
+      else if (cat.includes('culture') || cat.includes('museum') || cat.includes('historic')) { catClass = 'culture'; emoji = '🏛️'; }
+      else if (cat.includes('night') || cat.includes('bar') || cat.includes('drink')) { catClass = 'nightlife'; emoji = '🍸'; }
+      else if (cat.includes('active') || cat.includes('park') || cat.includes('experience')) { catClass = 'active'; emoji = '🎡'; }
+
+      parent.innerHTML = `<div class="fallback-img-banner category-${catClass}"><span>${emoji} ${category || 'Destination'}</span></div>`;
+    }
+
+    // ---- MAP VIEW LOGIC (LEAFLET) ----
+    let currentBrowseViewMode = 'list';
+
+    function switchBrowseView(mode) {
+      currentBrowseViewMode = mode;
+      document.getElementById('btn-view-list')?.classList.toggle('active', mode === 'list');
+      document.getElementById('btn-view-map')?.classList.toggle('active', mode === 'map');
+
+      const listGrid = document.getElementById('browse-results');
+      const mapContainer = document.getElementById('browse-map-container');
+
+      if (mode === 'map') {
+        if (listGrid) listGrid.style.display = 'none';
+        if (mapContainer) mapContainer.style.display = 'block';
+        initAndRenderMap();
+      } else {
+        if (listGrid) listGrid.style.display = 'grid';
+        if (mapContainer) mapContainer.style.display = 'none';
+      }
+    }
+
+    function initAndRenderMap() {
+      if (typeof L === 'undefined') {
+        showToast('Map library loading...');
+        return;
+      }
+
+      const visiblePlaces = window.lastFilteredPlaces || allPlaces;
+      if (!visiblePlaces || visiblePlaces.length === 0) return;
+
+      // Find center lat/lng from places
+      const validCoords = visiblePlaces.filter(p => p.Latitude && p.Longitude);
+      let centerLat = 39.2904, centerLng = -76.6122; // Default Baltimore
+      if (validCoords.length > 0) {
+        centerLat = validCoords.reduce((acc, p) => acc + parseFloat(p.Latitude), 0) / validCoords.length;
+        centerLng = validCoords.reduce((acc, p) => acc + parseFloat(p.Longitude), 0) / validCoords.length;
+      }
+
+      if (!leafletMap) {
+        leafletMap = L.map('leaflet-map').setView([centerLat, centerLng], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '© OpenStreetMap'
+        }).addTo(leafletMap);
+        leafletMarkersLayer = L.layerGroup().addTo(leafletMap);
+      } else {
+        leafletMap.setView([centerLat, centerLng], 13);
+      }
+
+      leafletMarkersLayer.clearLayers();
+
+      validCoords.forEach(p => {
+        const lat = parseFloat(p.Latitude);
+        const lng = parseFloat(p.Longitude);
+        
+        const popupContent = `
+          <div style="font-family:var(--font-u);">
+            <div style="font-size:10px;font-weight:800;color:var(--primary);text-transform:uppercase;">${p.Category} • ${p.Subcategory || ''}</div>
+            <div style="font-size:14px;font-weight:800;color:var(--text);margin-top:2px;">${p.Name}</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:2px;">📍 ${p.streetAddress || p.Address}</div>
+            <div style="font-size:11px;font-weight:700;color:#92400E;margin-top:4px;">★ ${p.localScore} / 10.0</div>
+            <button onclick="showDetailModal(allLoadedPlacesMap.get('${p.ID}'))" style="margin-top:8px;width:100%;background:var(--primary);color:#fff;border:none;padding:5px 8px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">View Spot</button>
+          </div>
+        `;
+
+        const marker = L.marker([lat, lng]).bindPopup(popupContent);
+        leafletMarkersLayer.addLayer(marker);
+      });
+
+      setTimeout(() => {
+        if (leafletMap) leafletMap.invalidateSize();
+      }, 200);
+    }
+
+
+    
+    // ---- USER PERSONALIZATION: PERSONAL NOTES ----
+    let userNotes = JSON.parse(localStorage.getItem('local_like_a_local_notes') || '{}');
+
+    function getPersonalNote(id) {
+      return userNotes[id] || '';
+    }
+
+    function savePersonalNote(id, text) {
+      if (text && text.trim()) {
+        userNotes[id] = text.trim();
+      } else {
+        delete userNotes[id];
+      }
+      localStorage.setItem('local_like_a_local_notes', JSON.stringify(userNotes));
+      showToast('Note saved! 📝');
+      if (document.getElementById('screen-favorites').classList.contains('active')) {
+        filterFavoritesView();
+      }
+    }
+
+    // ---- SHARE TRIP & FAVORITES LOGIC ----
+    function shareTripItinerary() {
+      if (!itinerary || itinerary.length === 0) {
+        showToast('No active itinerary to share!');
+        return;
+      }
+
+      let text = `✈️ My ${currentCityName} Trip Itinerary (${itinerary.length} Day${itinerary.length > 1 ? 's' : ''}):\n\n`;
+
+      itinerary.forEach((day, idx) => {
+        text += `📅 DAY ${idx + 1}:\n`;
+        const slots = [
+          { name: 'Morning', place: day.morning },
+          { name: 'Lunch', place: day.lunch },
+          { name: 'Afternoon', place: day.afternoon },
+          { name: 'Dinner', place: day.dinner },
+          { name: 'Evening', place: day.evening }
+        ];
+        slots.forEach(s => {
+          if (s.place) {
+            text += ` • ${s.name}: ${s.place.Name} (${s.place.Neighborhood || s.place.Address})\n`;
+          }
+        });
+        text += `\n`;
+      });
+
+      text += `Shared via Local Like a Local 🗺️`;
+
+      if (navigator.share) {
+        navigator.share({
+          title: `${currentCityName} Travel Itinerary`,
+          text: text
+        }).then(() => showToast('Itinerary shared! 📤'))
+          .catch((e) => {
+            if (e.name !== 'AbortError') copyToClipboard(text);
+          });
+      } else {
+        copyToClipboard(text);
+      }
+    }
+
+    // ---- ICS CALENDAR EXPORT ----
+    function exportItineraryICS(dayIndex) {
+      if (!itinerary || itinerary.length === 0) {
+        showToast('Please build an itinerary first!');
+        alert('Please select a city, go to Customize Trip, and click Build to generate an itinerary first!');
+        return;
+      }
+
+      let targetDays = [];
+      if (typeof dayIndex === 'number' && itinerary[dayIndex]) {
+        targetDays = [{ day: itinerary[dayIndex], index: dayIndex }];
+      } else {
+        targetDays = itinerary.map((day, i) => ({ day, index: i }));
+      }
+
+      let icsLines = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//Local Like a Local//Trip Itinerary//EN',
+        'CALSCALE:GREGORIAN',
+        'METHOD:PUBLISH'
+      ];
+
+      const now = new Date();
+      const dtstamp = now.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+
+      targetDays.forEach(({ day, index }) => {
+        const eventDate = new Date();
+        eventDate.setDate(now.getDate() + index);
+        const yyyy = eventDate.getFullYear();
+        const mm = String(eventDate.getMonth() + 1).padStart(2, '0');
+        const dd = String(eventDate.getDate()).padStart(2, '0');
+        const dateStr = `${yyyy}${mm}${dd}`;
+
+        const slots = [
+          { name: 'Morning Activity', place: day.morning, start: '090000', end: '110000' },
+          { name: 'Lunch Spot', place: day.lunch, start: '123000', end: '140000' },
+          { name: 'Afternoon Exploration', place: day.afternoon, start: '143000', end: '173000' },
+          { name: 'Dinner Spot', place: day.dinner, start: '190000', end: '210000' },
+          { name: 'Evening & Drinks', place: day.evening, start: '213000', end: '233000' }
+        ].filter(s => s.place);
+
+        slots.forEach((s, slotIdx) => {
+          const p = s.place;
+          const uid = `locallikealocal-${dateStr}-${index}-${slotIdx}@app`;
+          const summary = `Day ${index + 1} - ${s.name}: ${p.Name}`;
+          const description = (p.whyGo || p.Description || '').replace(/\n/g, ' ');
+          const location = (p.streetAddress || p.Address || '').replace(/\n/g, ' ');
+
+          icsLines.push(
+            'BEGIN:VEVENT',
+            `UID:${uid}`,
+            `DTSTAMP:${dtstamp}`,
+            `DTSTART:${dateStr}T${s.start}`,
+            `DTEND:${dateStr}T${s.end}`,
+            `SUMMARY:${summary}`,
+            `DESCRIPTION:${description}`,
+            `LOCATION:${location}`,
+            'END:VEVENT'
+          );
+        });
+      });
+
+      icsLines.push('END:VCALENDAR');
+
+      const icsString = icsLines.join('\r\n');
+      const citySlug = (currentCityName || 'trip').toLowerCase().replace(/\s+/g, '_');
+      const fileName = `${citySlug}_itinerary.ics`;
+
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      const dataUri = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(icsString);
+
+      if (isIOS) {
+        window.location.href = dataUri;
+      } else {
+        try {
+          const blob = new Blob([icsString], { type: 'text/calendar;charset=utf-8' });
+          const blobUrl = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.style.display = 'none';
+          a.href = blobUrl;
+          a.setAttribute('download', fileName);
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(blobUrl);
+          }, 300);
+        } catch (e) {
+          window.location.href = dataUri;
+        }
+      }
+
+      showToast('📅 Calendar (.ics) file exported!');
+    }
+
+
+
+    function shareFavorites() {
+      if (favoritesList.length === 0) {
+        showToast('No saved favorites to share!');
+        return;
+      }
+      const favPlaces = favoritesList.map(id => allLoadedPlacesMap.get(id)).filter(Boolean);
+      let text = `❤️ My Saved Places (${favPlaces.length} spot${favPlaces.length > 1 ? 's' : ''}):\n\n`;
+
+      const grouped = {};
+      favPlaces.forEach(p => {
+        const c = p.City || currentCityName || 'Saved Spots';
+        if (!grouped[c]) grouped[c] = [];
+        grouped[c].push(p);
+      });
+
+      for (const [city, places] of Object.entries(grouped)) {
+        text += `📍 ${city}:\n`;
+        places.forEach(p => {
+          const note = getPersonalNote(p.ID);
+          text += ` • ${p.Name} (${p.Category}) - ${p.Address}${note ? ` [Note: ${note}]` : ''}\n`;
+        });
+        text += `\n`;
+      }
+
+      text += `Shared via Local Like a Local 🗺️`;
+
+      if (navigator.share) {
+        navigator.share({
+          title: 'My Saved Places',
+          text: text
+        }).then(() => showToast('Favorites shared! 📤'))
+          .catch((e) => {
+            if (e.name !== 'AbortError') copyToClipboard(text);
+          });
+      } else {
+        copyToClipboard(text);
+      }
+    }
+
+    function copyToClipboard(text) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          showToast('📋 Copied to clipboard!');
+        }).catch(() => {
+          fallbackCopyText(text);
+        });
+      } else {
+        fallbackCopyText(text);
+      }
+    }
+
+    function fallbackCopyText(text) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        showToast('📋 Copied to clipboard!');
+      } catch (e) {
+        showToast('Unable to copy.');
+      }
+      document.body.removeChild(ta);
+    }
+
+    // ---- FAVORITES & LOCALSTORAGE STATE ----
+    let favoritesList = JSON.parse(localStorage.getItem('local_like_a_local_favs') || '[]');
+    let allLoadedPlacesMap = new Map(); // Global registry across loaded cities
+
+    function updateFavBadge() {
+      const badge = document.getElementById('fav-badge');
+      if (badge) {
+        badge.textContent = favoritesList.length;
+        badge.style.display = favoritesList.length > 0 ? 'inline-block' : 'none';
+      }
+    }
+
+    function isFavorite(id) {
+      return favoritesList.includes(id);
+    }
+
+    function toggleFavorite(event, placeId) {
+      if (event) event.stopPropagation();
+      const idx = favoritesList.indexOf(placeId);
+      if (idx > -1) {
+        favoritesList.splice(idx, 1);
+        showToast('Removed from Favorites');
+      } else {
+        favoritesList.push(placeId);
+        showToast('Saved to Favorites ❤️');
+      }
+      localStorage.setItem('local_like_a_local_favs', JSON.stringify(favoritesList));
+      updateFavBadge();
+
+      // Refresh current screen icons
+      if (document.getElementById('screen-browse').classList.contains('active')) {
+        filterBrowse(currentFilter);
+      } else if (document.getElementById('screen-favorites').classList.contains('active')) {
+        openFavoritesScreen();
+      }
+    }
+
+    let currentFavCategory = 'ALL';
+
+async function openFavoritesScreen() {
+  showScreen('screen-favorites');
+  const container = document.getElementById('favs-container');
+  const filterBar = document.querySelector('.favs-filter-bar');
+
+  if (favoritesList.length === 0) {
+    if (filterBar) filterBar.style.display = 'none';
+    container.innerHTML = `
+      <div style="text-align:center;padding:60px 20px;color:var(--text2);">
+        <div style="font-size:48px;margin-bottom:12px;">❤️</div>
+        <h3 style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:6px;">No Favorites Saved Yet</h3>
+        <p style="font-size:13px;color:var(--text2);">Tap the ❤️ icon on any venue card to save it here for offline viewing and PDF export!</p>
+      </div>
+    `;
+    return;
+  }
+
+  if (filterBar) filterBar.style.display = 'flex';
+
+  // Ensure all favorited places are loaded in allLoadedPlacesMap
+  const missingCount = favoritesList.filter(id => !allLoadedPlacesMap.has(id)).length;
+  if (missingCount > 0) {
+    container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text2);font-weight:600;">Loading saved place details...</div>';
+    for (const regionData of CITIES_BY_REGION) {
+      for (const city of regionData.cities) {
+        try {
+          const res = await fetch(`cities/${city.file}.json`);
+          if (res.ok) {
+            const rawJson = await res.json();
+            const normalized = normalizeCityData(rawJson);
+            normalized.forEach(p => {
+              if (!p.City) p.City = city.name.split(',')[0];
+              allLoadedPlacesMap.set(p.ID, p);
+            });
+          }
+        } catch(e) {}
+      }
+    }
+  }
+
+  // Populate City Dropdown
+  const favPlaces = favoritesList.map(id => allLoadedPlacesMap.get(id)).filter(Boolean);
+  const citiesWithFavs = [...new Set(favPlaces.map(p => p.City || currentCityName || 'Saved Spots'))].sort();
+  
+  const citySelect = document.getElementById('fav-city-select');
+  if (citySelect) {
+    const currentVal = citySelect.value;
+    citySelect.innerHTML = '<option value="ALL">All Cities</option>' + 
+      citiesWithFavs.map(c => `<option value="${c}">${c}</option>`).join('');
+    if (citiesWithFavs.includes(currentVal)) citySelect.value = currentVal;
+    else citySelect.value = 'ALL';
+  }
+
+  // Populate Category Pills
+  const categoriesWithFavs = [...new Set(favPlaces.map(p => p.Category).filter(Boolean))].sort();
+  const catTabs = document.getElementById('fav-category-tabs');
+  if (catTabs) {
+    catTabs.innerHTML = '';
+    const allBtn = document.createElement('button');
+    allBtn.className = `tab-btn ${currentFavCategory === 'ALL' ? 'active' : ''}`;
+    allBtn.textContent = 'All';
+    allBtn.onclick = () => setFavCategory('ALL');
+    catTabs.appendChild(allBtn);
+
+    categoriesWithFavs.forEach(cat => {
+      const btn = document.createElement('button');
+      btn.className = `tab-btn ${currentFavCategory === cat ? 'active' : ''}`;
+      btn.textContent = cat;
+      btn.onclick = () => setFavCategory(cat);
+      catTabs.appendChild(btn);
+    });
+  }
+
+  filterFavoritesView();
+}
+
+function setFavCategory(cat) {
+  currentFavCategory = cat;
+  document.querySelectorAll('#fav-category-tabs .tab-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.textContent === (cat === 'ALL' ? 'All' : cat));
+  });
+  filterFavoritesView();
+}
+
+function filterFavoritesView() {
+  const container = document.getElementById('favs-container');
+  if (!container) return;
+
+  const searchQuery = (document.getElementById('fav-search-input')?.value || '').toLowerCase().trim();
+  const selectedCity = document.getElementById('fav-city-select')?.value || 'ALL';
+
+  let favPlaces = favoritesList.map(id => allLoadedPlacesMap.get(id)).filter(Boolean);
+
+  if (currentFavCategory !== 'ALL') {
+    favPlaces = favPlaces.filter(p => p.Category === currentFavCategory);
+  }
+
+  if (selectedCity !== 'ALL') {
+    favPlaces = favPlaces.filter(p => (p.City || currentCityName) === selectedCity);
+  }
+
+  if (searchQuery) {
+    favPlaces = favPlaces.filter(p => 
+      (p.Name && p.Name.toLowerCase().includes(searchQuery)) ||
+      (p.Neighborhood && p.Neighborhood.toLowerCase().includes(searchQuery)) ||
+      (p.whyGo && p.whyGo.toLowerCase().includes(searchQuery)) ||
+      (p.Subcategory && p.Subcategory.toLowerCase().includes(searchQuery)) ||
+      (p.Address && p.Address.toLowerCase().includes(searchQuery))
+    );
+  }
+
+  container.innerHTML = '';
+
+  if (favPlaces.length === 0) {
+    container.innerHTML = `
+      <div style="text-align:center;padding:40px 20px;color:var(--text2);">
+        <p style="font-weight:600;">No matching saved favorites found.</p>
+        <p style="font-size:12px;color:var(--text3);margin-top:4px;">Try adjusting your keyword search, category, or city filter.</p>
+      </div>
+    `;
+    return;
+  }
+
+  const groupedByCity = {};
+  favPlaces.forEach(p => {
+    const cityName = p.City || currentCityName || 'Saved Spots';
+    if (!groupedByCity[cityName]) groupedByCity[cityName] = [];
+    groupedByCity[cityName].push(p);
+  });
+
+  for (const [city, places] of Object.entries(groupedByCity)) {
+    const sec = document.createElement('div');
+    sec.className = 'fav-city-section';
+
+    sec.innerHTML = `
+      <div class="fav-city-title">
+        <span>📍 ${city}</span>
+        <span style="font-size:12px;font-weight:600;color:var(--text2);">${places.length} Saved</span>
+      </div>
+    `;
+
+    places.forEach(place => {
+        const card = document.createElement('div');
+        card.className = 'place-card';
+        card.style.marginBottom = '12px';
+
+        const mapLink = buildMapUrl(place);
+        const webLink = place.specificWebsiteUrl || place.Website;
+        const noteText = getPersonalNote(place.ID);
+        const noteHTML = noteText ? `<div style="margin-top:8px;padding:8px 10px;background:var(--primary-light);border-left:3px solid var(--primary);border-radius:6px;font-size:12px;color:var(--text);line-height:1.4;"><span style="font-weight:700;color:var(--primary-dark);">📝 Note:</span> ${noteText}</div>` : '';
+
+      card.innerHTML = `
+        <div class="card-img-wrap"><img class="card-img" src="${getVenuePhotoUrl(place)}"></div><div class="place-row-top" style="margin-top:12px;">
+          <div class="place-main">
+            <div class="place-name">${place.Name}</div>
+            <span class="place-cat-badge">${place.Category} • ${place.Subcategory || 'Attraction'}</span>
+          </div>
+          <div class="place-score" style="display:flex;align-items:center;gap:6px;">
+            <span class="place-score-num">★ ${place.localScore}</span>
+            <button class="btn-fav-card" onclick="event.stopPropagation(); toggleFavorite(event, '${place.ID}')" style="background:none;border:none;font-size:22px;cursor:pointer;padding:2px 4px;line-height:1;" title="Remove Favorite">
+              ❤️
+            </button>
+          </div>
+        </div>
+        <div class="place-address">📍 ${place.streetAddress || place.Address} (${place.Neighborhood})</div>
+        <p class="place-why" style="-webkit-line-clamp:3;">${place.whyGo}</p>
+        ${noteHTML}
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:8px;border-top:1px solid var(--border);">
+          <span style="font-size:11px;color:var(--text2);font-weight:600;">🕒 ${place['Opening Hours'] || 'Standard Hours'} • ${place.priceDisplay}</span>
+          <div style="display:flex;gap:6px;" class="no-print">
+            <a href="${mapLink}" target="_blank" onclick="event.stopPropagation();" style="background:var(--teal);color:#fff;padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;text-decoration:none;">Map</a>
+            ${webLink && webLink !== 'N/A' ? `<a href="${webLink}" target="_blank" onclick="event.stopPropagation();" style="background:var(--primary);color:#fff;padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;text-decoration:none;">Web</a>` : ''}
+          </div>
+        </div>
+      `;
+
+      card.addEventListener('click', () => showDetailModal(place));
+      sec.appendChild(card);
+    });
+
+    container.appendChild(sec);
+  }
+}
+
+function exportFavoritesPDF() {
+      if (favoritesList.length === 0) {
+        showToast('No favorites saved to export!');
+        return;
+      }
+      window.print();
+    }
+
+    // Override showScreen to update bottom nav tabs & cache loaded places
+    const origShowScreen = showScreen;
+    showScreen = function(id) {
+      origShowScreen(id);
+      document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
+      if (id === 'screen-cities') document.getElementById('nav-cities')?.classList.add('active');
+      if (id === 'screen-browse') document.getElementById('nav-browse')?.classList.add('active');
+      if (id === 'screen-favorites') document.getElementById('nav-favs')?.classList.add('active');
+      if (id === 'screen-itinerary') document.getElementById('nav-itin')?.classList.add('active');
+    };
+
+
+    let prefs = {
+      days: 3,
+      neighborhood: 'All',
+      interests: [],
+      style: 'Local & authentic',
+      budget: 1,
+      nearMe: false
+    };
+
+    // ---- NAVIGATION HELPERS ----
+    function showScreen(id) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      window.scrollTo(0,0);
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('visible');
+      setTimeout(() => t.classList.remove('visible'), 2500);
+    }
+
+    function addLog(msg, type = 'info') {
+      const logEl = document.getElementById('load-log');
+      if (!logEl) return;
+      logEl.classList.add('has-content');
+      const line = document.createElement('div');
+      line.className = `log-line log-${type}`;
+      line.textContent = msg;
+      logEl.appendChild(line);
+      console.log(`[${type}]`, msg);
+    }
+
+    // ---- HAVERSINE DISTANCE MATH ----
+    function getDistanceInMiles(lat1, lon1, lat2, lon2) {
+      const R = 3958.8; // Radius of earth in miles
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
+    }
+
+    // ---- DATA PARSER / NORMALIZER (Solves baltimore.txt & JSON Quirks) ----
+    
+    // ---- CATEGORY BADGE PILL HELPER (v1.9) ----
+    function getCategoryBadgeHTML(category, subcategory = '') {
+      const cat = String(category || '').toLowerCase();
+      let catClass = 'general';
+      let emoji = '📍';
+
+      if (cat.includes('food') || cat.includes('dining') || cat.includes('restaurant') || cat.includes('cafe') || cat.includes('bakery') || cat.includes('pizza') || cat.includes('trattoria') || cat.includes('bistro')) {
+        catClass = 'food';
+        emoji = '🍽️';
+      } else if (cat.includes('culture') || cat.includes('museum') || cat.includes('historic') || cat.includes('attraction') || cat.includes('art') || cat.includes('landmark') || cat.includes('monument') || cat.includes('library')) {
+        catClass = 'culture';
+        emoji = '🏛️';
+      } else if (cat.includes('night') || cat.includes('bar') || cat.includes('drink') || cat.includes('pub') || cat.includes('club') || cat.includes('tavern') || cat.includes('speakeasy') || cat.includes('jazz')) {
+        catClass = 'nightlife';
+        emoji = '🍸';
+      } else if (cat.includes('active') || cat.includes('park') || cat.includes('experience') || cat.includes('outdoor') || cat.includes('shopping') || cat.includes('market') || cat.includes('district') || cat.includes('deck')) {
+        catClass = 'active';
+        emoji = '🎡';
+      }
+
+      const label = subcategory ? `${category} • ${subcategory}` : category;
+      return `<span class="cat-badge-pill cat-${catClass}"><span>${emoji}</span><span>${label}</span></span>`;
+    }
+
+    function normalizeCityData(rawPlaces) {
+      return rawPlaces.map(p => {
+        // 1. Convert string booleans ("TRUE"/"FALSE") to real booleans
+        const boolFields = ['Morning', 'Lunch', 'Afternoon', 'Drinks', 'Dinner', 'Nightlife'];
+        boolFields.forEach(field => {
+          p[field] = String(p[field]).toUpperCase() === "TRUE";
+        });
+        // Active defaults to true unless explicitly false or "FALSE"
+        if (p.Active === undefined || p.Active === null || p.Active === '') {
+          p.Active = true;
+        } else {
+          p.Active = String(p.Active).toUpperCase() !== "FALSE" && p.Active !== false;
+        }
+
+        // 2. Convert comma-separated Interests string to Array
+        if (typeof p.Interests === 'string') {
+          p.interestsArray = p.Interests ? p.Interests.split(',').map(i => i.trim()).filter(Boolean) : [];
+        } else if (Array.isArray(p.Interests)) {
+          p.interestsArray = p.Interests;
+        } else {
+          p.interestsArray = [];
+        }
+
+        // 3. Normalize Price for budget filtering
+        const priceStr = String(p.Price || '').trim();
+        if (priceStr.toLowerCase() === 'free') {
+          p.budgetNum = 0;
+          p.priceDisplay = 'Free';
+        } else if (priceStr.includes('$')) {
+          p.budgetNum = (priceStr.match(/\$/g) || []).length;
+          p.priceDisplay = priceStr;
+        } else {
+          p.budgetNum = 1;
+          p.priceDisplay = '$';
+        }
+
+        // 4. Map keys with spaces / special characters to camelCase properties
+        p.localScore = parseFloat(p['Local Score'] || p.localScore || 0);
+        p.hiddenGemScore = parseFloat(p['Hidden Gem Score'] || p.hiddenGemScore || 0);
+        p.whyGo = p['Why Go'] || p.whyGo || p.Description || '';
+        p.touristConcentration = p['Tourist Concentration'] || p.touristConcentration || '';
+        p.streetAddress = p.Address ? p.Address.split(',')[0].trim() : (p.streetAddress || '');
+        p.specificWebsiteUrl = p['Specific Website URL'] || p.Website || '';
+        p.googleMapsLink = p['Google Maps Link'] || '';
+        p.distance = null;
+
+        return p;
+      });
+    }
+
+    // ---- CITY RENDER & LOAD ----
+    
+    // ---- STREET VIEW MAP UTILITIES (Roadmap Mode & IOS Support) ----
+    function isIOSDevice() {
+      return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    }
+
+    function buildMapUrl(place) {
+      if (!place) return '#';
+      const query = encodeURIComponent((place.Name || '') + ' ' + (place.Address || place.streetAddress || ''));
+      if (isIOSDevice()) {
+        return "https://maps.apple.com/?q=" + query + "&t=m";
+      } else {
+        return "https://www.google.com/maps/search/?api=1&query=" + query + "&t=m";
+      }
+    }
+
+    function mapDayRoute(dayIndex) {
+      const day = itinerary[dayIndex];
+      if (!day) return;
+      const stops = [day.morning, day.lunch, day.afternoon, day.dinner, day.evening].filter(Boolean);
+      if (stops.length === 0) {
+        showToast('No scheduled stops to map for this day.');
+        return;
+      }
+
+      if (isIOSDevice()) {
+        const saddr = encodeURIComponent(stops[0].Name + ' ' + (stops[0].Address || ''));
+        const daddr = encodeURIComponent(stops[stops.length - 1].Name + ' ' + (stops[stops.length - 1].Address || ''));
+        let url = "https://maps.apple.com/?saddr=" + saddr + "&daddr=" + daddr + "&t=m";
+        if (stops.length > 2) {
+          stops.slice(1, -1).forEach(st => {
+            url += "&via=" + encodeURIComponent(st.Name + ' ' + (st.Address || ''));
+          });
+        }
+        window.open(url, '_blank');
+      } else {
+        const origin = encodeURIComponent(stops[0].Name + ' ' + (stops[0].Address || ''));
+        const destination = encodeURIComponent(stops[stops.length - 1].Name + ' ' + (stops[stops.length - 1].Address || ''));
+        let url = "https://www.google.com/maps/dir/?api=1&origin=" + origin + "&destination=" + destination + "&travelmode=walking&t=m";
+        if (stops.length > 2) {
+          const waypoints = stops.slice(1, -1).map(st => encodeURIComponent(st.Name + ' ' + (st.Address || ''))).join('|');
+          url += "&waypoints=" + waypoints;
+        }
+        window.open(url, '_blank');
+      }
+    }
+
+    async function renderCityGrid() {
+      const container = document.getElementById('cities-container');
+      container.innerHTML = `<div style="text-align:center;padding:12px;color:var(--text2);font-weight:700;font-size:13px;margin-bottom:10px;">🔍 Probing Available Cities...</div>` + getSkeletonHTML(4);
+
+      let totalAvailable = 0;
+      container.innerHTML = '';
+
+      for (const regionData of CITIES_BY_REGION) {
+        // Concurrently probe city files in cities/ directory with cache busting
+        const availabilityChecks = await Promise.all(
+          regionData.cities.map(async (city) => {
+            try {
+              let foundCity = null;
+              const probePaths = [
+                `cities/${city.file}.json?_t=${Date.now()}`,
+                `03_city_json_data/${city.file}.json?_t=${Date.now()}`,
+                `${city.file}.json?_t=${Date.now()}`
+              ];
+              for (const pPath of probePaths) {
+                try {
+                  const res = await fetch(pPath, { cache: 'no-cache' });
+                  if (res.ok) { foundCity = city; break; }
+                } catch(e) {}
+              }
+              return foundCity;
+            } catch (e) {
+              return null;
+            }
+          })
+        );
+
+        const availableCities = availabilityChecks.filter(Boolean);
+
+        if (availableCities.length > 0) {
+          const header = document.createElement('h3');
+          header.className = 'region-header';
+          header.textContent = regionData.region;
+          container.appendChild(header);
+
+          const grid = document.createElement('div');
+          grid.className = 'city-grid';
+
+          availableCities.forEach((city, i) => {
+            totalAvailable++;
+            const btn = document.createElement('button');
+            btn.className = `city-btn city-gradient-${i % 8}`;
+            btn.innerHTML = `<div class="city-overlay"></div><div class="city-text"><span class="city-name">${city.name}</span></div>`;
+            btn.addEventListener('click', () => loadCityData(city));
+            grid.appendChild(btn);
+          });
+
+          container.appendChild(grid);
+        }
+      }
+
+      if (totalAvailable === 0) {
+        container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3);font-weight:600;">No city JSON files found in /cities/ directory.<br><span style="font-size:12px;margin-top:6px;display:block;">Place city JSON files inside the /cities/ folder.</span></div>';
+      }
+
+      // Dynamically update UI city counts to match exact found JSON files
+      const countEl = document.getElementById('dynamic-city-count');
+      if (countEl) countEl.textContent = totalAvailable;
+
+      const headerCountEl = document.getElementById('cities-header-count');
+      if (headerCountEl) headerCountEl.textContent = `${totalAvailable} Available`;
+    }
+
+    async function loadCityData(city) {
+      currentCityName = city.name.split(',')[0];
+      document.getElementById('browse-title').textContent = currentCityName;
+
+      const logEl = document.getElementById('load-log');
+      if (logEl) logEl.innerHTML = '';
+
+      // Strict cache-busted paths inside cities/ folder
+      const pathsToTry = [
+        `cities/${city.file}.json?_t=${Date.now()}`,
+        `./cities/${city.file}.json?_t=${Date.now()}`,
+        `03_city_json_data/${city.file}.json?_t=${Date.now()}`,
+        `./03_city_json_data/${city.file}.json?_t=${Date.now()}`,
+        `${city.file}.json?_t=${Date.now()}`
+      ];
+
+      let rawJson = null;
+      let loadedPath = '';
+
+      for (const filePath of pathsToTry) {
+        try {
+          addLog(`Fetching: ${filePath}...`, 'info');
+          const res = await fetch(filePath, { cache: 'no-cache' });
+          if (res.ok) {
+            rawJson = await res.json();
+            loadedPath = filePath.split('?')[0];
+            break;
+          }
+        } catch (e) {
+          // Continue trying next path
+        }
+      }
+
+      if (!rawJson) {
+        addLog(`Error: Could not load JSON for ${city.name} from cities/${city.file}.json.`, 'err');
+        showToast(`Data file cities/${city.file}.json not found.`);
+        return;
+      }
+
+      addLog(`Loaded ${rawJson.length} items from ${loadedPath}`, 'ok');
+
+      // Normalize raw JSON data
+      allPlaces = normalizeCityData(rawJson).filter(p => p.Active !== false);
+      allPlaces.forEach(p => allLoadedPlacesMap.set(p.ID, p));
+
+      discoveredNeighborhoods = [...new Set(allPlaces.map(p => p.Neighborhood).filter(Boolean))].sort();
+      discoveredCategories = [...new Set(allPlaces.map(p => p.Category).filter(Boolean))].sort();
+      discoveredInterests = [...new Set(allPlaces.flatMap(p => p.interestsArray).filter(Boolean))].sort();
+
+      renderBrowseScreen();
+      showScreen('screen-browse');
+    }
+
+    // ---- BROWSE SCREEN FILTER & SORT ----
+    function renderBrowseScreen() {
+      const tabsWrap = document.getElementById('browse-tabs');
+      tabsWrap.innerHTML = '';
+
+      const allTab = document.createElement('button');
+      allTab.className = 'tab-btn active';
+      allTab.textContent = 'All';
+      allTab.addEventListener('click', () => filterBrowse('All'));
+      tabsWrap.appendChild(allTab);
+
+      discoveredCategories.forEach(cat => {
+        const tab = document.createElement('button');
+        tab.className = 'tab-btn';
+        tab.textContent = cat;
+        tab.addEventListener('click', () => filterBrowse(cat));
+        tabsWrap.appendChild(tab);
+      });
+
+      filterBrowse('All');
+    }
+
+    
+    function isOpenNow(openingHoursStr) {
+      if (!openingHoursStr) return true;
+      const str = String(openingHoursStr).trim().toLowerCase();
+      if (str.includes('24 hours') || str.includes('standard') || str.includes('n/a')) return true;
+
+      const parts = str.split('-');
+      if (parts.length < 2) return true;
+
+      const parseTime = (tStr) => {
+        const sub = tStr.trim().split(':');
+        if (sub.length < 2) return null;
+        return parseInt(sub[0], 10) + parseInt(sub[1], 10)/60;
+      };
+
+      const openH = parseTime(parts[0]);
+      const closeH = parseTime(parts[1]);
+      if (openH === null || closeH === null) return true;
+
+      const now = new Date();
+      const currentH = now.getHours() + now.getMinutes()/60;
+
+      if (closeH < openH) {
+        return currentH >= openH || currentH < closeH;
+      } else {
+        return currentH >= openH && currentH <= closeH;
+      }
+    }
+
+    
+    function toggleOpenNowFilter() {
+      openNowFilterActive = !openNowFilterActive;
+      const btn = document.getElementById('btn-filter-opennow');
+      if (btn) {
+        btn.classList.toggle('active', openNowFilterActive);
+        btn.style.background = openNowFilterActive ? 'var(--primary)' : '';
+        btn.style.color = openNowFilterActive ? '#ffffff' : '';
+      }
+      filterBrowse(currentFilter);
+    }
+
+    function toggleHiddenGemsFilter() {
+      hiddenGemsFilterActive = !hiddenGemsFilterActive;
+      const btn = document.getElementById('btn-filter-hiddengems');
+      if (btn) {
+        btn.classList.toggle('active', hiddenGemsFilterActive);
+        btn.style.background = hiddenGemsFilterActive ? 'var(--primary)' : '';
+        btn.style.color = hiddenGemsFilterActive ? '#ffffff' : '';
+      }
+      filterBrowse(currentFilter);
+    }
+
+    function toggleBrowseView() {
+      browseViewMode = (browseViewMode === 'list') ? 'map' : 'list';
+      const btn = document.getElementById('btn-toggle-view');
+      const resultsGrid = document.getElementById('browse-results');
+      const mapContainer = document.getElementById('browse-map-container');
+
+      if (browseViewMode === 'map') {
+        if (btn) btn.innerHTML = '📋 List View';
+        if (resultsGrid) resultsGrid.style.display = 'none';
+        if (mapContainer) mapContainer.style.display = 'block';
+        renderLeafletMap(window.lastFilteredPlaces || allPlaces);
+      } else {
+        if (btn) btn.innerHTML = '🗺️ Map View';
+        if (resultsGrid) resultsGrid.style.display = 'grid';
+        if (mapContainer) mapContainer.style.display = 'none';
+      }
+    }
+
+    function renderLeafletMap(places) {
+      const container = document.getElementById('leaflet-map');
+      if (!container || typeof L === 'undefined') return;
+
+      const validPlaces = (places || []).filter(p => p.Latitude && p.Longitude);
+      if (validPlaces.length === 0) return;
+
+      const centerLat = parseFloat(validPlaces[0].Latitude) || 39.2904;
+      const centerLng = parseFloat(validPlaces[0].Longitude) || -76.6122;
+
+      if (!leafletMap) {
+        leafletMap = L.map('leaflet-map').setView([centerLat, centerLng], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '© OpenStreetMap'
+        }).addTo(leafletMap);
+        leafletMarkersLayer = L.layerGroup().addTo(leafletMap);
+      } else {
+        leafletMap.setView([centerLat, centerLng], 13);
+        leafletMarkersLayer.clearLayers();
+      }
+
+      const bounds = [];
+
+      validPlaces.forEach(p => {
+        const lat = parseFloat(p.Latitude);
+        const lng = parseFloat(p.Longitude);
+        if (isNaN(lat) || isNaN(lng)) return;
+
+        bounds.push([lat, lng]);
+
+        const mapStopUrl = buildMapUrl(p);
+        const badgeHTML = getCategoryBadgeHTML(p.Category, p.Subcategory);
+
+        const popupContent = `
+          <div style="font-family:var(--font-u);padding:4px;min-width:180px;">
+            <div style="font-size:14px;font-weight:800;color:var(--text);">${p.Name}</div>
+            <div style="margin:4px 0;">${badgeHTML}</div>
+            <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">📍 ${p.streetAddress || p.Address}</div>
+            <div style="font-size:12px;font-weight:700;color:var(--primary);margin-bottom:8px;">★ ${p.localScore} / 10</div>
+            <div style="display:flex;gap:6px;">
+              <a href="${mapStopUrl}" target="_blank" style="background:var(--teal);color:#fff;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:700;text-decoration:none;">Directions</a>
+              <button onclick="showDetailModal(allLoadedPlacesMap.get('${p.ID}'))" style="background:var(--primary);color:#fff;border:none;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">Details</button>
+            </div>
+          </div>
+        `;
+
+        const marker = L.marker([lat, lng]).bindPopup(popupContent);
+        leafletMarkersLayer.addLayer(marker);
+      });
+
+      if (bounds.length > 0 && leafletMap) {
+        leafletMap.fitBounds(bounds, { padding: [30, 30] });
+        setTimeout(() => { if (leafletMap) leafletMap.invalidateSize(); }, 200);
+      }
+    }
+
+
+    function setSortMode(mode) {
+      currentSortMode = mode;
+      document.getElementById('sort-btn-locals').classList.toggle('active', mode === 'locals');
+      document.getElementById('sort-btn-alpha').classList.toggle('active', mode === 'alpha');
+      filterBrowse(currentFilter);
+    }
+
+    
+    function getVenuePhotoUrl(p) {
+      if (p.Photo || p.photoUrl) return p.Photo || p.photoUrl;
+      return getCityPhotoUrl(p.Category + ' ' + p.Name);
+    }
+
+    function filterBrowse(category) {
+      currentFilter = category;
+      document.querySelectorAll('.tab-btn').forEach(t => t.classList.toggle('active', t.textContent === category));
+
+      let filtered = category === 'All' ? [...allPlaces] : allPlaces.filter(p => p.Category === category);
+
+      // Apply Open Now Filter
+      if (openNowFilterActive) {
+        filtered = filtered.filter(p => isOpenNow(p['Opening Hours']));
+      }
+
+      // Apply Hidden Gems Filter
+      if (hiddenGemsFilterActive) {
+        filtered = filtered.filter(p => (p.hiddenGemScore && p.hiddenGemScore >= 7.0) || (p.touristConcentration && String(p.touristConcentration).toLowerCase().includes('low')));
+      }
+
+      // Handle Near Me filter (0.5 mile radius)
+      if (nearMePrefActive && userLocation) {
+        const MAX_DIST = 0.5;
+        filtered = filtered.filter(p => {
+          if (!p.Latitude || !p.Longitude) return false;
+          const d = getDistanceInMiles(userLocation.lat, userLocation.lng, parseFloat(p.Latitude), parseFloat(p.Longitude));
+          p.distance = d;
+          return d <= MAX_DIST;
+        });
+
+        // Near Me distance sort
+        filtered.sort((a, b) => a.distance - b.distance || b.localScore - a.localScore);
+      } else {
+        filtered.forEach(p => p.distance = null);
+
+        // Standard Dual Sorting (By Locals vs Alpha)
+        if (currentSortMode === 'alpha') {
+          filtered.sort((a, b) => (a.Name || '').localeCompare(b.Name || ''));
+        } else {
+          // Default: By Locals (descending localScore)
+          filtered.sort((a, b) => b.localScore - a.localScore || (a.Name || '').localeCompare(b.Name || ''));
+        }
+      }
+
+      const grid = document.getElementById('browse-results');
+      grid.innerHTML = '';
+
+      if (filtered.length === 0) {
+        grid.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3);font-weight:600;">No places found for selected criteria.</div>`;
+        return;
+      }
+
+      filtered.forEach(place => {
+        const card = document.createElement('div');
+        card.className = 'place-card';
+
+        const distTag = place.distance !== null ? ` • 📍 ${place.distance.toFixed(2)} mi` : '';
+
+        window.lastFilteredPlaces = filtered;
+      if (browseViewMode === 'map') {
+        renderLeafletMap(filtered);
+      }
+        
+        card.innerHTML = `
+          <div class="place-row-top">
+            <div class="place-main">
+              <div class="place-name">${place.Name}</div>
+              ${getCategoryBadgeHTML(place.Category, place.Subcategory)}
+            </div>
+            <div class="place-score" style="display:flex;align-items:center;gap:6px;">
+              <span class="place-score-num">★ ${place.localScore}</span>
+              <button class="btn-fav-card" onclick="event.stopPropagation(); toggleFavorite(event, '${place.ID}')" style="background:none;border:none;font-size:22px;cursor:pointer;padding:2px 4px;line-height:1;" title="Toggle Favorite">
+                ${isFavorite(place.ID) ? '❤️' : '🤍'}
+              </button>
+            </div>
+          </div>
+          <div class="place-address">📍 ${place.streetAddress || place.Address} (${place.Neighborhood})${distTag}</div>
+          <p class="place-why">${place.whyGo}</p>
+          <div class="place-tags">
+            ${place.interestsArray.slice(0,4).map(i => `<span class="tag-chip">#${i}</span>`).join('')}
+          </div>
+        `;
+
+        card.addEventListener('click', () => showDetailModal(place));
+        grid.appendChild(card);
+      });
+    }
+
+    // ---- NEAR ME LOGIC ----
+    function toggleNearMeBrowse() {
+      const btn = document.getElementById('btn-browse-nearme');
+      const bar = document.getElementById('browse-nearme-bar');
+      const text = document.getElementById('browse-nearme-text');
+
+      if (nearMePrefActive) {
+        nearMePrefActive = false;
+        userLocation = null;
+        btn.classList.remove('nearme-active');
+        btn.textContent = '📍 Near Me';
+        bar.classList.remove('visible');
+        filterBrowse(currentFilter);
+        showToast('Near Me disabled');
+        return;
+      }
+
+      if (!navigator.geolocation) {
+        showToast('Geolocation is not supported.');
+        return;
+      }
+
+      text.textContent = "Getting current location...";
+      bar.classList.add('visible');
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          nearMePrefActive = true;
+          btn.classList.add('nearme-active');
+          btn.textContent = 'Active';
+          text.textContent = "Near Me active — 0.5 mi radius";
+          filterBrowse(currentFilter);
+          showToast('Near Me activated');
+        },
+        (err) => {
+          text.textContent = "Could not retrieve location";
+          setTimeout(() => bar.classList.remove('visible'), 2000);
+          showToast('Unable to get location');
+        }
+      );
+    }
+
+    // ---- CUSTOMIZE SCREEN ----
+    function updateDays(delta) {
+      prefs.days = Math.max(1, Math.min(7, prefs.days + delta));
+      document.getElementById('days-val').textContent = prefs.days;
+    }
+
+    function setBudgetPref(b) {
+      prefs.budget = b;
+      document.querySelectorAll('.budget-btn').forEach((btn, idx) => {
+        btn.classList.toggle('active', idx + 1 === b);
+      });
+    }
+
+    
+    // ---- 12 CORE INTEREST CATEGORIES MAP ----
+    const CORE_INTEREST_MAP = [
+      { id: 'history', label: '🏛️ History & Heritage', keywords: ['historic', 'architecture', 'monuments', 'old town', 'museum', 'history', 'heritage', 'landmark'] },
+      { id: 'art', label: '🎨 Art & Culture', keywords: ['art gallery', 'street art', 'theater', 'performing arts', 'exhibitions', 'art', 'culture'] },
+      { id: 'foodie', label: '🍽️ Foodie & Local Eats', keywords: ['seafood', 'tapas', 'fine dining', 'street food', 'bistro', 'iconic eats', 'food', 'dining', 'gastronomy', 'restaurant', 'local eats'] },
+      { id: 'nightlife', label: '🍸 Nightlife & Cocktails', keywords: ['speakeasy', 'cocktail lounge', 'dive bar', 'rooftop bar', 'pub', 'dancing', 'nightlife', 'cocktails', 'bars', 'drinks'] },
+      { id: 'beer_wine', label: '🍺 Craft Beer & Wine', keywords: ['brewery', 'beer garden', 'winery', 'wine bar', 'taproom', 'craft beer', 'wine', 'beer'] },
+      { id: 'nature', label: '🌳 Nature & Waterfront', keywords: ['parks', 'gardens', 'waterfront', 'scenic views', 'hiking', 'beaches', 'nature', 'outdoors', 'park'] },
+      { id: 'cafes', label: '☕ Cafes & Bakeries', keywords: ['coffee shop', 'pastry shop', 'bakery', 'brunch', 'bookstore cafe', 'cafe', 'coffee', 'pastry'] },
+      { id: 'shopping', label: '🛍️ Shopping & Markets', keywords: ['flea market', 'food hall', 'boutiques', 'artisanal', 'vintage', 'shopping', 'market', 'markets'] },
+      { id: 'music', label: '🎵 Music & Entertainment', keywords: ['live music', 'jazz club', 'comedy', 'nightclub', 'venue', 'music', 'entertainment'] },
+      { id: 'hidden_gems', label: '💎 Hidden Gems', keywords: ['off the beaten path', 'local favorite', 'secret spot', 'non-touristy', 'hidden gem', 'hidden gems'] },
+      { id: 'activities', label: '🎡 Activities & Fun', keywords: ['tours', 'kid friendly', 'amusements', 'games', 'sports', 'activities', 'fun', 'experience'] },
+      { id: 'views', label: '🌅 Views & Vibe', keywords: ['rooftop', 'cozy', 'romantic', 'late night', 'outdoor seating', 'scenic', 'views', 'vibe'] }
+    ];
+
+    function renderPrefsScreen() {
+      // Neighborhood select
+      const sel = document.getElementById('pref-neighborhood');
+      sel.innerHTML = '<option value="All">All Neighborhoods</option>';
+      discoveredNeighborhoods.forEach(n => {
+        sel.innerHTML += `<option value="${n}">${n}</option>`;
+      });
+
+      // 12 Core Interest Category Chips
+      if (!prefs.selectedCoreInterests) prefs.selectedCoreInterests = [];
+      const intGrid = document.getElementById('pref-interests');
+      intGrid.innerHTML = '';
+      CORE_INTEREST_MAP.forEach(cat => {
+        const chip = document.createElement('button');
+        chip.className = 'interest-chip';
+        chip.setAttribute('data-id', cat.id);
+        chip.textContent = cat.label;
+        if (prefs.selectedCoreInterests.includes(cat.id)) {
+          chip.classList.add('active');
+        }
+        chip.addEventListener('click', () => {
+          chip.classList.toggle('active');
+          prefs.selectedCoreInterests = [...document.querySelectorAll('#pref-interests .interest-chip.active')].map(c => c.getAttribute('data-id'));
+          prefs.interests = CORE_INTEREST_MAP
+            .filter(m => prefs.selectedCoreInterests.includes(m.id))
+            .flatMap(m => m.keywords);
+        });
+        intGrid.appendChild(chip);
+      });
+
+      // Travel Style select
+      const styleSelect = document.getElementById('pref-style');
+      styleSelect.innerHTML = '';
+      TRAVEL_STYLES.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s;
+        opt.textContent = s;
+        if (s === prefs.style) opt.selected = true;
+        styleSelect.appendChild(opt);
+      });
+      styleSelect.onchange = (e) => { prefs.style = e.target.value; };
+    }
+
+    // ---- ITINERARY BUILDER ----
+    function buildItinerary() {
+      itinerary = [];
+      const selectedNeigh = document.getElementById('pref-neighborhood').value;
+
+      // Smart multi-factor scoring engine for broad, inclusive matching
+      let scoredPlaces = allPlaces.map(p => {
+        let score = (prefs.style === 'Off-the-beaten-path') ? (p.hiddenGemScore || p.localScore) : p.localScore;
+        
+        // Neighborhood preference bonus
+        if (selectedNeigh !== 'All' && p.Neighborhood === selectedNeigh) {
+          score += 10;
+        }
+        
+        // Interest match bonus (5 points per matching interest)
+        if (prefs.interests && prefs.interests.length > 0) {
+          const matchCount = prefs.interests.filter(i => p.interestsArray && p.interestsArray.includes(i)).length;
+          score += matchCount * 5;
+        }
+
+        // Style bonus
+        if (prefs.style === 'Food-focused' && p.Category === 'Food') score += 4;
+        
+        return { place: p, score: score };
+      });
+
+      // Sort candidate pool by match score descending
+      scoredPlaces.sort((a, b) => b.score - a.score);
+      let candidatePool = scoredPlaces.map(sp => sp.place);
+
+      // Fallback: Ensure candidate pool is never empty
+      if (candidatePool.length < 5) {
+        candidatePool = [...allPlaces].sort((a, b) => b.localScore - a.localScore);
+      }
+
+      let usedIDs = new Set();
+
+      for (let d = 0; d < prefs.days; d++) {
+        const dayPlan = { morning: null, lunch: null, afternoon: null, dinner: null, evening: null };
+
+        // Helper function to pick best matching unused spot with fallback
+        const pickSpot = (filterFn) => {
+          let found = candidatePool.find(p => !usedIDs.has(p.ID) && filterFn(p));
+          if (!found) {
+            // Tier 1 Fallback: Any unused spot in candidatePool
+            found = candidatePool.find(p => !usedIDs.has(p.ID));
+          }
+          if (!found) {
+            // Tier 2 Fallback: Any unused spot in allPlaces
+            found = allPlaces.find(p => !usedIDs.has(p.ID));
+          }
+          if (found) {
+            usedIDs.add(found.ID);
+          }
+          return found;
+        };
+
+        const lightBiteSubcats = ['bakery', 'pastry shop', 'pastry', 'cafe', 'coffee shop', 'dessert', 'desserts', 'bakery & cafe', 'ice cream', 'creperie', 'tea room'];
+
+        dayPlan.morning = pickSpot(p => p.Morning || p.Category === 'Culture' || p.Category === 'Experience' || p.Category === 'Active');
+        dayPlan.lunch = pickSpot(p => p.Lunch || p.Category === 'Food');
+        dayPlan.afternoon = pickSpot(p => p.Afternoon || p.Category === 'Culture' || p.Category === 'Active' || p.Category === 'Experience');
+        
+        // Strict Dinner Exclusion: Prefer real dinner/food spots that are NOT light bites/bakeries
+        dayPlan.dinner = pickSpot(p => {
+          const subcat = String(p.Subcategory || '').toLowerCase();
+          const cat = String(p.Category || '').toLowerCase();
+          const name = String(p.Name || '').toLowerCase();
+          const isLightBite = lightBiteSubcats.some(lb => subcat.includes(lb) || name.includes('bakery') || name.includes('pastry'));
+          
+          if (isLightBite) return false;
+          return p.Dinner || cat === 'food';
+        });
+
+        dayPlan.evening = pickSpot(p => p.Nightlife || p.Drinks || p.Category === 'Nightlife');
+
+        itinerary.push(dayPlan);
+      }
+
+      renderItinerary();
+      showScreen('screen-itinerary');
+    }
+
+    function renderItinerary() {
+      const daysBar = document.getElementById('itin-days-bar');
+      const content = document.getElementById('itin-content');
+      daysBar.innerHTML = '';
+      content.innerHTML = '';
+
+      itinerary.forEach((day, i) => {
+        const tab = document.createElement('button');
+        tab.className = `itin-day-tab ${i === 0 ? 'active' : ''}`;
+        tab.textContent = `Day ${i + 1}`;
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('.itin-day-tab').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          renderDay(i);
+        });
+        daysBar.appendChild(tab);
+      });
+
+      renderDay(0);
+    }
+
+    function renderDay(dayIndex) {
+      currentDayIndex = dayIndex;
+      const content = document.getElementById("itin-content");
+      const day = itinerary[dayIndex];
+      if (!content || !day) return;
+      content.innerHTML = "";
+
+      const slots = [
+        { time: "Morning Activity", data: day.morning },
+        { time: "Lunch Spot", data: day.lunch },
+        { time: "Afternoon Exploration", data: day.afternoon },
+        { time: "Dinner Spot", data: day.dinner },
+        { time: "Evening & Drinks", data: day.evening }
+      ].filter(s => s.data);
+
+      const summaryTextEl = document.getElementById("itin-summary-text");
+      let totalDistanceMiles = 0;
+      let prevCoords = null;
+
+      slots.forEach(s => {
+        if (s.data.Latitude && s.data.Longitude) {
+          const lat = parseFloat(s.data.Latitude);
+          const lng = parseFloat(s.data.Longitude);
+          if (prevCoords) {
+            totalDistanceMiles += getDistanceInMiles(prevCoords.lat, prevCoords.lng, lat, lng);
+          }
+          prevCoords = { lat, lng };
+        }
+      });
+
+      if (summaryTextEl) {
+        if (slots.length > 0) {
+          summaryTextEl.innerHTML = "📍 <strong>" + slots.length + " Stops</strong>" + (totalDistanceMiles > 0 ? " • 🚶 Travel: ~" + totalDistanceMiles.toFixed(1) + " mi" : "");
+        } else {
+          summaryTextEl.textContent = "📍 0 Stops";
+        }
+      }
+
+      let lastCoords = null;
+
+      slots.forEach((s, idx) => {
+        const cLat = s.data.Latitude ? parseFloat(s.data.Latitude) : null;
+        const cLng = s.data.Longitude ? parseFloat(s.data.Longitude) : null;
+
+        if (idx > 0 && lastCoords && cLat && cLng) {
+          const dist = getDistanceInMiles(lastCoords.lat, lastCoords.lng, cLat, cLng);
+          let travelText = "";
+          if (dist < 1.0) {
+            const walkMin = Math.max(1, Math.round(dist * 20));
+            travelText = "🚶 " + dist.toFixed(2) + " mi (~" + walkMin + " min walk)";
+          } else {
+            const driveMin = Math.max(3, Math.round(4 + dist * 3));
+            travelText = "🚕 " + dist.toFixed(2) + " mi (~" + driveMin + " min drive)";
+          }
+
+          content.innerHTML += '<div class="travel-connector"><span class="travel-badge">' + travelText + '</span></div>';
+        }
+
+        if (cLat && cLng) lastCoords = { lat: cLat, lng: cLng };
+
+        const mapStopUrl = buildMapUrl(s.data);
+        const isFav = isFavorite(s.data.ID);
+
+        content.innerHTML += `
+          <div class="slot-card">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+              <div class="slot-time">${s.time}</div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <a href="${mapStopUrl}" target="_blank" onclick="event.stopPropagation();" style="background:var(--teal-light);color:var(--teal-dark);padding:3px 8px;border-radius:10px;font-size:11px;font-weight:700;text-decoration:none;">📍 Map Stop</a>
+                <button onclick="event.stopPropagation(); toggleFavorite(event, '${s.data.ID}'); renderDay(${dayIndex});" style="background:none;border:none;font-size:20px;cursor:pointer;padding:2px 4px;line-height:1;" title="Favorite">
+                  ${isFav ? '❤️' : '🤍'}
+                </button>
+              </div>
+            </div>
+            <div class="slot-title">${s.data.Name}</div>
+            <div class="slot-address">📍 ${s.data.streetAddress || s.data.Address} (${s.data.Neighborhood})</div>
+            <p style="font-size:12px;color:var(--text2);margin-top:6px;">"${s.data.whyGo}"</p>
+          </div>
+        `;
+      });
+    }
+
+    // ---- DETAIL MODAL ----
+    function showDetailModal(place) {
+      const body = document.getElementById('modal-detail-body');
+
+      const mapLink = buildMapUrl(place);
+      const webLink = place.specificWebsiteUrl || place.Website;
+      const noteVal = getPersonalNote(place.ID);
+
+      body.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding-right:48px;gap:10px;margin-bottom:8px;">
+          ${getCategoryBadgeHTML(place.Category, place.Subcategory)}
+          <button onclick="toggleFavorite(event, '${place.ID}'); showDetailModal(place);" style="background:var(--primary-light);border:1px solid var(--primary);color:var(--primary-dark);padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;" title="Favorite">
+            ${isFavorite(place.ID) ? '❤️ Saved' : '🤍 Save to Favorites'}
+          </button>
+        </div>
+        <h2 style="font-size:20px;font-weight:800;margin-top:2px;color:var(--text);">${place.Name}</h2>
+        <div style="font-size:13px;color:var(--text2);margin-top:2px;">📍 ${place.Address}</div>
+
+        <div class="detail-row">
+          <span class="detail-label">Neighborhood</span>
+          <span style="font-weight:600;">${place.Neighborhood}</span>
+        </div>
+
+        <div class="detail-row">
+          <span class="detail-label">Local Score / Rating</span>
+          <span style="font-weight:700;color:var(--primary);">★ ${place.localScore} / 10.0</span>
+        </div>
+
+        <div class="detail-row">
+          <span class="detail-label">Price Level</span>
+          <span style="font-weight:600;">${place.priceDisplay}</span>
+        </div>
+
+        <div class="detail-row">
+          <span class="detail-label">Opening Hours</span>
+          <span style="font-weight:600;">${place['Opening Hours'] || 'Standard Operating Hours'}</span>
+        </div>
+
+        <div class="detail-row" style="margin-top:12px;">
+          <span class="detail-label">Why Go</span>
+          <p style="font-size:13px;color:var(--text2);line-height:1.5;margin-top:2px;">"${place.whyGo}"</p>
+        </div>
+
+        <!-- USER PERSONALIZATION: PERSONAL NOTE -->
+        <div class="detail-row" style="margin-top:14px;flex-direction:column;align-items:flex-start;gap:6px;width:100%;box-sizing:border-box;">
+          <div style="display:flex;align-items:center;justify-content:space-between;width:100%;">
+            <span class="detail-label">📝 Personal Note</span>
+            ${noteVal ? '<span style="font-size:11px;color:var(--teal);font-weight:700;">Saved</span>' : ''}
+          </div>
+          <textarea id="modal-note-input-${place.ID}" placeholder="Add a private note (e.g. must-try dish, reservation info)..." style="width:100%;height:60px;padding:8px 12px;border:1px solid var(--border);border-radius:10px;font-family:var(--font-u);font-size:13px;resize:none;background:var(--bg);color:var(--text);box-sizing:border-box;">${noteVal}</textarea>
+          <button onclick="savePersonalNote('${place.ID}', document.getElementById('modal-note-input-${place.ID}').value)" style="align-self:flex-end;background:var(--teal);color:#fff;border:none;padding:5px 14px;border-radius:14px;font-size:12px;font-weight:700;cursor:pointer;margin-top:4px;">Save Note</button>
+        </div>
+
+        <div class="detail-btn-row">
+          <a href="${mapLink}" target="_blank" class="btn-action btn-map">View Map</a>
+          ${webLink && webLink !== 'N/A' ? `<a href="${webLink}" target="_blank" class="btn-action btn-web">Official Website</a>` : ''}
+        </div>
+      `;
+
+      document.getElementById('modal-detail').classList.add('open');
+    }
+
+    // ---- INIT ON DOM CONTENT LOADED ----
+    
+    // ---- OFFLINE & SERVICE WORKER LOGIC ----
+    function initOfflineAndPWA() {
+      function updateOnlineStatus() {
+        const bar = document.getElementById('offline-status-bar');
+        const text = document.getElementById('offline-status-text');
+        if (!bar) return;
+
+        if (!navigator.onLine) {
+          bar.style.display = 'flex';
+          bar.classList.remove('online-restored');
+          if (text) text.innerHTML = '⚡ Offline Mode — Serving cached city guides & saved places';
+        } else {
+          if (bar.style.display !== 'none') {
+            bar.classList.add('online-restored');
+            if (text) text.innerHTML = '🟢 Back Online — Connection restored';
+            setTimeout(() => {
+              bar.style.display = 'none';
+              bar.classList.remove('online-restored');
+            }, 3000);
+          }
+        }
+      }
+
+      window.addEventListener('online', updateOnlineStatus);
+      window.addEventListener('offline', updateOnlineStatus);
+      updateOnlineStatus();
+
+      // Service Worker Registration
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').catch(err => {
+          console.log('SW Registration optional:', err);
+        });
+      }
+
+      // PWA Install Prompt Logic
+      let deferredPrompt = null;
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        const banner = document.getElementById('pwa-install-banner');
+        if (banner) banner.style.display = 'flex';
+      });
+
+      const installBtn = document.getElementById('btn-pwa-install');
+      if (installBtn) {
+        installBtn.addEventListener('click', () => {
+          if (deferredPrompt) {
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then(() => {
+              deferredPrompt = null;
+              const banner = document.getElementById('pwa-install-banner');
+              if (banner) banner.style.display = 'none';
+            });
+          } else {
+            alert("To install on iPhone / iPad:\n1. Tap the Share button ⎋ in Safari\n2. Scroll down and tap 'Add to Home Screen ➕'");
+          }
+        });
+      }
+    }
+
+    function dismissPwaBanner() {
+      const banner = document.getElementById('pwa-install-banner');
+      if (banner) banner.style.display = 'none';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initOfflineAndPWA();
+      document.getElementById('btn-start').addEventListener('click', () => showScreen('screen-cities'));
+      document.getElementById('btn-cities-back').addEventListener('click', () => showScreen('screen-welcome'));
+      document.getElementById('btn-browse-back').addEventListener('click', () => showScreen('screen-cities'));
+      document.getElementById('btn-prefs-back').addEventListener('click', () => showScreen('screen-browse'));
+      document.getElementById('btn-itin-back').addEventListener('click', () => showScreen('screen-prefs'));
+      document.getElementById('btn-modal-detail-close').addEventListener('click', () => document.getElementById('modal-detail').classList.remove('open'));
+
+      document.getElementById('btn-browse-prefs').addEventListener('click', () => {
+        renderPrefsScreen();
+        showScreen('screen-prefs');
+      });
+
+      document.getElementById('btn-browse-nearme').addEventListener('click', toggleNearMeBrowse);
+      document.getElementById('btn-days-minus').addEventListener('click', () => updateDays(-1));
+      document.getElementById('btn-days-plus').addEventListener('click', () => updateDays(1));
+      document.getElementById('btn-build-itinerary').addEventListener('click', buildItinerary);
+
+      renderCityGrid();
+    });
+  </script>
+
+  <!-- BOTTOM NAVIGATION BAR -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" onclick="showScreen('screen-cities')" id="nav-cities">
+      <span class="nav-icon">🏙️</span>
+      <span class="nav-label">Cities</span>
+    </button>
+    <button class="nav-item" onclick="showScreen('screen-browse')" id="nav-browse">
+      <span class="nav-icon">🔍</span>
+      <span class="nav-label">Browse</span>
+    </button>
+    <button class="nav-item" onclick="openFavoritesScreen()" id="nav-favs">
+      <span class="nav-icon">❤️</span>
+      <span class="nav-label">Favorites</span>
+      <span id="fav-badge" class="fav-badge">0</span>
+    </button>
+    <button class="nav-item" onclick="showScreen('screen-itinerary')" id="nav-itin">
+      <span class="nav-icon">📅</span>
+      <span class="nav-label">Itinerary</span>
+    </button>
+  </nav>
+
+</body>
+</html>
