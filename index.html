@@ -4,12 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Local Like a Local</title>
+  <meta name="description" content="Discover authentic local spots and build a personalized city itinerary.">
     <link rel="manifest" href="manifest.json">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Local Like a Local">
-  <meta name="theme-color" content="#D4550A">
+  <meta name="theme-color" content="#263D36">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   
@@ -688,22 +689,8 @@
     .browse-results {
       padding: 16px;
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 16px;
-      max-width: 1280px;
-      margin: 0 auto;
-    }
-
-    @media (max-width: 900px) {
-      .browse-results {
-        grid-template-columns: repeat(2, 1fr);
-      }
-    }
-
-    @media (max-width: 600px) {
-      .browse-results {
-        grid-template-columns: 1fr;
-      }
+      grid-template-columns: 1fr;
+      gap: 14px;
     }
 
     .place-card {
@@ -903,21 +890,9 @@
     }
 
     .interests-grid {
-      display: grid;
-      grid-template-columns: repeat(6, 1fr);
-      gap: 10px;
-    }
-
-    @media (max-width: 900px) {
-      .interests-grid {
-        grid-template-columns: repeat(3, 1fr);
-      }
-    }
-
-    @media (max-width: 500px) {
-      .interests-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
     }
 
     .interest-chip {
@@ -1320,71 +1295,185 @@
     }
 
 
-/* ==========================================================
-EDITORIAL REDESIGN — Boutique travel magazine
-========================================================== */
-:root {
-  --bg: #F8F6F0 !important;
-  --card: #FFFEFB !important;
-  --primary: #B85F43 !important;
-  --primary-dark: #8B4C37 !important;
-  --primary-light: #F6ECE7 !important;
-  --teal: #456B61 !important;
-  --teal-light: #E8EFEB !important;
-  --teal-dark: #263D36 !important;
-  --text: #222B28 !important;
-  --text2: #52605B !important;
-  --text3: #82908B !important;
-  --border: #E5E0D5 !important;
-  --radius: 8px !important;
-  --shadow: 0 4px 20px rgba(38,61,54,.06) !important;
-  --shadow-lg: 0 12px 32px rgba(38,61,54,.12) !important;
-}
 
-#screen-welcome { background: #263D36 !important; }
-.welcome-wrap {
-  min-height: 100vh; padding: clamp(28px, 7vh, 76px) 24px 36px;
-  display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start; text-align: left; color: white;
-  position: relative; overflow: hidden; isolation: isolate;
-}
-.welcome-wrap::before {
-  content: 'A FIELD GUIDE TO THE GOOD STUFF'; position: absolute; top: 30px; left: 26px;
-  font-size: 10px; font-weight: 700; letter-spacing: .2em; color: rgba(255,255,255,.72);
-}
-.welcome-bg {
-  position: absolute; inset: 0; z-index: 0;
-  background-color: #263D36;
-  background-image: linear-gradient(180deg, rgba(23,35,30,.12) 0%, rgba(23,35,30,.18) 34%, rgba(23,35,30,.90) 100%),
-  url('https://images.unsplash.com/photo-1516483638261-f4dbaf036963?auto=format&fit=crop&w=2000&q=85');
-  background-size: cover; background-position: center;
-  transform: scale(1.015);
-}
-.welcome-icon { display: none !important; }
-.welcome-wrap h1 {
-  font-family: var(--font-d); font-size: clamp(48px, 11vw, 76px); font-weight: 900;
-  letter-spacing: -.03em; line-height: .92; margin-bottom: 14px; text-shadow: 0 4px 20px rgba(0,0,0,.35);
-}
-.tagline {
-  font-size: clamp(15px, 2.2vw, 18px); color: rgba(255,255,255,.88); font-weight: 400;
-  line-height: 1.45; margin-bottom: 28px; max-width: 380px; text-shadow: 0 2px 10px rgba(0,0,0,.3);
-}
-.btn-cta {
-  background: var(--primary) !important; color: #fff !important; border-radius: 6px !important; padding: 16px 28px !important;
-  font-size: 15px !important; font-weight: 700 !important; letter-spacing: .02em !important; max-width: 340px !important;
-  box-shadow: 0 8px 24px rgba(184,95,67,.38) !important;
-}
+    /* ==========================================================
+       EDITORIAL REDESIGN — Boutique travel magazine
+       Keeps the existing app structure and interaction states.
+       ========================================================== */
+    :root {
+      --bg: #F7F5F0;
+      --card: #FFFEFB;
+      --primary: #B85F43;
+      --primary-dark: #87412E;
+      --primary-light: #F4E6DE;
+      --teal: #456B61;
+      --teal-light: #E8F0EB;
+      --teal-dark: #294A40;
+      --text: #292D2A;
+      --text2: #6E746E;
+      --text3: #92958E;
+      --border: #E5E0D6;
+      --red: #B84C43;
+      --green: #39745A;
+      --orange: #B85F43;
+      --yellow: #C18C3B;
+      --radius: 18px;
+      --shadow: 0 5px 18px rgba(42, 48, 41, .055);
+      --shadow-lg: 0 16px 40px rgba(42, 48, 41, .14);
+      --font-d: 'Fraunces', Georgia, serif;
+      --font-u: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    html { scroll-behavior: smooth; }
+    body { background: var(--bg); color: var(--text); line-height: 1.55; }
+    button, input, select, textarea { font: inherit; }
+    button { -webkit-tap-highlight-color: transparent; }
+    button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+      outline: 3px solid rgba(184,95,67,.42); outline-offset: 3px;
+    }
+    .screen { padding-bottom: max(68px, env(safe-area-inset-bottom)); }
+    .screen.active { animation: editorialIn .24s ease-out; }
+    @keyframes editorialIn { from { opacity: .65; } to { opacity: 1; } }
 
-.cat-badge-pill {
-  display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 4px;
-  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
-}
-.cat-badge-pill.cat-food { background: #FDF2EE; color: #B85F43; border: 1px solid #F6CEC1; }
-.cat-badge-pill.cat-culture { background: #E8EFEB; color: #263D36; border: 1px solid #B8CFC5; }
-.cat-badge-pill.cat-nightlife { background: #F3EFF5; color: #52435B; border: 1px solid #D6CCE0; }
-.cat-badge-pill.cat-active { background: #F1F4EE; color: #3E5948; border: 1px solid #C4D3BB; }
-.cat-badge-pill.cat-general { background: #F4F2EC; color: #52605B; border: 1px solid #DDD8CC; }
+    /* Welcome: immersive cover image with legible editorial title */
+    #screen-welcome { background: #263D36; }
+    .welcome-wrap {
+      min-height: 100svh; padding: clamp(28px, 7vh, 76px) 24px 36px;
+      justify-content: flex-end; align-items: flex-start; text-align: left; color: white;
+      isolation: isolate;
+    }
+    .welcome-bg {
+      background-color: #263D36;
+      background-image: linear-gradient(180deg, rgba(23,35,30,.12) 0%, rgba(23,35,30,.18) 34%, rgba(23,35,30,.90) 100%),
+        url('https://images.unsplash.com/photo-1516483638261-f4dbaf036963?auto=format&fit=crop&w=2000&q=85');
+      background-size: cover; background-position: center;
+      transform: scale(1.015);
+    }
+    .welcome-wrap::before {
+      content: 'A FIELD GUIDE TO THE GOOD STUFF'; position: absolute; top: 30px; left: 26px;
+      color: rgba(255,255,255,.88); font-size: 10px; font-weight: 700; letter-spacing: .22em;
+    }
+    .welcome-icon { font-size: 27px; margin-bottom: 17px; filter: none; color: #E9C5A6; }
+    .welcome-wrap h1 {
+      color: #FFFCF6; font-size: clamp(42px, 9vw, 76px); line-height: .99;
+      letter-spacing: -.045em; font-weight: 700; max-width: 650px; margin-bottom: 20px;
+      text-wrap: balance;
+    }
+    .tagline { color: rgba(255,252,246,.88); font-size: clamp(16px, 2.2vw, 19px); line-height: 1.65; max-width: 440px; margin-bottom: 28px; }
+    .btn-cta {
+      width: auto; max-width: none; min-height: 54px; padding: 15px 25px; border-radius: 5px;
+      background: #F7F0E6; color: #263D36; box-shadow: none; font-size: 14px; font-weight: 700;
+      letter-spacing: .025em; transition: background .2s, transform .2s;
+    }
+    .btn-cta:hover { background: #E9C5A6; color: #263D36; transform: translateY(-2px); }
+    .legal-note { color: rgba(255,252,246,.65); max-width: 380px; font-size: 11px; margin-top: 24px; }
+    #load-log { border: 1px solid rgba(255,255,255,.2); }
 
-</style>
+    /* Consistent magazine-style app chrome */
+    .header-bar {
+      padding: 15px clamp(16px, 4vw, 34px); min-height: 66px; gap: 12px;
+      background: rgba(255,254,251,.96); border-bottom: 1px solid var(--border);
+      box-shadow: 0 3px 16px rgba(42,48,41,.035); backdrop-filter: blur(14px);
+    }
+    .header-bar h2 { font-family: var(--font-d); font-size: clamp(19px, 3vw, 25px); font-weight: 700; letter-spacing: -.025em; }
+    .btn-back, .btn-header { color: var(--teal-dark); font-size: 12px; font-weight: 700; border-radius: 5px; padding: 9px 11px; }
+    .btn-back:hover, .btn-header:hover { background: var(--teal-light); }
+    .btn-header.nearme-active { background: var(--teal-light); color: var(--teal-dark); animation: none; }
+    .pwa-banner { padding: 12px clamp(16px,4vw,34px); background: #F0E9DE; border-color: var(--border); box-shadow: none; }
+    .pwa-install-btn { background: var(--teal-dark); border-radius: 4px; }
+    .offline-status-bar { background: #F7EEDB; color: #795E2F; border-color: #E8D9B9; }
+
+    /* Destination directory */
+    .city-screen-content { padding: 24px clamp(16px,4vw,36px) 40px; max-width: 1320px; margin: 0 auto; }
+    .region-header { margin: 26px 0 13px 2px; color: var(--teal-dark); font-size: 10px; letter-spacing: .19em; font-weight: 700; }
+    .city-grid { grid-template-columns: repeat( auto-fit, minmax(min(100%, 230px), 1fr)); gap: 16px; }
+    .city-btn {
+      min-height: 190px; height: clamp(170px, 21vw, 245px); border-radius: 5px;
+      box-shadow: 0 4px 14px rgba(24,32,26,.08); background-color: #6E776A;
+      background-size: cover !important; background-position: center !important;
+    }
+    .city-btn::after { content: ''; position:absolute; inset:0; border: 1px solid rgba(255,255,255,.18); pointer-events:none; }
+    .city-btn:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+    .city-overlay { background: linear-gradient(180deg, rgba(19,29,24,.02) 15%, rgba(19,29,24,.12) 45%, rgba(19,29,24,.82) 100%); }
+    .city-text { padding: 20px; }
+    .city-name { font-family: var(--font-d); font-size: clamp(21px, 2.5vw, 29px); line-height: 1.05; letter-spacing: -.02em; font-weight: 700; text-shadow: 0 2px 12px rgba(0,0,0,.35); }
+
+    /* Browse controls: tidy, touch-friendly, and responsive */
+    .filter-bar { padding: 12px clamp(14px,3vw,30px); gap: 12px; background: #F7F5F0; border-color: var(--border); flex-wrap: wrap; }
+    .category-tabs { gap: 7px; }
+    .tab-btn, .sort-btn, .toggle-filter-btn, .view-toggle-btn {
+      border-radius: 4px; transition: color .18s, background .18s, border-color .18s;
+    }
+    .tab-btn { padding: 8px 13px; border: 1px solid var(--border); background: var(--card); color: var(--text2); font-weight: 600; }
+    .tab-btn.active { background: var(--teal-dark); color: #fff; border-color: var(--teal-dark); }
+    .sort-btn { border: 1px solid var(--border); background: var(--card); padding: 7px 10px; color: var(--text2); }
+    .sort-btn.active { background: var(--teal-dark); color: #fff; border-color: var(--teal-dark); }
+    .toggle-filter-btn { padding: 8px 12px; background: var(--card); border-color: var(--border); }
+    .toggle-filter-btn.active { background: var(--teal-dark); border-color: var(--teal-dark); box-shadow: none; }
+    .view-toggle-bar { border-radius: 5px; background: #ECE9E1; border-color: transparent; }
+    .view-toggle-btn { border-radius: 3px; padding: 8px 13px; }
+    .view-toggle-btn.active { color: var(--teal-dark); box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+    .nearme-bar { background: var(--teal-light); color: var(--teal-dark); border-color: #D2E0D7; padding: 12px clamp(16px,4vw,34px); }
+    #browse-results { padding: 20px clamp(14px,3vw,30px) 36px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 18px; max-width: 1500px; margin: 0 auto; }
+    .place-card {
+      padding: 0 0 17px; overflow: hidden; border-radius: 5px; border: 1px solid var(--border);
+      box-shadow: 0 4px 18px rgba(42,48,41,.045); background: var(--card); transition: transform .2s, box-shadow .2s;
+    }
+    .place-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+    .place-card > :not(.card-img-wrap) { margin-left: 17px; margin-right: 17px; }
+    .card-img-wrap { height: 160px; margin: 0 0 15px; border-radius: 0; background: #E7E2D8; }
+    .card-img { transition: transform .45s ease; }
+    .fallback-img-banner { background: linear-gradient(135deg, #456B61, #263D36); letter-spacing: .1em; }
+    .fallback-img-banner.category-food { background: linear-gradient(135deg, #B85F43, #8B4C37); }
+    .fallback-img-banner.category-culture { background: linear-gradient(135deg, #456B61, #263D36); }
+    .fallback-img-banner.category-nightlife { background: linear-gradient(135deg, #62556D, #34313D); }
+    .fallback-img-banner.category-active { background: linear-gradient(135deg, #758A68, #3E5948); }
+    .cat-badge-pill { border-radius: 3px; box-shadow: none; letter-spacing: .015em; }
+    .cat-badge-pill.cat-food { background: #F6E9E1; color: #8A482F; border-color: #E8C7B7; }
+    .cat-badge-pill.cat-culture { background: #E8F0EB; color: #315C4E; border-color: #CADDD1; }
+    .cat-badge-pill.cat-nightlife { background: #F0EAF2; color: #66506E; border-color: #DED0E2; }
+    .cat-badge-pill.cat-active { background: #EAF0E5; color: #426044; border-color: #D0DDC8; }
+    .cat-badge-pill.cat-general { background: #F0EEE8; color: #5D625B; border-color: #E1DDD3; }
+    .travel-connector::before { border-left-color: #A8BDB0; }
+    .travel-badge { background: var(--teal-light); color: var(--teal-dark); border-color: #D2E0D7; box-shadow: none; border-radius: 4px; }
+    .leaflet-popup-content-wrapper { border-radius: 5px !important; box-shadow: var(--shadow-lg) !important; }
+    .leaflet-control-zoom a { color: var(--teal-dark) !important; }
+
+    /* Comfortable forms, preferences, favorites, itinerary, and modal surfaces */
+    input, select, textarea { border-radius: 5px; border-color: var(--border); }
+    .modal-content, .modal-body, .toast { border-radius: 7px; }
+    .toast { background: #263D36; box-shadow: var(--shadow-lg); }
+    .bottom-nav { background: rgba(255,254,251,.97); border-top: 1px solid var(--border); backdrop-filter: blur(12px); }
+    .bottom-nav button, .bottom-nav .nav-item { color: var(--text2); }
+    .bottom-nav .active { color: var(--teal-dark); }
+
+    @media (min-width: 900px) {
+      .welcome-wrap { padding-left: max(7vw, 60px); padding-right: max(7vw, 60px); }
+      .city-screen-content { padding-top: 32px; }
+      .city-grid { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+      #browse-results { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+    }
+    @media (max-width: 640px) {
+      .welcome-wrap { padding: 76px 23px 30px; }
+      .welcome-wrap::before { top: 25px; left: 24px; font-size: 9px; letter-spacing: .16em; }
+      .welcome-wrap h1 { font-size: clamp(42px, 12vw, 60px); }
+      .header-bar { align-items: center; padding: 12px 13px; }
+      .header-bar h2 { font-size: 18px; }
+      .header-actions { gap: 1px; }
+      .btn-header, .btn-back { padding: 8px 6px; font-size: 11px; }
+      .city-screen-content { padding: 14px 13px 28px; }
+      .city-grid { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
+      .city-btn { min-height: 154px; height: 35vw; max-height: 205px; }
+      .city-text { padding: 13px; }
+      .city-name { font-size: clamp(18px, 5vw, 24px); }
+      .filter-bar { padding: 10px 12px; }
+      #browse-results { padding: 13px 12px 28px; grid-template-columns: 1fr; gap: 13px; }
+      .card-img-wrap { height: 180px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    }
+
+  </style>
 </head>
 <body>
 
@@ -1714,7 +1803,10 @@ EDITORIAL REDESIGN — Boutique travel magazine
       if (!visiblePlaces || visiblePlaces.length === 0) return;
 
       // Find center lat/lng from places
-      const validCoords = visiblePlaces.filter(p => p.Latitude && p.Longitude);
+      const validCoords = visiblePlaces.filter(p => {
+        const lat = Number(p.Latitude), lng = Number(p.Longitude);
+        return p.Latitude !== '' && p.Longitude !== '' && Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+      });
       let centerLat = 39.2904, centerLng = -76.6122; // Default Baltimore
       if (validCoords.length > 0) {
         centerLat = validCoords.reduce((acc, p) => acc + parseFloat(p.Latitude), 0) / validCoords.length;
@@ -1760,7 +1852,32 @@ EDITORIAL REDESIGN — Boutique travel magazine
 
     
     // ---- USER PERSONALIZATION: PERSONAL NOTES ----
-    let userNotes = JSON.parse(localStorage.getItem('local_like_a_local_notes') || '{}');
+    // Storage can be unavailable in private browsing, embedded browsers, or when quota is full.
+    // Keep the app usable even when preferences cannot be persisted.
+    function readStoredJSON(key, fallback) {
+      try {
+        const raw = window.localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : fallback;
+      } catch (err) {
+        console.warn(`Could not read saved data for ${key}; using defaults.`, err);
+        return fallback;
+      }
+    }
+
+    function writeStoredJSON(key, value) {
+      try {
+        window.localStorage.setItem(key, JSON.stringify(value));
+        return true;
+      } catch (err) {
+        console.warn(`Could not save data for ${key}.`, err);
+        if (typeof showToast === 'function') {
+          showToast('This browser could not save your changes. They may not persist after closing the app.');
+        }
+        return false;
+      }
+    }
+    let userNotes = readStoredJSON('local_like_a_local_notes', {});
+    if (!userNotes || typeof userNotes !== 'object' || Array.isArray(userNotes)) userNotes = {};
 
     function getPersonalNote(id) {
       return userNotes[id] || '';
@@ -1772,7 +1889,7 @@ EDITORIAL REDESIGN — Boutique travel magazine
       } else {
         delete userNotes[id];
       }
-      localStorage.setItem('local_like_a_local_notes', JSON.stringify(userNotes));
+      writeStoredJSON('local_like_a_local_notes', userNotes);
       showToast('Note saved! 📝');
       if (document.getElementById('screen-favorites').classList.contains('active')) {
         filterFavoritesView();
@@ -1819,104 +1936,6 @@ EDITORIAL REDESIGN — Boutique travel magazine
         copyToClipboard(text);
       }
     }
-
-    // ---- ICS CALENDAR EXPORT ----
-    function exportItineraryICS(dayIndex) {
-      if (!itinerary || itinerary.length === 0) {
-        showToast('Please build an itinerary first!');
-        alert('Please select a city, go to Customize Trip, and click Build to generate an itinerary first!');
-        return;
-      }
-
-      let targetDays = [];
-      if (typeof dayIndex === 'number' && itinerary[dayIndex]) {
-        targetDays = [{ day: itinerary[dayIndex], index: dayIndex }];
-      } else {
-        targetDays = itinerary.map((day, i) => ({ day, index: i }));
-      }
-
-      let icsLines = [
-        'BEGIN:VCALENDAR',
-        'VERSION:2.0',
-        'PRODID:-//Local Like a Local//Trip Itinerary//EN',
-        'CALSCALE:GREGORIAN',
-        'METHOD:PUBLISH'
-      ];
-
-      const now = new Date();
-      const dtstamp = now.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-
-      targetDays.forEach(({ day, index }) => {
-        const eventDate = new Date();
-        eventDate.setDate(now.getDate() + index);
-        const yyyy = eventDate.getFullYear();
-        const mm = String(eventDate.getMonth() + 1).padStart(2, '0');
-        const dd = String(eventDate.getDate()).padStart(2, '0');
-        const dateStr = `${yyyy}${mm}${dd}`;
-
-        const slots = [
-          { name: 'Morning Activity', place: day.morning, start: '090000', end: '110000' },
-          { name: 'Lunch Spot', place: day.lunch, start: '123000', end: '140000' },
-          { name: 'Afternoon Exploration', place: day.afternoon, start: '143000', end: '173000' },
-          { name: 'Dinner Spot', place: day.dinner, start: '190000', end: '210000' },
-          { name: 'Evening & Drinks', place: day.evening, start: '213000', end: '233000' }
-        ].filter(s => s.place);
-
-        slots.forEach((s, slotIdx) => {
-          const p = s.place;
-          const uid = `locallikealocal-${dateStr}-${index}-${slotIdx}@app`;
-          const summary = `Day ${index + 1} - ${s.name}: ${p.Name}`;
-          const description = (p.whyGo || p.Description || '').replace(/\n/g, ' ');
-          const location = (p.streetAddress || p.Address || '').replace(/\n/g, ' ');
-
-          icsLines.push(
-            'BEGIN:VEVENT',
-            `UID:${uid}`,
-            `DTSTAMP:${dtstamp}`,
-            `DTSTART:${dateStr}T${s.start}`,
-            `DTEND:${dateStr}T${s.end}`,
-            `SUMMARY:${summary}`,
-            `DESCRIPTION:${description}`,
-            `LOCATION:${location}`,
-            'END:VEVENT'
-          );
-        });
-      });
-
-      icsLines.push('END:VCALENDAR');
-
-      const icsString = icsLines.join('\r\n');
-      const citySlug = (currentCityName || 'trip').toLowerCase().replace(/\s+/g, '_');
-      const fileName = `${citySlug}_itinerary.ics`;
-
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-      const dataUri = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(icsString);
-
-      if (isIOS) {
-        window.location.href = dataUri;
-      } else {
-        try {
-          const blob = new Blob([icsString], { type: 'text/calendar;charset=utf-8' });
-          const blobUrl = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.style.display = 'none';
-          a.href = blobUrl;
-          a.setAttribute('download', fileName);
-          document.body.appendChild(a);
-          a.click();
-          setTimeout(() => {
-            document.body.removeChild(a);
-            URL.revokeObjectURL(blobUrl);
-          }, 300);
-        } catch (e) {
-          window.location.href = dataUri;
-        }
-      }
-
-      showToast('📅 Calendar (.ics) file exported!');
-    }
-
-
 
     function shareFavorites() {
       if (favoritesList.length === 0) {
@@ -1984,7 +2003,8 @@ EDITORIAL REDESIGN — Boutique travel magazine
     }
 
     // ---- FAVORITES & LOCALSTORAGE STATE ----
-    let favoritesList = JSON.parse(localStorage.getItem('local_like_a_local_favs') || '[]');
+    let favoritesList = readStoredJSON('local_like_a_local_favs', []);
+    if (!Array.isArray(favoritesList)) favoritesList = [];
     let allLoadedPlacesMap = new Map(); // Global registry across loaded cities
 
     function updateFavBadge() {
@@ -2009,7 +2029,7 @@ EDITORIAL REDESIGN — Boutique travel magazine
         favoritesList.push(placeId);
         showToast('Saved to Favorites ❤️');
       }
-      localStorage.setItem('local_like_a_local_favs', JSON.stringify(favoritesList));
+      writeStoredJSON('local_like_a_local_favs', favoritesList);
       updateFavBadge();
 
       // Refresh current screen icons
@@ -2174,7 +2194,7 @@ function filterFavoritesView() {
         const noteHTML = noteText ? `<div style="margin-top:8px;padding:8px 10px;background:var(--primary-light);border-left:3px solid var(--primary);border-radius:6px;font-size:12px;color:var(--text);line-height:1.4;"><span style="font-weight:700;color:var(--primary-dark);">📝 Note:</span> ${noteText}</div>` : '';
 
       card.innerHTML = `
-        <div class="card-img-wrap"><img class="card-img" src="${getVenuePhotoUrl(place)}"></div><div class="place-row-top" style="margin-top:12px;">
+        <div class="place-row-top">
           <div class="place-main">
             <div class="place-name">${place.Name}</div>
             <span class="place-cat-badge">${place.Category} • ${place.Subcategory || 'Attraction'}</span>
@@ -2192,8 +2212,8 @@ function filterFavoritesView() {
         <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:8px;border-top:1px solid var(--border);">
           <span style="font-size:11px;color:var(--text2);font-weight:600;">🕒 ${place['Opening Hours'] || 'Standard Hours'} • ${place.priceDisplay}</span>
           <div style="display:flex;gap:6px;" class="no-print">
-            <a href="${mapLink}" target="_blank" onclick="event.stopPropagation();" style="background:var(--teal);color:#fff;padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;text-decoration:none;">Map</a>
-            ${webLink && webLink !== 'N/A' ? `<a href="${webLink}" target="_blank" onclick="event.stopPropagation();" style="background:var(--primary);color:#fff;padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;text-decoration:none;">Web</a>` : ''}
+            <a href="${mapLink}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();" style="background:var(--teal);color:#fff;padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;text-decoration:none;">Map</a>
+            ${webLink && webLink !== 'N/A' ? `<a href="${webLink}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();" style="background:var(--primary);color:#fff;padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;text-decoration:none;">Web</a>` : ''}
           </div>
         </div>
       `;
@@ -2299,51 +2319,58 @@ function exportFavoritesPDF() {
     }
 
     function normalizeCityData(rawPlaces) {
-      return rawPlaces.map(p => {
-        // 1. Convert string booleans ("TRUE"/"FALSE") to real booleans
-        const boolFields = ['Morning', 'Lunch', 'Afternoon', 'Drinks', 'Dinner', 'Nightlife'];
-        boolFields.forEach(field => {
-          p[field] = String(p[field]).toUpperCase() === "TRUE";
+      if (!Array.isArray(rawPlaces)) throw new TypeError('City data must be a JSON array of places.');
+      const aliases = {
+        ID: ['id'], City: ['city'], Name: ['name'], Category: ['category'], Subcategory: ['subcategory'],
+        Description: ['description'], Address: ['address'], Neighborhood: ['neighborhood'],
+        Latitude: ['latitude', 'lat'], Longitude: ['longitude', 'lng', 'long'], Price: ['price'],
+        'Local Score': ['local score', 'local_score', 'localScore'],
+        'Hidden Gem Score': ['hidden gem score', 'hidden_gem_score', 'hiddenGemScore'],
+        'Why Go': ['why go', 'why_go', 'whyGo'], Interests: ['interests'],
+        'Tourist Concentration': ['tourist concentration', 'tourist_concentration', 'touristConcentration'],
+        'Local Focus': ['local focus', 'local_focus', 'localFocus'],
+        'Best For': ['best for', 'best_for', 'bestFor'],
+        'Opening Hours': ['opening hours', 'opening_hours', 'openingHours'],
+        Website: ['website', 'url'], Source: ['source'], 'Source URL': ['source url', 'source_url'],
+        'Specific Website URL': ['specific website url', 'specific_website_url', 'specificWebsiteUrl'],
+        'Google Maps Link': ['google maps link', 'google_maps_link', 'googleMapsLink']
+      };
+      const readField = (obj, key, alternateKeys = []) => {
+        if (obj[key] !== undefined && obj[key] !== null && obj[key] !== '') return obj[key];
+        const wanted = [key, ...alternateKeys].map(k => String(k).toLowerCase().replace(/[_-]/g, ' '));
+        const actual = Object.keys(obj).find(k => wanted.includes(k.toLowerCase().replace(/[_-]/g, ' ')));
+        return actual ? obj[actual] : undefined;
+      };
+      return rawPlaces.map((raw, index) => {
+        const p = { ...raw };
+        Object.entries(aliases).forEach(([canonical, alternatives]) => {
+          const value = readField(raw, canonical, alternatives);
+          if (value !== undefined) p[canonical] = value;
         });
-        // Active defaults to true unless explicitly false or "FALSE"
-        if (p.Active === undefined || p.Active === null || p.Active === '') {
-          p.Active = true;
-        } else {
-          p.Active = String(p.Active).toUpperCase() !== "FALSE" && p.Active !== false;
-        }
-
-        // 2. Convert comma-separated Interests string to Array
-        if (typeof p.Interests === 'string') {
-          p.interestsArray = p.Interests ? p.Interests.split(',').map(i => i.trim()).filter(Boolean) : [];
-        } else if (Array.isArray(p.Interests)) {
-          p.interestsArray = p.Interests;
-        } else {
-          p.interestsArray = [];
-        }
-
-        // 3. Normalize Price for budget filtering
+        // Give records without IDs a stable fallback, and preserve explicit Active=false.
+        if (!p.ID) p.ID = `${String(p.City || 'CITY').replace(/[^a-z0-9]/gi, '').toUpperCase()}-${index + 1}`;
+        if (p.Active === undefined || p.Active === null || p.Active === '') p.Active = true;
+        else p.Active = !(String(p.Active).toLowerCase() === 'false' || p.Active === false || p.Active === 0 || String(p.Active) === '0');
+        ['Morning', 'Lunch', 'Afternoon', 'Drinks', 'Dinner', 'Nightlife'].forEach(field => {
+          const value = readField(raw, field, [field.toLowerCase()]);
+          p[field] = value === true || String(value).toLowerCase() === 'true' || String(value) === '1';
+        });
+        const interests = readField(raw, 'Interests', ['interests']);
+        if (typeof interests === 'string') p.interestsArray = interests.split(',').map(i => i.trim()).filter(Boolean);
+        else if (Array.isArray(interests)) p.interestsArray = interests.map(String);
+        else p.interestsArray = [];
         const priceStr = String(p.Price || '').trim();
-        if (priceStr.toLowerCase() === 'free') {
-          p.budgetNum = 0;
-          p.priceDisplay = 'Free';
-        } else if (priceStr.includes('$')) {
-          p.budgetNum = (priceStr.match(/\$/g) || []).length;
-          p.priceDisplay = priceStr;
-        } else {
-          p.budgetNum = 1;
-          p.priceDisplay = '$';
-        }
-
-        // 4. Map keys with spaces / special characters to camelCase properties
-        p.localScore = parseFloat(p['Local Score'] || p.localScore || 0);
-        p.hiddenGemScore = parseFloat(p['Hidden Gem Score'] || p.hiddenGemScore || 0);
+        if (priceStr.toLowerCase() === 'free') { p.budgetNum = 0; p.priceDisplay = 'Free'; }
+        else if (priceStr.includes('$')) { p.budgetNum = (priceStr.match(/\$/g) || []).length; p.priceDisplay = priceStr; }
+        else { p.budgetNum = 1; p.priceDisplay = priceStr || 'Price unknown'; }
+        p.localScore = Number.parseFloat(p['Local Score'] ?? p.localScore ?? 0) || 0;
+        p.hiddenGemScore = Number.parseFloat(p['Hidden Gem Score'] ?? p.hiddenGemScore ?? 0) || 0;
         p.whyGo = p['Why Go'] || p.whyGo || p.Description || '';
         p.touristConcentration = p['Tourist Concentration'] || p.touristConcentration || '';
-        p.streetAddress = p.Address ? p.Address.split(',')[0].trim() : (p.streetAddress || '');
+        p.streetAddress = p.Address ? String(p.Address).split(',')[0].trim() : (p.streetAddress || '');
         p.specificWebsiteUrl = p['Specific Website URL'] || p.Website || '';
         p.googleMapsLink = p['Google Maps Link'] || '';
         p.distance = null;
-
         return p;
       });
     }
@@ -2396,6 +2423,33 @@ function exportFavoritesPDF() {
       }
     }
 
+    // Destination photography uses remote Unsplash images with an elegant CSS-gradient fallback.
+    // The original data files and city discovery logic remain unchanged.
+    function getCityPhotoUrl(cityName) {
+      const name = String(cityName || '').toLowerCase();
+      const photoSets = [
+        [/paris|france/, 'photo-1502602898657-3e91760cbb34'],
+        [/rome|italy|bologna|florence|venice|milan|naples/, 'photo-1515542622106-78bda8ba0e5b'],
+        [/madrid|barcelona|spain|girona|valencia|seville|malaga/, 'photo-1539037116277-4db20889f2d4'],
+        [/lisbon|portugal|porto/, 'photo-1555881400-74d7acaacd8b'],
+        [/london|england|united kingdom|edinburgh/, 'photo-1513635269975-59663e0ac1ad'],
+        [/new orleans|nola/, 'photo-1477959858617-67f85cf4f1df'],
+        [/miami|florida|palm springs|california|los angeles|san diego/, 'photo-1533105079780-92b9be482077'],
+        [/buffalo|chicago|boston|philadelphia|washington/, 'photo-1477959858617-67f85cf4f1df'],
+        [/amsterdam|netherlands/, 'photo-1512470876302-972faa2aa9a4'],
+        [/prague|budapest|vienna|croatia|split|dubrovnik|zadar/, 'photo-1519681393784-d120267933ba'],
+        [/sydney|australia|melbourne/, 'photo-1506973035872-a4ec16b8e8d9'],
+        [/istanbul|turkey/, 'photo-1524231757912-21f4fe3a7200'],
+        [/mexico|oaxaca|merida/, 'photo-1512813195386-6cf811ad3542'],
+        [/bologna/, 'photo-1516483638261-f4dbaf036963']
+      ];
+      const match = photoSets.find(([pattern]) => pattern.test(name));
+      let id = match && match[1];
+      // Known image IDs only; otherwise use a general architecture/travel photograph.
+      if (!id) id = 'photo-1476514525535-07fb3b4ae5f1';
+      return `https://images.unsplash.com/${id}?auto=format&fit=crop&w=1000&q=82`;
+    }
+
     async function renderCityGrid() {
       const container = document.getElementById('cities-container');
       container.innerHTML = `<div style="text-align:center;padding:12px;color:var(--text2);font-weight:700;font-size:13px;margin-bottom:10px;">🔍 Probing Available Cities...</div>` + getSkeletonHTML(4);
@@ -2408,19 +2462,11 @@ function exportFavoritesPDF() {
         const availabilityChecks = await Promise.all(
           regionData.cities.map(async (city) => {
             try {
-              let foundCity = null;
-              const probePaths = [
-                `cities/${city.file}.json?_t=${Date.now()}`,
-                `03_city_json_data/${city.file}.json?_t=${Date.now()}`,
-                `${city.file}.json?_t=${Date.now()}`
-              ];
-              for (const pPath of probePaths) {
-                try {
-                  const res = await fetch(pPath, { cache: 'no-cache' });
-                  if (res.ok) { foundCity = city; break; }
-                } catch(e) {}
-              }
-              return foundCity;
+              const probeUrl = `cities/${city.file}.json?_t=${Date.now()}`;
+              const res = await fetch(probeUrl, { method: 'HEAD', cache: 'no-cache' });
+              if (res.ok) return city;
+              const resGet = await fetch(probeUrl, { cache: 'no-cache' });
+              return resGet.ok ? city : null;
             } catch (e) {
               return null;
             }
@@ -2442,6 +2488,9 @@ function exportFavoritesPDF() {
             totalAvailable++;
             const btn = document.createElement('button');
             btn.className = `city-btn city-gradient-${i % 8}`;
+            const photoUrl = getCityPhotoUrl(city.name);
+            btn.style.backgroundImage = `linear-gradient(180deg, rgba(38,61,54,.08), rgba(38,61,54,.16)), url("${photoUrl}")`;
+            btn.style.backgroundColor = '#53675B';
             btn.innerHTML = `<div class="city-overlay"></div><div class="city-text"><span class="city-name">${city.name}</span></div>`;
             btn.addEventListener('click', () => loadCityData(city));
             grid.appendChild(btn);
@@ -2473,10 +2522,7 @@ function exportFavoritesPDF() {
       // Strict cache-busted paths inside cities/ folder
       const pathsToTry = [
         `cities/${city.file}.json?_t=${Date.now()}`,
-        `./cities/${city.file}.json?_t=${Date.now()}`,
-        `03_city_json_data/${city.file}.json?_t=${Date.now()}`,
-        `./03_city_json_data/${city.file}.json?_t=${Date.now()}`,
-        `${city.file}.json?_t=${Date.now()}`
+        `./cities/${city.file}.json?_t=${Date.now()}`
       ];
 
       let rawJson = null;
@@ -2540,34 +2586,51 @@ function exportFavoritesPDF() {
 
     
     function isOpenNow(openingHoursStr) {
-      if (!openingHoursStr) return true;
+      // Conservative by design: ambiguous or unknown hours are not treated as open.
+      if (!openingHoursStr) return false;
       const str = String(openingHoursStr).trim().toLowerCase();
-      if (str.includes('24 hours') || str.includes('standard') || str.includes('n/a')) return true;
+      if (/\b(closed|hours unknown|unknown|n\/a|standard hours|call for hours)\b/.test(str)) return false;
+      if (/\b24\s*[- ]?hours\b|\bopen\s*24\s*hours\b/.test(str)) return true;
 
-      const parts = str.split('-');
-      if (parts.length < 2) return true;
+      // Extract a single explicit time range (e.g. 9am-5pm, 9:30 AM to 6 PM, 18:00–23:00).
+      const time = '(?:[0-9]{1,2}(?::[0-9]{2})?\s*(?:am|pm)?)';
+      const range = str.match(new RegExp('(' + time + ')\\s*(?:-|–|—|\\bto\\b)\\s*(' + time + ')', 'i'));
+      if (!range) return false;
 
-      const parseTime = (tStr) => {
-        const sub = tStr.trim().split(':');
-        if (sub.length < 2) return null;
-        return parseInt(sub[0], 10) + parseInt(sub[1], 10)/60;
+      const parseTime = value => {
+        const m = value.trim().match(/^([0-9]{1,2})(?::([0-9]{2}))?\s*(am|pm)?$/i);
+        if (!m) return null;
+        let h = Number(m[1]), mins = Number(m[2] || 0);
+        if (mins > 59) return null;
+        if (m[3]) {
+          if (h < 1 || h > 12) return null;
+          h = (h % 12) + (m[3].toLowerCase() === 'pm' ? 12 : 0);
+        } else if (h > 23) return null;
+        return h * 60 + mins;
       };
 
-      const openH = parseTime(parts[0]);
-      const closeH = parseTime(parts[1]);
-      if (openH === null || closeH === null) return true;
+      const openRaw = parseTime(range[1]);
+      let closeRaw = parseTime(range[2]);
+      if (openRaw === null || closeRaw === null) return false;
+
+      // For common shorthand such as "9-5", infer a daytime closing time rather than
+      // interpreting 5am as the close. Explicit AM/PM or 24-hour times remain untouched.
+      const openHasMeridiem = /(?:am|pm)/i.test(range[1]);
+      const closeHasMeridiem = /(?:am|pm)/i.test(range[2]);
+      const openIs24Hour = /^\s*\d{1,2}:\d{2}/.test(range[1]) && !openHasMeridiem;
+      const closeIs24Hour = /^\s*\d{1,2}:\d{2}/.test(range[2]) && !closeHasMeridiem;
+      if (!openHasMeridiem && !closeHasMeridiem && !openIs24Hour && !closeIs24Hour && closeRaw <= openRaw && openRaw < 12 * 60) {
+        closeRaw += 12 * 60;
+      }
 
       const now = new Date();
-      const currentH = now.getHours() + now.getMinutes()/60;
-
-      if (closeH < openH) {
-        return currentH >= openH || currentH < closeH;
-      } else {
-        return currentH >= openH && currentH <= closeH;
-      }
+      const current = now.getHours() * 60 + now.getMinutes();
+      // If closing is earlier than opening, treat it as an overnight schedule.
+      return closeRaw < openRaw
+        ? (current >= openRaw || current < closeRaw)
+        : (current >= openRaw && current < closeRaw);
     }
 
-    
     function toggleOpenNowFilter() {
       openNowFilterActive = !openNowFilterActive;
       const btn = document.getElementById('btn-filter-opennow');
@@ -2612,8 +2675,12 @@ function exportFavoritesPDF() {
       const container = document.getElementById('leaflet-map');
       if (!container || typeof L === 'undefined') return;
 
-      const validPlaces = (places || []).filter(p => p.Latitude && p.Longitude);
-      if (validPlaces.length === 0) return;
+      const validPlaces = (places || []).filter(p => p.Latitude !== undefined && p.Latitude !== null && p.Latitude !== '' && p.Longitude !== undefined && p.Longitude !== null && p.Longitude !== '' && Number.isFinite(Number(p.Latitude)) && Number.isFinite(Number(p.Longitude)));
+      if (validPlaces.length === 0) {
+        if (leafletMarkersLayer) leafletMarkersLayer.clearLayers();
+        container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text2)">No mappable places match these filters.</div>';
+        return;
+      }
 
       const centerLat = parseFloat(validPlaces[0].Latitude) || 39.2904;
       const centerLng = parseFloat(validPlaces[0].Longitude) || -76.6122;
@@ -2673,12 +2740,6 @@ function exportFavoritesPDF() {
       filterBrowse(currentFilter);
     }
 
-    
-    function getVenuePhotoUrl(p) {
-      if (p.Photo || p.photoUrl) return p.Photo || p.photoUrl;
-      return getCityPhotoUrl(p.Category + ' ' + p.Name);
-    }
-
     function filterBrowse(category) {
       currentFilter = category;
       document.querySelectorAll('.tab-btn').forEach(t => t.classList.toggle('active', t.textContent === category));
@@ -2699,8 +2760,9 @@ function exportFavoritesPDF() {
       if (nearMePrefActive && userLocation) {
         const MAX_DIST = 0.5;
         filtered = filtered.filter(p => {
-          if (!p.Latitude || !p.Longitude) return false;
-          const d = getDistanceInMiles(userLocation.lat, userLocation.lng, parseFloat(p.Latitude), parseFloat(p.Longitude));
+          const lat = Number(p.Latitude), lng = Number(p.Longitude);
+          if (p.Latitude === '' || p.Longitude === '' || !Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) return false;
+          const d = getDistanceInMiles(userLocation.lat, userLocation.lng, lat, lng);
           p.distance = d;
           return d <= MAX_DIST;
         });
@@ -2819,23 +2881,6 @@ function exportFavoritesPDF() {
       });
     }
 
-    
-    // ---- 12 CORE INTEREST CATEGORIES MAP ----
-    const CORE_INTEREST_MAP = [
-      { id: 'history', label: '🏛️ History & Heritage', keywords: ['historic', 'architecture', 'monuments', 'old town', 'museum', 'history', 'heritage', 'landmark'] },
-      { id: 'art', label: '🎨 Art & Culture', keywords: ['art gallery', 'street art', 'theater', 'performing arts', 'exhibitions', 'art', 'culture'] },
-      { id: 'foodie', label: '🍽️ Foodie & Local Eats', keywords: ['seafood', 'tapas', 'fine dining', 'street food', 'bistro', 'iconic eats', 'food', 'dining', 'gastronomy', 'restaurant', 'local eats'] },
-      { id: 'nightlife', label: '🍸 Nightlife & Cocktails', keywords: ['speakeasy', 'cocktail lounge', 'dive bar', 'rooftop bar', 'pub', 'dancing', 'nightlife', 'cocktails', 'bars', 'drinks'] },
-      { id: 'beer_wine', label: '🍺 Craft Beer & Wine', keywords: ['brewery', 'beer garden', 'winery', 'wine bar', 'taproom', 'craft beer', 'wine', 'beer'] },
-      { id: 'nature', label: '🌳 Nature & Waterfront', keywords: ['parks', 'gardens', 'waterfront', 'scenic views', 'hiking', 'beaches', 'nature', 'outdoors', 'park'] },
-      { id: 'cafes', label: '☕ Cafes & Bakeries', keywords: ['coffee shop', 'pastry shop', 'bakery', 'brunch', 'bookstore cafe', 'cafe', 'coffee', 'pastry'] },
-      { id: 'shopping', label: '🛍️ Shopping & Markets', keywords: ['flea market', 'food hall', 'boutiques', 'artisanal', 'vintage', 'shopping', 'market', 'markets'] },
-      { id: 'music', label: '🎵 Music & Entertainment', keywords: ['live music', 'jazz club', 'comedy', 'nightclub', 'venue', 'music', 'entertainment'] },
-      { id: 'hidden_gems', label: '💎 Hidden Gems', keywords: ['off the beaten path', 'local favorite', 'secret spot', 'non-touristy', 'hidden gem', 'hidden gems'] },
-      { id: 'activities', label: '🎡 Activities & Fun', keywords: ['tours', 'kid friendly', 'amusements', 'games', 'sports', 'activities', 'fun', 'experience'] },
-      { id: 'views', label: '🌅 Views & Vibe', keywords: ['rooftop', 'cozy', 'romantic', 'late night', 'outdoor seating', 'scenic', 'views', 'vibe'] }
-    ];
-
     function renderPrefsScreen() {
       // Neighborhood select
       const sel = document.getElementById('pref-neighborhood');
@@ -2844,24 +2889,16 @@ function exportFavoritesPDF() {
         sel.innerHTML += `<option value="${n}">${n}</option>`;
       });
 
-      // 12 Core Interest Category Chips
-      if (!prefs.selectedCoreInterests) prefs.selectedCoreInterests = [];
+      // Interests chips
       const intGrid = document.getElementById('pref-interests');
       intGrid.innerHTML = '';
-      CORE_INTEREST_MAP.forEach(cat => {
+      discoveredInterests.forEach(interest => {
         const chip = document.createElement('button');
         chip.className = 'interest-chip';
-        chip.setAttribute('data-id', cat.id);
-        chip.textContent = cat.label;
-        if (prefs.selectedCoreInterests.includes(cat.id)) {
-          chip.classList.add('active');
-        }
+        chip.textContent = interest;
         chip.addEventListener('click', () => {
           chip.classList.toggle('active');
-          prefs.selectedCoreInterests = [...document.querySelectorAll('#pref-interests .interest-chip.active')].map(c => c.getAttribute('data-id'));
-          prefs.interests = CORE_INTEREST_MAP
-            .filter(m => prefs.selectedCoreInterests.includes(m.id))
-            .flatMap(m => m.keywords);
+          prefs.interests = [...document.querySelectorAll('.interest-chip.active')].map(c => c.textContent);
         });
         intGrid.appendChild(chip);
       });
@@ -2884,8 +2921,14 @@ function exportFavoritesPDF() {
       itinerary = [];
       const selectedNeigh = document.getElementById('pref-neighborhood').value;
 
+      // Respect the selected maximum price tier; if no places have usable price data, fall back transparently.
+      let budgetPlaces = allPlaces.filter(p => Number.isFinite(p.budgetNum) && p.budgetNum <= prefs.budget);
+      if (budgetPlaces.length === 0) {
+        budgetPlaces = [...allPlaces];
+        showToast('No places matched that budget; showing all price levels.');
+      }
       // Smart multi-factor scoring engine for broad, inclusive matching
-      let scoredPlaces = allPlaces.map(p => {
+      let scoredPlaces = budgetPlaces.map(p => {
         let score = (prefs.style === 'Off-the-beaten-path') ? (p.hiddenGemScore || p.localScore) : p.localScore;
         
         // Neighborhood preference bonus
@@ -2910,7 +2953,7 @@ function exportFavoritesPDF() {
       let candidatePool = scoredPlaces.map(sp => sp.place);
 
       // Fallback: Ensure candidate pool is never empty
-      if (candidatePool.length < 5) {
+      if (candidatePool.length < 5 && budgetPlaces.length < 5) {
         candidatePool = [...allPlaces].sort((a, b) => b.localScore - a.localScore);
       }
 
@@ -2936,23 +2979,10 @@ function exportFavoritesPDF() {
           return found;
         };
 
-        const lightBiteSubcats = ['bakery', 'pastry shop', 'pastry', 'cafe', 'coffee shop', 'dessert', 'desserts', 'bakery & cafe', 'ice cream', 'creperie', 'tea room'];
-
         dayPlan.morning = pickSpot(p => p.Morning || p.Category === 'Culture' || p.Category === 'Experience' || p.Category === 'Active');
         dayPlan.lunch = pickSpot(p => p.Lunch || p.Category === 'Food');
         dayPlan.afternoon = pickSpot(p => p.Afternoon || p.Category === 'Culture' || p.Category === 'Active' || p.Category === 'Experience');
-        
-        // Strict Dinner Exclusion: Prefer real dinner/food spots that are NOT light bites/bakeries
-        dayPlan.dinner = pickSpot(p => {
-          const subcat = String(p.Subcategory || '').toLowerCase();
-          const cat = String(p.Category || '').toLowerCase();
-          const name = String(p.Name || '').toLowerCase();
-          const isLightBite = lightBiteSubcats.some(lb => subcat.includes(lb) || name.includes('bakery') || name.includes('pastry'));
-          
-          if (isLightBite) return false;
-          return p.Dinner || cat === 'food';
-        });
-
+        dayPlan.dinner = pickSpot(p => p.Dinner || p.Category === 'Food');
         dayPlan.evening = pickSpot(p => p.Nightlife || p.Drinks || p.Category === 'Nightlife');
 
         itinerary.push(dayPlan);
@@ -3051,7 +3081,7 @@ function exportFavoritesPDF() {
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
               <div class="slot-time">${s.time}</div>
               <div style="display:flex;align-items:center;gap:8px;">
-                <a href="${mapStopUrl}" target="_blank" onclick="event.stopPropagation();" style="background:var(--teal-light);color:var(--teal-dark);padding:3px 8px;border-radius:10px;font-size:11px;font-weight:700;text-decoration:none;">📍 Map Stop</a>
+                <a href="${mapStopUrl}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();" style="background:var(--teal-light);color:var(--teal-dark);padding:3px 8px;border-radius:10px;font-size:11px;font-weight:700;text-decoration:none;">📍 Map Stop</a>
                 <button onclick="event.stopPropagation(); toggleFavorite(event, '${s.data.ID}'); renderDay(${dayIndex});" style="background:none;border:none;font-size:20px;cursor:pointer;padding:2px 4px;line-height:1;" title="Favorite">
                   ${isFav ? '❤️' : '🤍'}
                 </button>
