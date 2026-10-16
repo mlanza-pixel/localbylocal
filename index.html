@@ -895,6 +895,20 @@
       gap: 6px;
     }
 
+    /* Stack groups vertically; each group contains a separate grid of up to 12 interests. */
+    #pref-interests { display:flex; flex-direction:column; gap:12px; width:100%; }
+    #pref-interests .interest-group {
+      width:100%; min-width:0; box-sizing:border-box; padding:10px 12px 12px;
+      margin:0 0 2px; border:1px solid var(--border); border-radius:12px; background:var(--card);
+    }
+    #pref-interests .interest-group-title { letter-spacing:.04em; text-transform:uppercase; }
+    #pref-interests .interests-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }
+    #pref-interests .interest-chip { min-height:36px; padding:8px 10px; border-radius:10px; text-align:left; overflow-wrap:anywhere; }
+    @media (max-width:700px) {
+      #pref-interests .interests-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      #itin-summary-bar { flex-wrap:wrap; }
+    }
+
     .interest-chip {
       background: var(--card);
       border: 1px solid var(--border);
@@ -1609,6 +1623,10 @@
     <div class="itin-days-bar" id="itin-days-bar"></div>
     <div id="itin-summary-bar" style="padding: 8px 16px; background: var(--card); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; font-weight: 700; color: var(--text2);">
       <span id="itin-summary-text">📍 0 Stops</span>
+      <label for="trip-start-date" style="display:flex;align-items:center;gap:5px;white-space:nowrap;font-size:11px;font-weight:600;color:var(--text2);">
+        <span>Trip starts</span>
+        <input id="trip-start-date" type="date" aria-label="Trip start date" style="max-width:132px;padding:5px 6px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font:inherit;">
+      </label>
       <button id="btn-itin-map-route" onclick="mapDayRoute(currentDayIndex)" style="background: var(--primary); color: #fff; border: none; padding: 5px 12px; border-radius: 14px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;">🗺️ Map Day Route</button>
     </div>
     <div class="itin-content" id="itin-content"></div>
@@ -1948,6 +1966,103 @@
       }
     }
 
+    // ---- CALENDAR EXPORT (iCalendar .ics) ----
+    // Avoid data: URL navigation, which can replace the app screen in mobile browsers.
+    function icsEscape(value) {
+      return String(value == null ? '' : value)
+        .replace(/\\/g, '\\\\')
+        .replace(/\r?\n/g, '\\n')
+        .replace(/;/g, '\\;')
+        .replace(/,/g, '\\,');
+    }
+
+    function foldIcsLine(line) {
+      const chunks = [];
+      let current = '';
+      let bytes = 0;
+      for (const char of line) {
+        const size = new TextEncoder().encode(char).length;
+        if (bytes + size > 73) { chunks.push(current); current = ' '; bytes = 1; }
+        current += char;
+        bytes += size;
+      }
+      chunks.push(current);
+      return chunks.join('\r\n');
+    }
+
+    function formatIcsDate(date) {
+      return `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
+    }
+
+    async function exportItineraryICS(dayIndex) {
+      if (!Array.isArray(itinerary) || itinerary.length === 0) {
+        showToast('Create a trip before adding it to your calendar.');
+        return;
+      }
+      const startInput = document.getElementById('trip-start-date');
+      const startDate = startInput && startInput.value ? new Date(`${startInput.value}T12:00:00`) : new Date();
+      if (Number.isNaN(startDate.getTime())) {
+        showToast('Please choose a valid trip start date.');
+        startInput?.focus();
+        return;
+      }
+      const oneDay = Number.isInteger(dayIndex) && Boolean(itinerary[dayIndex]);
+      const days = oneDay ? [{ day: itinerary[dayIndex], index: dayIndex }] : itinerary.map((day, index) => ({ day, index }));
+      const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+      const lines = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Local Like a Local//Trip Itinerary//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH',`X-WR-CALNAME:${icsEscape(`${currentCityName || 'Travel'} Itinerary`)}`];
+      const slots = [
+        { key:'morning', label:'Morning activity', start:'090000', end:'110000' },
+        { key:'lunch', label:'Lunch', start:'123000', end:'140000' },
+        { key:'afternoon', label:'Afternoon activity', start:'143000', end:'170000' },
+        { key:'dinner', label:'Dinner', start:'190000', end:'210000' },
+        { key:'evening', label:'Evening & drinks', start:'213000', end:'230000' }
+      ];
+      let eventCount = 0;
+      days.forEach(({day,index}) => {
+        const date = new Date(startDate);
+        date.setDate(startDate.getDate() + index);
+        const dateStr = formatIcsDate(date);
+        slots.forEach((slot, slotIndex) => {
+          const place = day && day[slot.key];
+          if (!place) return;
+          const name = place.Name || place.name || 'Planned stop';
+          const address = place.Address || place.streetAddress || place.address || '';
+          const description = place.whyGo || place.Description || place.description || '';
+          const stableId = String(place.ID || name).replace(/[^a-z0-9-]/gi, '').slice(0, 40);
+          lines.push('BEGIN:VEVENT',`UID:locallikealocal-${dateStr}-${index}-${slotIndex}-${stableId}@locallikealocal.app`,`DTSTAMP:${stamp}`,`DTSTART:${dateStr}T${slot.start}`,`DTEND:${dateStr}T${slot.end}`,`SUMMARY:${icsEscape(`Day ${index + 1} - ${slot.label}: ${name}`)}`,`DESCRIPTION:${icsEscape(description)}`,`LOCATION:${icsEscape(address)}`,'END:VEVENT');
+          eventCount++;
+        });
+      });
+      if (!eventCount) { showToast('There are no itinerary stops to export yet.'); return; }
+      lines.push('END:VCALENDAR');
+      const content = lines.map(foldIcsLine).join('\r\n') + '\r\n';
+      const citySlug = String(currentCityName || 'trip').toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'trip';
+      const fileName = `${citySlug}_${oneDay ? `day_${dayIndex + 1}` : 'itinerary'}.ics`;
+      const file = new File([content], fileName, { type:'text/calendar;charset=utf-8' });
+      try {
+        if (navigator.share && navigator.canShare && navigator.canShare({ files:[file] })) {
+          await navigator.share({ title:`${currentCityName || 'Trip'} Calendar`, files:[file] });
+          showToast('Calendar file ready to add to your calendar.');
+          return;
+        }
+      } catch (err) {
+        if (err && err.name === 'AbortError') return;
+      }
+      let url;
+      try {
+        url = URL.createObjectURL(new Blob([content], {type:'text/calendar;charset=utf-8'}));
+        const link = document.createElement('a');
+        link.href = url; link.download = fileName; link.style.display = 'none';
+        document.body.appendChild(link); link.click(); link.remove();
+        showToast('Calendar file downloaded. Open it to add the events.');
+        window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+      } catch (err) {
+        if (url) URL.revokeObjectURL(url);
+        console.error('Calendar export failed:', err);
+        showToast('Calendar export was blocked. Try opening the app in Safari or Chrome.');
+      }
+    }
+
     function shareFavorites() {
       if (favoritesList.length === 0) {
         showToast('No saved favorites to share!');
@@ -2257,6 +2372,7 @@ function exportFavoritesPDF() {
     };
 
 
+    let currentDayIndex = 0;
     let prefs = {
       days: 3,
       neighborhood: 'All',
@@ -2266,10 +2382,18 @@ function exportFavoritesPDF() {
       nearMe: false
     };
 
+    function initializeTripStartDate() {
+      const input = document.getElementById('trip-start-date');
+      if (!input || input.value) return;
+      const now = new Date();
+      input.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    }
+
     // ---- NAVIGATION HELPERS ----
     function showScreen(id) {
       document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
       document.getElementById(id).classList.add('active');
+      if (id === 'screen-itinerary') initializeTripStartDate();
       window.scrollTo(0,0);
     }
 
@@ -2962,9 +3086,9 @@ function exportFavoritesPDF() {
         group.style.cssText = 'width:100%;margin:0 0 12px;';
         const heading = document.createElement('div');
         heading.className = 'interest-group-title';
-        heading.style.cssText = 'font-size:11px;font-weight:700;color:var(--text2);margin:0 0 7px;';
+        heading.style.cssText = 'font-size:11px;font-weight:700;color:var(--text2);margin:0 0 9px;';
         const end = Math.min(start + 12, discoveredInterests.length);
-        heading.textContent = discoveredInterests.length > 12 ? `Interests ${start + 1}–${end}` : 'Choose your interests';
+        heading.textContent = discoveredInterests.length > 12 ? `Interests ${start + 1}–${end} of ${discoveredInterests.length}` : 'Choose your interests';
         group.appendChild(heading);
         const chips = document.createElement('div');
         chips.className = 'interests-grid';
@@ -2973,9 +3097,13 @@ function exportFavoritesPDF() {
           chip.type = 'button';
           chip.className = 'interest-chip';
           chip.textContent = interest;
+          const isSelected = Array.isArray(prefs.interests) && prefs.interests.includes(interest);
+          chip.setAttribute('aria-pressed', String(isSelected));
+          if (isSelected) chip.classList.add('active');
           chip.addEventListener('click', () => {
             chip.classList.toggle('active');
-            prefs.interests = [...document.querySelectorAll('.interest-chip.active')].map(c => c.textContent);
+            chip.setAttribute('aria-pressed', String(chip.classList.contains('active')));
+            prefs.interests = [...document.querySelectorAll('#pref-interests .interest-chip.active')].map(c => c.textContent);
           });
           chips.appendChild(chip);
         });
