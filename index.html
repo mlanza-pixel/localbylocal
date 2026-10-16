@@ -1551,7 +1551,7 @@
     </div>
     <div class="prefs-container">
       
-      <!-- Top Quick-Controls Bar (Days, Budget, Travel Style, Build) -->
+      <!-- Top Quick-Controls Bar (Days, Budget, Travel Style, Create Trip) -->
       <div class="prefs-quick-controls">
         <div class="pref-compact-group">
           <span class="pref-compact-label">Days</span>
@@ -1577,7 +1577,7 @@
           <select id="pref-style" class="select-input"></select>
         </div>
 
-        <button id="btn-build-itinerary" class="btn-build-mini">Build</button>
+        <button id="btn-build-itinerary" class="btn-build-mini">Create Trip</button>
       </div>
 
       <!-- Neighborhood Section (Half Width) -->
@@ -1644,6 +1644,17 @@
   </div>
 
   <!-- MODAL DETAIL VIEW -->
+  <div id="in-app-map-overlay" style="display:none;position:fixed;inset:0;z-index:10050;background:var(--bg,#fff);padding:0;">
+    <div style="height:100%;display:flex;flex-direction:column;">
+      <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--bg,#fff);">
+        <button type="button" onclick="closeInAppMap()" aria-label="Close map" style="border:1px solid var(--border);background:var(--bg,#fff);color:var(--text);border-radius:12px;padding:8px 12px;font-size:14px;font-weight:700;cursor:pointer;">← Back</button>
+        <div style="flex:1;min-width:0;"><div id="in-app-map-title" style="font-size:16px;font-weight:800;color:var(--text);">Explore Map</div><div id="in-app-map-subtitle" style="font-size:12px;color:var(--text2);">Explore places without leaving Local Like a Local</div></div>
+        <a id="in-app-map-external" href="#" target="_blank" rel="noopener noreferrer" style="display:none;background:var(--teal);color:#fff;border-radius:12px;padding:9px 11px;font-size:12px;font-weight:800;text-decoration:none;white-space:nowrap;">Get Directions ↗</a>
+      </div>
+      <div id="in-app-map-canvas" style="flex:1;min-height:0;width:100%;background:#e8e8e8;"></div>
+    </div>
+  </div>
+
   <div id="modal-detail" class="modal">
     <div class="modal-content">
       <button id="btn-modal-detail-close" class="btn-close-modal">✕</button>
@@ -2377,6 +2388,82 @@ function exportFavoritesPDF() {
 
     // ---- CITY RENDER & LOAD ----
     
+    // ---- IN-APP MAP OVERLAY ----
+    let inAppLeafletMap = null;
+    let inAppLeafletLayer = null;
+    let inAppMapRouteLine = null;
+    let inAppMapIsMultiStopRoute = false;
+
+    function showInAppMap(placeOrPlaces, title) {
+      const places = Array.isArray(placeOrPlaces) ? placeOrPlaces.filter(Boolean) : (placeOrPlaces ? [placeOrPlaces] : []);
+      const overlay = document.getElementById('in-app-map-overlay');
+      const titleEl = document.getElementById('in-app-map-title');
+      const subtitleEl = document.getElementById('in-app-map-subtitle');
+      const externalLink = document.getElementById('in-app-map-external');
+      if (!overlay || typeof L === 'undefined') { showToast('Map is still loading. Please try again in a moment.'); return; }
+      overlay.style.display = 'block';
+      document.body.style.overflow = 'hidden';
+      titleEl.textContent = title || (places.length === 1 ? (places[0].Name || 'Place Map') : 'Explore Map');
+      subtitleEl.textContent = places.length === 1 ? (places[0].Address || places[0].streetAddress || 'Explore this place without leaving the app') : `${places.length} itinerary stops · Tap a pin for details and directions`;
+      inAppMapIsMultiStopRoute = places.length > 1 && /route/i.test(title || '');
+      if (places.length === 1 && !inAppMapIsMultiStopRoute) {
+        externalLink.href = buildMapUrl(places[0]);
+        externalLink.style.display = 'inline-flex';
+        externalLink.textContent = 'Get Directions ↗';
+      } else {
+        // Keep multi-stop itinerary routes inside Local Like a Local.
+        externalLink.style.display = 'none';
+        externalLink.removeAttribute('href');
+      }
+      if (!inAppLeafletMap) {
+        inAppLeafletMap = L.map('in-app-map-canvas').setView([39.2904, -76.6122], 12);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap contributors' }).addTo(inAppLeafletMap);
+        inAppLeafletLayer = L.layerGroup().addTo(inAppLeafletMap);
+      } else inAppLeafletLayer.clearLayers();
+      if (inAppMapRouteLine && inAppLeafletMap) { inAppLeafletMap.removeLayer(inAppMapRouteLine); inAppMapRouteLine = null; }
+      const valid = places.filter(p => {
+        const lat = Number(p.Latitude), lng = Number(p.Longitude);
+        return p.Latitude !== '' && p.Longitude !== '' && Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+      });
+      const bounds = [];
+      valid.forEach(p => {
+        const lat = Number(p.Latitude), lng = Number(p.Longitude);
+        bounds.push([lat, lng]);
+        const directionsAction = inAppMapIsMultiStopRoute ? '' : `<a href="${buildMapUrl(p)}" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:#087f8c;color:white;padding:6px 9px;border-radius:7px;text-decoration:none;font-weight:700">Get Directions ↗</a>`;
+        const safeName = String(p.Name || 'Place').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+        const safeAddress = String(p.Address || p.streetAddress || '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+        const marker = L.marker([lat, lng]).bindPopup(`<div style="min-width:170px"><strong>${safeName}</strong><div style="font-size:12px;margin:5px 0">${safeAddress}</div>${directionsAction}</div>`);
+        inAppLeafletLayer.addLayer(marker);
+      });
+      if (inAppMapIsMultiStopRoute && bounds.length > 1) {
+        inAppMapRouteLine = L.polyline(bounds, { color: '#087f8c', weight: 4, opacity: 0.85, dashArray: '8 7' }).addTo(inAppLeafletMap);
+      }
+      if (bounds.length > 1) inAppLeafletMap.fitBounds(bounds, { padding: [36, 36], maxZoom: 15 });
+      else if (bounds.length === 1) inAppLeafletMap.setView(bounds[0], 15);
+      else inAppLeafletMap.setView([39.2904, -76.6122], 4);
+      setTimeout(() => { if (inAppLeafletMap) inAppLeafletMap.invalidateSize(); }, 150);
+    }
+
+    function closeInAppMap() {
+      const overlay = document.getElementById('in-app-map-overlay');
+      if (overlay) overlay.style.display = 'none';
+      document.body.style.overflow = '';
+    }
+
+    function buildRouteMapUrl(places) {
+      const stops = (places || []).filter(Boolean);
+      if (!stops.length) return '#';
+      const destination = stops[stops.length - 1];
+      if (isIOSDevice()) {
+        const params = new URLSearchParams({ saddr: `${stops[0].Name || ''} ${stops[0].Address || ''}`.trim(), daddr: `${destination.Name || ''} ${destination.Address || ''}`.trim(), t: 'm' });
+        stops.slice(1, -1).forEach(p => params.append('via', `${p.Name || ''} ${p.Address || ''}`.trim()));
+        return 'https://maps.apple.com/?' + params.toString();
+      }
+      const params = new URLSearchParams({ api: '1', origin: `${stops[0].Name || ''} ${stops[0].Address || ''}`.trim(), destination: `${destination.Name || ''} ${destination.Address || ''}`.trim(), travelmode: 'walking' });
+      if (stops.length > 2) params.set('waypoints', stops.slice(1, -1).map(p => `${p.Name || ''} ${p.Address || ''}`.trim()).join('|'));
+      return 'https://www.google.com/maps/dir/?' + params.toString();
+    }
+
     // ---- STREET VIEW MAP UTILITIES (Roadmap Mode & IOS Support) ----
     function isIOSDevice() {
       return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -2396,31 +2483,8 @@ function exportFavoritesPDF() {
       const day = itinerary[dayIndex];
       if (!day) return;
       const stops = [day.morning, day.lunch, day.afternoon, day.dinner, day.evening].filter(Boolean);
-      if (stops.length === 0) {
-        showToast('No scheduled stops to map for this day.');
-        return;
-      }
-
-      if (isIOSDevice()) {
-        const saddr = encodeURIComponent(stops[0].Name + ' ' + (stops[0].Address || ''));
-        const daddr = encodeURIComponent(stops[stops.length - 1].Name + ' ' + (stops[stops.length - 1].Address || ''));
-        let url = "https://maps.apple.com/?saddr=" + saddr + "&daddr=" + daddr + "&t=m";
-        if (stops.length > 2) {
-          stops.slice(1, -1).forEach(st => {
-            url += "&via=" + encodeURIComponent(st.Name + ' ' + (st.Address || ''));
-          });
-        }
-        window.open(url, '_blank');
-      } else {
-        const origin = encodeURIComponent(stops[0].Name + ' ' + (stops[0].Address || ''));
-        const destination = encodeURIComponent(stops[stops.length - 1].Name + ' ' + (stops[stops.length - 1].Address || ''));
-        let url = "https://www.google.com/maps/dir/?api=1&origin=" + origin + "&destination=" + destination + "&travelmode=walking&t=m";
-        if (stops.length > 2) {
-          const waypoints = stops.slice(1, -1).map(st => encodeURIComponent(st.Name + ' ' + (st.Address || ''))).join('|');
-          url += "&waypoints=" + waypoints;
-        }
-        window.open(url, '_blank');
-      }
+      if (stops.length === 0) { showToast('No scheduled stops to map for this day.'); return; }
+      showInAppMap(stops, `Day ${dayIndex + 1} Route`);
     }
 
     // Destination photography uses remote Unsplash images with an elegant CSS-gradient fallback.
@@ -2889,19 +2953,35 @@ function exportFavoritesPDF() {
         sel.innerHTML += `<option value="${n}">${n}</option>`;
       });
 
-      // Interests chips
+      // Interests are presented in manageable groups of 12 to reduce visual overload.
       const intGrid = document.getElementById('pref-interests');
       intGrid.innerHTML = '';
-      discoveredInterests.forEach(interest => {
-        const chip = document.createElement('button');
-        chip.className = 'interest-chip';
-        chip.textContent = interest;
-        chip.addEventListener('click', () => {
-          chip.classList.toggle('active');
-          prefs.interests = [...document.querySelectorAll('.interest-chip.active')].map(c => c.textContent);
+      for (let start = 0; start < discoveredInterests.length; start += 12) {
+        const group = document.createElement('div');
+        group.className = 'interest-group';
+        group.style.cssText = 'width:100%;margin:0 0 12px;';
+        const heading = document.createElement('div');
+        heading.className = 'interest-group-title';
+        heading.style.cssText = 'font-size:11px;font-weight:700;color:var(--text2);margin:0 0 7px;';
+        const end = Math.min(start + 12, discoveredInterests.length);
+        heading.textContent = discoveredInterests.length > 12 ? `Interests ${start + 1}–${end}` : 'Choose your interests';
+        group.appendChild(heading);
+        const chips = document.createElement('div');
+        chips.className = 'interests-grid';
+        discoveredInterests.slice(start, start + 12).forEach(interest => {
+          const chip = document.createElement('button');
+          chip.type = 'button';
+          chip.className = 'interest-chip';
+          chip.textContent = interest;
+          chip.addEventListener('click', () => {
+            chip.classList.toggle('active');
+            prefs.interests = [...document.querySelectorAll('.interest-chip.active')].map(c => c.textContent);
+          });
+          chips.appendChild(chip);
         });
-        intGrid.appendChild(chip);
-      });
+        group.appendChild(chips);
+        intGrid.appendChild(group);
+      }
 
       // Travel Style select
       const styleSelect = document.getElementById('pref-style');
@@ -3081,7 +3161,7 @@ function exportFavoritesPDF() {
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
               <div class="slot-time">${s.time}</div>
               <div style="display:flex;align-items:center;gap:8px;">
-                <a href="${mapStopUrl}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();" style="background:var(--teal-light);color:var(--teal-dark);padding:3px 8px;border-radius:10px;font-size:11px;font-weight:700;text-decoration:none;">📍 Map Stop</a>
+                <button type="button" onclick="event.stopPropagation();showInAppMap(allLoadedPlacesMap.get('${s.data.ID}'))" style="background:var(--teal-light);color:var(--teal-dark);padding:3px 8px;border:0;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer;">📍 Map Stop</button>
                 <button onclick="event.stopPropagation(); toggleFavorite(event, '${s.data.ID}'); renderDay(${dayIndex});" style="background:none;border:none;font-size:20px;cursor:pointer;padding:2px 4px;line-height:1;" title="Favorite">
                   ${isFav ? '❤️' : '🤍'}
                 </button>
@@ -3097,6 +3177,7 @@ function exportFavoritesPDF() {
 
     // ---- DETAIL MODAL ----
     function showDetailModal(place) {
+      window.lastSelectedPlace = place;
       const body = document.getElementById('modal-detail-body');
 
       const mapLink = buildMapUrl(place);
@@ -3149,7 +3230,7 @@ function exportFavoritesPDF() {
         </div>
 
         <div class="detail-btn-row">
-          <a href="${mapLink}" target="_blank" class="btn-action btn-map">View Map</a>
+          <button type="button" onclick="showInAppMap(window.lastSelectedPlace)" class="btn-action btn-map" style="border:0;cursor:pointer;">View Map</button>
           ${webLink && webLink !== 'N/A' ? `<a href="${webLink}" target="_blank" class="btn-action btn-web">Official Website</a>` : ''}
         </div>
       `;
