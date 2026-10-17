@@ -375,7 +375,7 @@
 
     // ---- FAVORITES & LOCALSTORAGE STATE ----
     let favoritesList = JSON.parse(localStorage.getItem('local_like_a_local_favs') || '[]');
-    let allLoadedPlacesMap = new Map(); // Global registry across loaded cities
+    let allLoadedPlacesMap = new Map(); window.allLoadedPlacesMap = allLoadedPlacesMap; // Global registry across loaded cities
 
     function updateFavBadge() {
       const badge = document.getElementById('fav-badge');
@@ -1213,6 +1213,7 @@ function exportFavoritesPDF() {
         if (resultsGrid) resultsGrid.style.display = 'none';
         if (mapContainer) mapContainer.style.display = 'block';
         renderLeafletMap(window.lastFilteredPlaces || allPlaces);
+        setTimeout(() => { if (leafletMap) leafletMap.invalidateSize(); }, 200);
       } else {
         if (btn) btn.innerHTML = '🗺️ Map View';
         if (resultsGrid) resultsGrid.style.display = 'grid';
@@ -1337,6 +1338,11 @@ function exportFavoritesPDF() {
       }
 
       const grid = document.getElementById('browse-results');
+      window.lastFilteredPlaces = filtered;
+      if (browseViewMode === 'map') {
+        renderLeafletMap(filtered);
+      }
+
       grid.innerHTML = '';
 
       if (filtered.length === 0) {
@@ -1350,11 +1356,6 @@ function exportFavoritesPDF() {
 
         const distTag = place.distance !== null ? ` • 📍 ${place.distance.toFixed(2)} mi` : '';
 
-        window.lastFilteredPlaces = filtered;
-      if (browseViewMode === 'map') {
-        renderLeafletMap(filtered);
-      }
-        
         card.innerHTML = `
           <div class="place-row-top">
             <div class="place-main">
@@ -1663,20 +1664,41 @@ function exportFavoritesPDF() {
         const mapStopUrl = buildMapUrl(s.data);
         const isFav = isFavorite(s.data.ID);
 
+        const placeObj = s.data;
+        allLoadedPlacesMap.set(placeObj.ID, placeObj);
+
         content.innerHTML += `
-          <div class="slot-card">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-              <div class="slot-time">${s.time}</div>
-              <div style="display:flex;align-items:center;gap:8px;">
-                <button onclick="event.stopPropagation(); showInAppSingleStopMap(s.data);" style="background:var(--teal-light);color:var(--teal-dark);padding:3px 8px;border-radius:10px;font-size:11px;font-weight:700;border:none;cursor:pointer;">📍 Map Stop</button>
-                <button onclick="event.stopPropagation(); toggleFavorite(event, '${s.data.ID}'); renderDay(${dayIndex});" style="background:none;border:none;font-size:20px;cursor:pointer;padding:2px 4px;line-height:1;" title="Favorite">
+          <div class="place-card slot-card" onclick="showDetailModal(allLoadedPlacesMap.get('${placeObj.ID}') || ${JSON.stringify(placeObj).replace(/"/g, '&quot;')})">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);">
+              <span class="slot-time" style="font-size:11px;font-weight:800;color:var(--primary);text-transform:uppercase;letter-spacing:0.5px;">${s.time}</span>
+              <div style="display:flex;align-items:center;gap:8px;" onclick="event.stopPropagation();">
+                <button onclick="event.stopPropagation(); showInAppSingleStopMap(allLoadedPlacesMap.get('${placeObj.ID}'));" style="background:var(--teal-light);color:var(--teal-dark);padding:4px 10px;border-radius:12px;font-size:11px;font-weight:800;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;">📍 Map Stop</button>
+                <button onclick="event.stopPropagation(); toggleFavorite(event, '${placeObj.ID}'); renderDay(${dayIndex});" style="background:none;border:none;font-size:20px;cursor:pointer;padding:2px 4px;line-height:1;" title="Favorite">
                   ${isFav ? '❤️' : '🤍'}
                 </button>
               </div>
             </div>
-            <div class="slot-title">${cleanName(s.data.Name)}</div>
-            <div class="slot-address">📍 ${s.data.streetAddress || s.data.Address} (${s.data.Neighborhood})</div>
-            <p style="font-size:12px;color:var(--text2);margin-top:6px;">"${s.data.whyGo}"</p>
+
+            <div class="card-img-wrap" style="height:140px;border-radius:12px;overflow:hidden;margin-bottom:10px;box-shadow:inset 0 2px 4px rgba(0,0,0,0.15);">
+              <img class="card-img" src="${getVenuePhotoUrl(placeObj)}" alt="${cleanName(placeObj.Name)}" style="width:100%;height:100%;object-fit:cover;">
+            </div>
+
+            <div class="place-row-top">
+              <div class="place-main">
+                <div class="place-name" style="font-family:var(--font-s);font-size:17px;font-weight:900;color:var(--text);line-height:1.2;">${cleanName(placeObj.Name)}</div>
+                <span class="place-cat-badge">${getCategoryBadgeHTML(placeObj.Category, placeObj.Subcategory)}</span>
+              </div>
+              <div class="place-score">
+                <span class="place-score-num">★ ${placeObj.localScore}</span>
+              </div>
+            </div>
+
+            <div class="place-address" style="font-size:12px;color:var(--text2);margin-top:6px;">📍 ${placeObj.streetAddress || placeObj.Address} (${placeObj.Neighborhood})</div>
+            <p class="place-desc" style="font-size:12px;color:var(--text);margin-top:8px;font-style:italic;border-left:3px solid var(--accent);padding-left:8px;">"${placeObj.whyGo}"</p>
+            
+            <div style="margin-top:8px;text-align:right;">
+              <span style="font-size:11px;font-weight:800;color:var(--primary);text-transform:uppercase;">Tap for Full Details →</span>
+            </div>
           </div>
         `;
       });
@@ -2698,14 +2720,27 @@ function exportFavoritesPDF() {
       }
     }
 
-    .place-card {
-      background: var(--card);
-      border-radius: var(--radius);
-      padding: 16px;
-      box-shadow: var(--shadow);
-      border: 1px solid var(--border);
+    .place-card, .slot-card {
+      background: linear-gradient(145deg, #ffffff 0%, #fbfaf5 100%);
+      border: 1px solid rgba(216, 224, 220, 0.85);
+      border-top: 1px solid rgba(255, 255, 255, 0.95);
+      border-left: 1px solid rgba(255, 255, 255, 0.85);
+      border-radius: 16px;
+      padding: 14px;
+      box-shadow: 0 10px 22px -4px rgba(28, 45, 39, 0.12), 0 4px 8px -2px rgba(28, 45, 39, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.9);
       cursor: pointer;
-      transition: transform 0.15s;
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+      position: relative;
+    }
+
+    .place-card:hover, .slot-card:hover {
+      transform: translateY(-4px) scale(1.005);
+      box-shadow: 0 18px 30px -6px rgba(28, 45, 39, 0.18), 0 8px 14px -3px rgba(28, 45, 39, 0.08);
+    }
+
+    .place-card:active, .slot-card:active {
+      transform: translateY(-1px) scale(0.99);
+      box-shadow: 0 6px 14px -2px rgba(28, 45, 39, 0.14);
     }
 
     .place-card:active {
@@ -2750,14 +2785,18 @@ function exportFavoritesPDF() {
     }
 
     .place-score-num {
-      background: #FEF3C7;
-      color: #92400E;
-      border: 1px solid #FDE68A;
+      background: linear-gradient(135deg, #FDE68A 0%, #F59E0B 100%);
+      color: #78350F;
+      border: 1px solid #D97706;
       font-size: 12px;
-      font-weight: 800;
-      padding: 3px 8px;
-      border-radius: 8px;
-      display: inline-block;
+      font-weight: 900;
+      padding: 4px 10px;
+      border-radius: 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      box-shadow: 0 3px 6px rgba(245, 158, 11, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+      text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
     }
 
     .place-address {
@@ -3788,6 +3827,10 @@ EDITORIAL REDESIGN — Boutique travel magazine
     <button class="nav-item" onclick="showScreen('screen-itinerary')" id="nav-itin">
       <span class="nav-icon">📅</span>
       <span class="nav-label">Itinerary</span>
+    </button>
+    <button class="nav-item" onclick="openHelpModal()" id="nav-help">
+      <span class="nav-icon">❓</span>
+      <span class="nav-label">Help</span>
     </button>
   </nav>
 
