@@ -1388,7 +1388,12 @@ function exportFavoritesPDF() {
           <div class="card-img-wrap" style="height:140px;border-radius:12px;overflow:hidden;margin-bottom:10px;position:relative;">
             <img class="card-img" src="${photoUrl}" alt="${name}" style="width:100%;height:100%;object-fit:cover;">
             <div style="position:absolute;top:8px;left:8px;">${catBadge}</div>
-            <div class="place-score-num" style="position:absolute;top:8px;right:8px;box-shadow:0 2px 6px rgba(0,0,0,0.2);">★ ${place.localScore || '9.0'}</div>
+            <div style="position:absolute;top:8px;right:8px;display:flex;align-items:center;gap:6px;">
+              <button onclick="event.stopPropagation(); toggleFavorite(event, '${place.ID}'); ${options.onFavToggle || ''}" style="background:rgba(255,255,255,0.92);border:none;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.3);line-height:1;" title="Toggle Favorite">
+                ${isFav ? '❤️' : '🤍'}
+              </button>
+              <div class="place-score-num" style="box-shadow:0 2px 6px rgba(0,0,0,0.2);">★ ${place.localScore || '9.0'}</div>
+            </div>
           </div>
           <div class="place-row-top" style="margin-bottom:4px;">
             <div class="place-name" style="font-family:var(--font-s);font-size:17px;font-weight:900;color:var(--text);line-height:1.2;">${name}</div>
@@ -1776,49 +1781,69 @@ function exportFavoritesPDF() {
       const mapLink = buildMapUrl(place);
       const webLink = place.specificWebsiteUrl || place.Website;
       const noteVal = getPersonalNote(place.ID);
+      const isFav = isFavorite(place.ID);
       const escPlace = JSON.stringify(place).replace(/"/g, '&quot;');
+      const name = cleanName(place.Name);
+
+      const tipText = place.whyGo || place.Description || '';
+      const descText = (place.Description && place.Description !== place.whyGo) ? place.Description : '';
 
       body.innerHTML = `
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;justify-content:flex-start;gap:10px;margin-bottom:12px;padding-right:50px;flex-wrap:wrap;">
           ${getCategoryBadgeHTML(place.Category, place.Subcategory)}
           <button onclick="toggleFavorite(event, '${place.ID}'); showDetailModal(allLoadedPlacesMap.get('${place.ID}') || ${escPlace});" style="background:var(--primary-light);border:1px solid var(--primary);color:var(--primary-dark);padding:6px 14px;border-radius:20px;font-size:12px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:6px;" title="Favorite">
-            ${isFavorite(place.ID) ? '❤️ Saved' : '🤍 Save to Favorites'}
+            ${isFav ? '❤️ Saved' : '🤍 Save'}
           </button>
         </div>
-        <h2 style="font-family:var(--font-s);font-size:22px;font-weight:900;margin-top:2px;color:var(--text);line-height:1.2;">${cleanName(place.Name)}</h2>
+
+        <h2 style="font-family:var(--font-s);font-size:22px;font-weight:900;margin-top:2px;color:var(--text);line-height:1.2;">${name}</h2>
         <div style="font-size:13px;color:var(--text2);margin-top:4px;font-weight:600;">📍 ${place.Neighborhood || 'District'} • ${place.streetAddress || place.Address || ''}</div>
 
-        <div style="background:var(--primary-light);border-radius:12px;padding:12px;margin:14px 0;display:flex;align-items:center;justify-content:space-between;">
-          <span style="font-size:13px;font-weight:800;color:var(--primary-dark);">Local Authenticity Score</span>
-          <span style="font-size:16px;font-weight:900;color:var(--primary-dark);">★ ${place.localScore || '9.0'} / 10.0</span>
+        <div style="background:var(--primary-light);border-radius:12px;padding:12px 14px;margin:14px 0;display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:center;">
+          <div>
+            <div style="font-size:11px;font-weight:800;color:var(--primary-dark);text-transform:uppercase;letter-spacing:0.5px;">Local Score</div>
+            <div style="font-size:16px;font-weight:900;color:var(--primary-dark);">★ ${place.localScore || '9.0'} / 10.0</div>
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:800;color:var(--primary-dark);text-transform:uppercase;letter-spacing:0.5px;">Price Tier</div>
+            <div style="font-size:14px;font-weight:800;color:var(--primary-dark);">${place.Price || place.priceTier || '$$'}</div>
+          </div>
         </div>
 
-        <div style="margin:14px 0;">
-          <div style="font-size:11px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Why Go Insider Tip</div>
-          <p style="border-left:3px solid var(--accent);padding-left:10px;font-style:italic;font-size:14px;color:var(--text);line-height:1.5;margin:0;">“${place.whyGo || place.Description || ''}”</p>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:8px 12px;margin-bottom:14px;font-size:12px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px;">
+          <span>⏰</span> <span>Opening Hours: <strong>${place['Opening Hours'] || place.openingHours || '09:00 - 23:00'}</strong></span>
         </div>
 
-        ${place.Description ? `<div style="margin:14px 0;font-size:13px;color:var(--text2);line-height:1.5;">${place.Description}</div>` : ''}
+        ${tipText ? `
+          <div style="margin:14px 0;">
+            <div style="font-size:11px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Why Go Insider Tip</div>
+            <p style="border-left:3px solid var(--accent);padding-left:10px;font-style:italic;font-size:14px;color:var(--text);line-height:1.5;margin:0;">“${tipText}”</p>
+          </div>
+        ` : ''}
 
-        <div style="margin:16px 0;">
-          <div style="font-size:12px;font-weight:800;color:var(--text);margin-bottom:6px;">📝 My Personal Trip Notes</div>
-          <textarea id="modal-note-input-${place.ID}" placeholder="Add a private note (e.g. must-try dish, reservation info)..." style="width:100%;height:70px;padding:10px;border-radius:10px;border:1px solid var(--border);font-family:var(--font-u);font-size:13px;background:var(--card);color:var(--text);resize:none;">${noteVal}</textarea>
-          <button onclick="savePersonalNote('${place.ID}', document.getElementById('modal-note-input-${place.ID}').value)" style="margin-top:6px;background:var(--primary);color:#fff;border:none;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;">💾 Save Note</button>
+        ${descText ? `<div style="margin:12px 0;font-size:13px;color:var(--text2);line-height:1.5;">${descText}</div>` : ''}
+
+        <div style="display:flex;gap:8px;margin:16px 0;flex-wrap:wrap;">
+          <button onclick="showInAppSingleStopMap(allLoadedPlacesMap.get('${place.ID}') || ${escPlace})" style="flex:1;background:var(--primary);color:#fff;border:none;padding:8px 12px;border-radius:10px;font-size:12px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+            📍 Map Location
+          </button>
+          ${webLink ? `
+            <a href="${webLink}" target="_blank" rel="noopener" style="flex:1;background:var(--primary-light);color:var(--primary-dark);text-decoration:none;padding:8px 12px;border-radius:10px;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--primary);">
+              🌐 Website
+            </a>
+          ` : ''}
         </div>
 
-        <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;">
-          <button onclick="showInAppSingleStopMap(allLoadedPlacesMap.get('${place.ID}') || ${escPlace})" style="flex:1;min-width:120px;background:var(--teal-light);color:var(--teal-dark);border:1px solid var(--teal);padding:10px;border-radius:12px;font-size:13px;font-weight:800;cursor:pointer;">🗺️ Route Map</button>
-          ${webLink ? `<a href="${webLink}" target="_blank" style="flex:1;min-width:120px;background:var(--primary-light);color:var(--primary-dark);border:1px solid var(--primary);padding:10px;border-radius:12px;font-size:13px;font-weight:800;text-decoration:none;text-align:center;">🌐 Official Web</a>` : ''}
-        </div>
-
-        <!-- Sticky Bottom Close Button so user never gets cut off -->
-        <div style="position:sticky;bottom:-20px;background:var(--card);padding:12px 0 0 0;border-top:1px solid var(--border);margin-top:20px;text-align:center;">
-          <button onclick="document.getElementById('modal-detail').classList.remove('open')" style="width:100%;background:var(--primary);color:#fff;border:none;padding:12px;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;">Close Details ✕</button>
+        <div style="margin-top:18px;border-top:1px solid var(--border);padding-top:14px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <span style="font-size:13px;font-weight:800;color:var(--text);">📝 My Personal Trip Notes</span>
+            <button onclick="savePersonalNote('${place.ID}', document.getElementById('modal-note-input-${place.ID}').value)" style="background:var(--primary);color:#fff;border:none;padding:4px 12px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;box-shadow:0 2px 4px rgba(0,0,0,0.15);">💾 Save Note</button>
+          </div>
+          <textarea id="modal-note-input-${place.ID}" placeholder="Add a private note (e.g. must-try dish, reservation info)..." style="width:100%;height:70px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;font-family:var(--font-u);font-size:13px;margin-bottom:12px;">${noteVal}</textarea>
         </div>
       `;
 
-      const modal = document.getElementById('modal-detail');
-      if (modal) modal.classList.add('open');
+      document.getElementById('modal-detail').classList.add('open');
     }
 
 
