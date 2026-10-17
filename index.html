@@ -741,27 +741,52 @@ function exportFavoritesPDF() {
           p.interestsArray = [];
         }
 
-        // 3. Normalize Price for budget filtering
+        // 3. Address Mapping (Supports both New and Old Data Formats)
+        p.Address_Street = p.Address_Street || p['Address_Street'] || p['Address Street'] || '';
+        p.Address_City = p.Address_City || p['Address_City'] || p['Address City'] || '';
+        p.Address_State = p.Address_State || p['Address_State'] || p['Address State'] || '';
+        p.Address_Zip = p.Address_Zip || p['Address_Zip'] || p['Address Zip'] || '';
+
+        if (p.Address_Street) {
+          p.streetAddress = p.Address_Street;
+          const addrParts = [p.Address_Street, p.Address_City, p.Address_State, p.Address_Zip].filter(Boolean);
+          p.Address = addrParts.join(', ');
+        } else if (p.Address) {
+          p.streetAddress = String(p.Address).split(',')[0].trim();
+        } else {
+          p.streetAddress = '';
+          p.Address = '';
+        }
+
+        // 4. Extended Metadata (Phone, Parking, Cost Context, Opening Hours)
+        p.Phone = p.Phone || p['Phone'] || '';
+        p.Parking_Info = p.Parking_Info || p['Parking_Info'] || p['Parking Info'] || '';
+        p.Estimated_Cost_Context = p.Estimated_Cost_Context || p['Estimated_Cost_Context'] || p['Estimated Cost Context'] || '';
+        p.Opening_Hours = p.Opening_Hours || p['Opening Hours'] || p['Opening_Hours'] || '';
+
+        // 5. Normalize Price & Budget filtering
         const priceStr = String(p.Price || '').trim();
         if (priceStr.toLowerCase() === 'free') {
           p.budgetNum = 0;
-          p.priceDisplay = 'Free';
+          p.priceDisplay = p.Estimated_Cost_Context ? `Free (${p.Estimated_Cost_Context})` : 'Free';
         } else if (priceStr.includes('$')) {
           p.budgetNum = (priceStr.match(/\$/g) || []).length;
-          p.priceDisplay = priceStr;
+          p.priceDisplay = p.Estimated_Cost_Context ? `${priceStr} • ${p.Estimated_Cost_Context}` : priceStr;
+        } else if (p.Estimated_Cost_Context && p.Estimated_Cost_Context.includes('$')) {
+          p.budgetNum = (p.Estimated_Cost_Context.match(/\$/g) || []).length || 1;
+          p.priceDisplay = p.Estimated_Cost_Context;
         } else {
           p.budgetNum = 1;
           p.priceDisplay = '$';
         }
 
-        // 4. Map keys with spaces / special characters to camelCase properties
-        p.localScore = parseFloat(p['Local Score'] || p.localScore || 0);
-        p.hiddenGemScore = parseFloat(p['Hidden Gem Score'] || p.hiddenGemScore || 0);
-        p.whyGo = p['Why Go'] || p.whyGo || p.Description || '';
-        p.touristConcentration = p['Tourist Concentration'] || p.touristConcentration || '';
-        p.streetAddress = p.Address ? p.Address.split(',')[0].trim() : (p.streetAddress || '');
-        p.specificWebsiteUrl = p['Specific Website URL'] || p.Website || '';
-        p.googleMapsLink = p['Google Maps Link'] || '';
+        // 6. Map keys with spaces / special characters to camelCase properties
+        p.localScore = parseFloat(p['Local Score'] || p.Local_Score || p.localScore || 0);
+        p.hiddenGemScore = parseFloat(p['Hidden Gem Score'] || p.Hidden_Gem_Score || p.hiddenGemScore || 0);
+        p.whyGo = p['Why Go'] || p.Why_Go || p.whyGo || p.Description || '';
+        p.touristConcentration = p['Tourist Concentration'] || p.Tourist_Concentration || p.touristConcentration || '';
+        p.specificWebsiteUrl = p['Specific Website URL'] || p.Specific_Website_URL || p.Website || '';
+        p.googleMapsLink = p['Google Maps Link'] || p.Google_Maps_Link || '';
         p.distance = null;
 
         return p;
@@ -1200,32 +1225,85 @@ function exportFavoritesPDF() {
     function isOpenNow(openingHoursStr) {
       if (!openingHoursStr) return false; // Unknown status -> Do not assume open!
       const str = String(openingHoursStr).trim().toLowerCase();
-      
+
       if (str.includes('24 hours') || str.includes('24/7') || str.includes('24-hours') || str === 'open 24 hours') return true;
       if (str.includes('closed') || str.includes('n/a') || str === 'none') return false;
 
-      // Extract time range (e.g. "09:00 - 23:00" or "09:00-23:00" or "18:00 - 02:00")
-      const match = str.match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/);
-      if (!match) return false; // Unparseable hours -> Do not assume open!
-
-      const openH = parseInt(match[1], 10) + parseInt(match[2], 10) / 60;
-      const closeH = parseInt(match[3], 10) + parseInt(match[4], 10) / 60;
-
       const now = new Date();
+      const currentDayNum = now.getDay(); // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
       const currentH = now.getHours() + now.getMinutes() / 60;
 
-      if (closeH > openH) {
-        // Standard same-day window (e.g. 09:00 to 23:00)
-        return currentH >= openH && currentH <= closeH;
-      } else if (closeH < openH) {
-        // Overnight window (e.g. 18:00 to 02:00 next morning)
-        return currentH >= openH || currentH <= closeH;
-      } else {
-        return true;
+      // Helper to expand day ranges like "mon-fri", "thu-sun", "tue-sun", "daily" into day numbers
+      const parseDays = (clauseStr) => {
+        if (clauseStr.includes('daily') || clauseStr.includes('everyday')) {
+          return [0, 1, 2, 3, 4, 5, 6];
+        }
+        const dayMap = { 'sun': 0, 'mon': 1, 'tue': 2, 'tues': 2, 'wed': 3, 'thu': 4, 'thur': 4, 'thurs': 4, 'fri': 5, 'sat': 6 };
+        
+        // Check range like "mon-fri" or "thu-sun"
+        const rangeMatch = clauseStr.match(/(sun|mon|tue|tues|wed|thu|thur|thurs|fri|sat)\s*-\s*(sun|mon|tue|tues|wed|thu|thur|thurs|fri|sat)/);
+        if (rangeMatch) {
+          const startDay = dayMap[rangeMatch[1]];
+          const endDay = dayMap[rangeMatch[2]];
+          if (startDay !== undefined && endDay !== undefined) {
+            const days = [];
+            let curr = startDay;
+            while (true) {
+              days.push(curr);
+              if (curr === endDay) break;
+              curr = (curr + 1) % 7;
+            }
+            return days;
+          }
+        }
+
+        // Check single day or comma list of days
+        const foundDays = [];
+        Object.keys(dayMap).forEach(dKey => {
+          if (clauseStr.includes(dKey)) foundDays.push(dayMap[dKey]);
+        });
+        if (foundDays.length > 0) return [...new Set(foundDays)];
+
+        // Default: If no day specified, applies to all days
+        return [0, 1, 2, 3, 4, 5, 6];
+      };
+
+      // Split multi-clause schedules like "Daily 08:00-14:00, Thu-Sun 17:00-21:00"
+      const clauses = str.split(/[,;]/);
+
+      for (let clause of clauses) {
+        clause = clause.trim();
+        if (!clause) continue;
+
+        const applicableDays = parseDays(clause);
+        if (!applicableDays.includes(currentDayNum)) {
+          continue; // Day doesn't match this clause
+        }
+
+        // Extract time range (e.g. "08:00-14:00" or "08:00 - 14:00")
+        const match = clause.match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/);
+        if (!match) {
+          if (clause.includes('24 hours') || clause.includes('24/7')) return true;
+          continue;
+        }
+
+        const openH = parseInt(match[1], 10) + parseInt(match[2], 10) / 60;
+        const closeH = parseInt(match[3], 10) + parseInt(match[4], 10) / 60;
+
+        if (closeH > openH) {
+          // Standard same-day window (e.g. 08:00 to 14:00)
+          if (currentH >= openH && currentH <= closeH) return true;
+        } else if (closeH < openH) {
+          // Overnight window (e.g. 18:00 to 02:00)
+          if (currentH >= openH || currentH <= closeH) return true;
+        } else {
+          return true;
+        }
       }
+
+      return false;
     }
 
-    
     function toggleOpenNowFilter() {
       openNowFilterActive = !openNowFilterActive;
       const btn = document.getElementById('btn-filter-opennow');
@@ -1886,7 +1964,15 @@ function setBudgetPref(b) {
           </div>
         </div>
 
-        ${descText ? `<div style="margin:14px 0;font-size:13px;color:var(--text);line-height:1.5;">${descText}</div>` : ''}
+                ${descText ? `<div style="margin:14px 0;font-size:13px;color:var(--text);line-height:1.5;">${descText}</div>` : ''}
+
+        ${place.Phone || place.Parking_Info || place.Estimated_Cost_Context ? `
+          <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:12px;margin:14px 0;font-size:12px;display:flex;flex-direction:column;gap:6px;color:var(--text2);">
+            ${place.Estimated_Cost_Context ? `<div>💵 <b>Est. Cost:</b> ${place.Estimated_Cost_Context}</div>` : ''}
+            ${place.Phone ? `<div>📞 <b>Phone:</b> <a href="tel:${place.Phone}" style="color:var(--primary);font-weight:700;text-decoration:none;">${place.Phone}</a></div>` : ''}
+            ${place.Parking_Info ? `<div>🅿️ <b>Parking:</b> ${place.Parking_Info}</div>` : ''}
+          </div>
+        ` : ''}
 
         <div style="display:flex;gap:8px;margin:16px 0;flex-wrap:wrap;">
           <button onclick="showInAppSingleStopMap(allLoadedPlacesMap.get('${place.ID}') || ${escPlace})" style="flex:1;background:var(--primary);color:#fff;border:none;padding:10px 14px;border-radius:12px;font-size:12px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
@@ -1986,20 +2072,39 @@ function setBudgetPref(b) {
         return;
       }
 
-      // Parse date-only values as local calendar dates, avoiding UTC timezone rollover.
+      // RFC 5545 text escaper helper for commas, semicolons, backslashes, and line breaks
+      const escapeICS = (str) => {
+        if (!str) return '';
+        return String(str)
+          .replace(/\\/g, '\\\\')
+          .replace(/;/g, '\\;')
+          .replace(/,/g, '\\,')
+          .replace(/\r?\n/g, '\\n');
+      };
+
+      const pad = (n) => String(n).padStart(2, '0');
+      const formatICSDate = (dt) => {
+        return dt.getFullYear() +
+               pad(dt.getMonth() + 1) +
+               pad(dt.getDate()) + 'T' +
+               pad(dt.getHours()) +
+               pad(dt.getMinutes()) +
+               pad(dt.getSeconds());
+      };
+
+      // Improved validation and local device date parsing (YYYY-MM-DD)
       const dateInput = document.getElementById('pref-start-date')?.value;
-      let startDate;
+      let startDate = new Date();
       if (dateInput && /^\d{4}-\d{2}-\d{2}$/.test(dateInput)) {
-        const [year, month, day] = dateInput.split('-').map(Number);
-        startDate = new Date(year, month - 1, day, 9, 0, 0, 0);
-        if (startDate.getFullYear() !== year || startDate.getMonth() !== month - 1 || startDate.getDate() !== day) {
-          showToast('Please choose a valid trip start date.');
-          return;
-        }
+        const parts = dateInput.split('-');
+        const year = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1;
+        const day = parseInt(parts[2], 10);
+        startDate = new Date(year, month, day, 9, 0, 0);
       } else {
-        startDate = new Date();
-        startDate.setDate(startDate.getDate() + 1);
-        startDate.setHours(9, 0, 0, 0);
+        const tom = new Date();
+        tom.setDate(tom.getDate() + 1);
+        startDate = new Date(tom.getFullYear(), tom.getMonth(), tom.getDate(), 9, 0, 0);
       }
 
       const slotTimes = [
@@ -2009,62 +2114,71 @@ function setBudgetPref(b) {
         { key: 'dinner', label: 'Dinner', startH: 18, startM: 30, endH: 20, endM: 30 },
         { key: 'evening', label: 'Evening Spot / Nightlife', startH: 21, startM: 0, endH: 23, endM: 0 }
       ];
-      const targetDays = (dayIndex !== null && dayIndex !== undefined && itinerary[dayIndex])
-        ? [dayIndex]
+
+      const targetDays = (dayIndex !== null && dayIndex !== undefined && itinerary[dayIndex]) 
+        ? [dayIndex] 
         : Array.from({ length: itinerary.length }, (_, i) => i);
-      let icsContent = 'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Local Like a Local Travel Guide//EN\r\nCALSCALE:GREGORIAN\r\nMETHOD:PUBLISH\r\n';
-      const pad = n => String(n).padStart(2, '0');
-      // DTSTART/DTEND are floating local times so imported events keep the intended local clock times.
-      const formatLocalICSDate = dt => `${dt.getFullYear()}${pad(dt.getMonth() + 1)}${pad(dt.getDate())}T${pad(dt.getHours())}${pad(dt.getMinutes())}${pad(dt.getSeconds())}`;
-      const formatUTCICSDate = dt => `${dt.getUTCFullYear()}${pad(dt.getUTCMonth() + 1)}${pad(dt.getUTCDate())}T${pad(dt.getUTCHours())}${pad(dt.getUTCMinutes())}${pad(dt.getUTCSeconds())}Z`;
-      const escapeICSText = value => String(value ?? '')
-        .replace(/\\/g, '\\\\')
-        .replace(/\r\n|\n|\r/g, '\\n')
-        .replace(/;/g, '\\;')
-        .replace(/,/g, '\\,');
+
+      let icsContent = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Local Like a Local Travel Guide//EN\r\nCALSCALE:GREGORIAN\r\nMETHOD:PUBLISH\r\n";
 
       let eventCount = 0;
+
       targetDays.forEach(dIdx => {
         const dayPlan = itinerary[dIdx];
         if (!dayPlan) return;
+
         const currentDayDate = new Date(startDate);
         currentDayDate.setDate(startDate.getDate() + dIdx);
+
         slotTimes.forEach(slot => {
           const place = dayPlan[slot.key];
           if (!place) return;
+
           const dtStart = new Date(currentDayDate);
           dtStart.setHours(slot.startH, slot.startM, 0, 0);
+
           const dtEnd = new Date(currentDayDate);
           dtEnd.setHours(slot.endH, slot.endM, 0, 0);
+
           const title = `${cleanName(place.Name)} (${slot.label})`;
           const location = `${cleanName(place.Name)}, ${place.streetAddress || place.Address || ''}`;
-          const description = `📍 ${place.streetAddress || place.Address || ''} (${place.Neighborhood || ''}) - "${place.whyGo || ''}" - Rating: ${place.localScore ?? 'N/A'}/10`;
-          icsContent += 'BEGIN:VEVENT\r\n';
-          icsContent += `UID:locallikealocal-${dIdx}-${slot.key}-${Date.now()}-${eventCount}@guide\r\n`;
-          icsContent += `DTSTAMP:${formatUTCICSDate(new Date())}\r\n`;
-          icsContent += `DTSTART:${formatLocalICSDate(dtStart)}\r\n`;
-          icsContent += `DTEND:${formatLocalICSDate(dtEnd)}\r\n`;
-          icsContent += `SUMMARY:${escapeICSText(title)}\r\n`;
-          icsContent += `LOCATION:${escapeICSText(location)}\r\n`;
-          icsContent += `DESCRIPTION:${escapeICSText(description)}\r\n`;
-          icsContent += 'END:VEVENT\r\n';
+          const summary = `📍 ${place.streetAddress || place.Address || ''} (${place.Neighborhood || ''}) - "${place.whyGo || ''}" - Rating: ${place.localScore}/10`;
+
+          icsContent += "BEGIN:VEVENT\r\n";
+          icsContent += `UID:locallikealocal-${dIdx}-${slot.key}-${Date.now()}@guide\r\n`;
+          icsContent += `DTSTAMP:${formatICSDate(new Date())}\r\n`;
+          icsContent += `DTSTART:${formatICSDate(dtStart)}\r\n`;
+          icsContent += `DTEND:${formatICSDate(dtEnd)}\r\n`;
+          icsContent += `SUMMARY:${escapeICS(title)}\r\n`;
+          icsContent += `LOCATION:${escapeICS(location)}\r\n`;
+          icsContent += `DESCRIPTION:${escapeICS(summary)}\r\n`;
+          icsContent += "END:VEVENT\r\n";
+
           eventCount++;
         });
       });
-      icsContent += 'END:VCALENDAR\r\n';
+
+      icsContent += "END:VCALENDAR\r\n";
+
       if (eventCount === 0) {
         showToast('No scheduled spots to export.');
         return;
       }
+
       const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `local_like_a_local_day_${(dayIndex !== null && dayIndex !== undefined ? dayIndex + 1 : 'all')}.ics`);
+      link.setAttribute('download', `local_like_a_local_day_${(dayIndex !== null ? dayIndex + 1 : 'all')}.ics`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+      // Cleanup temporary download URL object
+      setTimeout(() => {
+        try { URL.revokeObjectURL(url); } catch (e) {}
+      }, 1000);
+
       showToast(`Exported ${eventCount} spot(s) to Calendar! 📅`);
     }
 
@@ -2080,13 +2194,11 @@ function setBudgetPref(b) {
     document.addEventListener('DOMContentLoaded', () => {
       initOfflineAndPWA(); 
       const dateEl = document.getElementById('pref-start-date'); 
-      if (dateEl && !dateEl.value) {
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const yyyy = tomorrow.getFullYear();
-        const mm = String(tomorrow.getMonth() + 1).padStart(2, '0');
-        const dd = String(tomorrow.getDate()).padStart(2, '0');
-        dateEl.value = `${yyyy}-${mm}-${dd}`;
+      if (dateEl && !dateEl.value) { 
+        const pad = (n) => String(n).padStart(2, '0');
+        const tom = new Date();
+        tom.setDate(tom.getDate() + 1);
+        dateEl.value = `${tom.getFullYear()}-${pad(tom.getMonth() + 1)}-${pad(tom.getDate())}`; 
       }
       document.getElementById('btn-start')?.addEventListener('click', handleStartApp);
       document.getElementById('btn-cities-back')?.addEventListener('click', () => showScreen('screen-welcome'));
@@ -3801,22 +3913,6 @@ EDITORIAL REDESIGN — Boutique travel magazine
         <p style="font-size:16px; color:var(--text2); margin-top:4px;">Everything you need to know about using Local Like a Local</p>
       </div>
 
-<!-- CALENDAR EXPORT FAQ -->
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:16px;">
-        <div style="font-size:12px;font-weight:800;color:var(--teal);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">📅 Calendar Export & Date Selection</div>
-        <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:6px;">How Calendar Times & Dates Get Populated</div>
-        <p style="font-size:12px;color:var(--text2);line-height:1.4;margin-bottom:8px;">
-          In <b>Customize Trip</b>, select your vacation arrival date under <b>Trip Start Date</b> (defaults to tomorrow). When you tap <b>"📅 Calendar"</b>, the app schedules your 5 daily slots with automatic travel/meal buffers:
-        </p>
-        <div style="background:var(--bg);border-radius:10px;padding:10px;font-size:11px;color:var(--text);line-height:1.6;">
-          • <b>Morning Spot:</b> 9:00 AM – 11:30 AM<br>
-          • <b>Lunch:</b> 12:00 PM – 1:30 PM<br>
-          • <b>Afternoon Spot:</b> 2:00 PM – 4:30 PM<br>
-          • <b>Dinner:</b> 6:30 PM – 8:30 PM<br>
-          • <b>Evening Spot:</b> 9:00 PM – 11:00 PM
-        </div>
-      </div>
-
       <!-- VISUAL ANATOMY INFOGRAPHIC -->
       <div style="background:var(--primary-light); border:1px solid var(--primary); border-radius:16px; padding:20px; margin-bottom:20px;">
         <div style="font-size:13px; font-weight:800; color:var(--primary-dark); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">📖 VISUAL REFERENCE GUIDE</div>
@@ -3851,13 +3947,6 @@ EDITORIAL REDESIGN — Boutique travel magazine
 
   <!-- TOAST NOTIFICATION -->
   
-  <!-- IN-APP ROUTE MAP MODAL -->
-  
-
-  
-  <!-- MODAL HELP & GUIDE (App Guide Style) -->
-  
-
   <div id="toast" class="toast"></div>
 
   <!-- =============================================
