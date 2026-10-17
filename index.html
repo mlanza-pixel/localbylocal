@@ -15,7 +15,10 @@
   
   
   <!-- Leaflet.js for Interactive Map View -->
+  <link rel="stylesheet" href="vendor/css/leaflet.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="vendor/js/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
 
     function cleanName(str) {
@@ -1124,6 +1127,11 @@ function exportFavoritesPDF() {
       allPlaces.forEach(p => allLoadedPlacesMap.set(p.ID, p));
 
       discoveredNeighborhoods = [...new Set(allPlaces.map(p => p.Neighborhood).filter(Boolean))].sort();
+      const neighSelect = document.getElementById('browse-neighborhood-select');
+      if (neighSelect) {
+        neighSelect.innerHTML = `<option value="All">🏘️ All Neighborhoods (${discoveredNeighborhoods.length})</option>` +
+          discoveredNeighborhoods.map(n => `<option value="${n}">📍 ${n}</option>`).join('');
+      }
 
       // Update City-Specific Neighborhoods Dropdown
       const nhSelect = document.getElementById('browse-neighborhood-select');
@@ -1236,6 +1244,62 @@ function exportFavoritesPDF() {
       }
     }
 
+    
+    // ---- SVG FALLBACK MAP ENGINE (v3.17) ----
+    function renderSvgFallbackMap(container, validPlaces) {
+      if (!container || !validPlaces || validPlaces.length === 0) return;
+      
+      const lats = validPlaces.map(p => parseFloat(p.Latitude)).filter(n => !isNaN(n));
+      const lngs = validPlaces.map(p => parseFloat(p.Longitude)).filter(n => !isNaN(n));
+      if (lats.length === 0) return;
+
+      const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+      const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+      const latRange = maxLat - minLat || 0.02;
+      const lngRange = maxLng - minLng || 0.02;
+
+      let pinsHTML = '';
+      validPlaces.forEach((p, i) => {
+        const lat = parseFloat(p.Latitude);
+        const lng = parseFloat(p.Longitude);
+        if (isNaN(lat) || isNaN(lng)) return;
+
+        // Project lat/lng to percentage coordinates
+        const x = 8 + ((lng - minLng) / lngRange) * 84;
+        const y = 88 - ((lat - minLat) / latRange) * 76;
+        const escP = JSON.stringify(p).replace(/"/g, '&quot;');
+
+        pinsHTML += `
+          <g transform="translate(${x * 5}, ${y * 3.5})" style="cursor:pointer;" onclick="showDetailModal(allLoadedPlacesMap.get('${p.ID}') || ${escP})">
+            <circle r="14" fill="#2D5A4C" stroke="#FFFFFF" stroke-width="3" filter="drop-shadow(0px 2px 4px rgba(0,0,0,0.3))"/>
+            <text y="4" font-size="11" font-weight="900" fill="#FFFFFF" text-anchor="middle">${i + 1}</text>
+            <title>${cleanName(p.Name)} (${p.Neighborhood || 'District'})</title>
+          </g>
+        `;
+      });
+
+      container.innerHTML = `
+        <div style="width:100%;height:100%;background:#E5ECE8;position:relative;overflow:hidden;border-radius:12px;display:flex;flex-direction:column;">
+          <div style="background:#2D5A4C;color:#fff;padding:8px 12px;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:space-between;">
+            <span>🗺️ Interactive City Map (${validPlaces.length} Mapped Venues)</span>
+            <span style="font-size:10px;background:rgba(255,255,255,0.2);padding:2px 6px;border-radius:4px;">Tap pin for details</span>
+          </div>
+          <div style="flex:1;position:relative;padding:10px;">
+            <svg viewBox="0 0 500 350" style="width:100%;height:100%;background:#F4F6F4;border-radius:8px;">
+              <defs>
+                <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#D8E0DC" stroke-width="1"/>
+                </pattern>
+              </defs>
+              <rect width="500" height="350" fill="url(#grid)" />
+              ${pinsHTML}
+            </svg>
+          </div>
+        </div>
+      `;
+    }
+
+
     function renderLeafletMap(places) {
       const container = document.getElementById('leaflet-map');
       if (!container || typeof L === 'undefined') return;
@@ -1307,22 +1371,58 @@ function exportFavoritesPDF() {
       return 'images/welcome_bg.jpg';
     }
 
+    
+    // ---- UNIFIED VENUE CARD GENERATOR (v3.17) ----
+    function createVenueCardHTML(place, options = {}) {
+      if (!place) return '';
+      const isFav = isFavorite(place.ID);
+      const name = cleanName(place.Name);
+      const catBadge = getCategoryBadgeHTML(place.Category, place.Subcategory);
+      const photoUrl = getVenuePhotoUrl(place);
+      const slotLabel = options.slotTime ? `<div style="font-size:11px;font-weight:800;color:var(--primary);text-transform:uppercase;margin-bottom:6px;letter-spacing:0.5px;">⏰ ${options.slotTime}</div>` : '';
+      const escPlace = JSON.stringify(place).replace(/"/g, '&quot;');
+
+      return `
+        <div class="place-card ${options.extraClass || ''}" onclick="showDetailModal(allLoadedPlacesMap.get('${place.ID}') || ${escPlace})">
+          ${slotLabel}
+          <div class="card-img-wrap" style="height:140px;border-radius:12px;overflow:hidden;margin-bottom:10px;position:relative;">
+            <img class="card-img" src="${photoUrl}" alt="${name}" style="width:100%;height:100%;object-fit:cover;">
+            <div style="position:absolute;top:8px;left:8px;">${catBadge}</div>
+            <div class="place-score-num" style="position:absolute;top:8px;right:8px;box-shadow:0 2px 6px rgba(0,0,0,0.2);">★ ${place.localScore || '9.0'}</div>
+          </div>
+          <div class="place-row-top" style="margin-bottom:4px;">
+            <div class="place-name" style="font-family:var(--font-s);font-size:17px;font-weight:900;color:var(--text);line-height:1.2;">${name}</div>
+          </div>
+          <div class="place-address" style="font-size:12px;color:var(--text2);margin-bottom:6px;">📍 ${place.Neighborhood || 'District'} • ${place.streetAddress || place.Address || ''}</div>
+          <p class="place-desc" style="border-left:3px solid var(--accent);padding-left:8px;margin:6px 0;font-style:italic;font-size:12px;color:var(--text);line-height:1.4;">“${place.whyGo || place.Description || ''}”</p>
+          <div class="card-actions-bar" style="margin-top:10px;display:flex;align-items:center;justify-content:space-between;gap:6px;" onclick="event.stopPropagation();">
+            <button onclick="event.stopPropagation(); showInAppSingleStopMap(allLoadedPlacesMap.get('${place.ID}') || ${escPlace});" class="btn-card-act" style="background:var(--teal-light);color:var(--teal-dark);border:none;padding:5px 10px;border-radius:10px;font-size:11px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:4px;">📍 Map</button>
+            <button onclick="event.stopPropagation(); toggleFavorite(event, '${place.ID}'); ${options.onFavToggle || ''}" class="btn-card-act" style="background:var(--primary-light);color:var(--primary-dark);border:none;padding:5px 10px;border-radius:10px;font-size:11px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:4px;">
+              ${isFav ? '❤️ Saved' : '🤍 Save'}
+            </button>
+            <button onclick="event.stopPropagation(); showDetailModal(allLoadedPlacesMap.get('${place.ID}') || ${escPlace});" class="btn-card-act" style="background:var(--primary);color:#fff;border:none;padding:5px 12px;border-radius:10px;font-size:11px;font-weight:800;cursor:pointer;">Details →</button>
+          </div>
+        </div>
+      `;
+    }
+
+
     function getVenuePhotoUrl(p) {
       if (p.Photo || p.photoUrl) return p.Photo || p.photoUrl;
       return getCityPhotoUrl(p.Category + ' ' + p.Name);
     }
 
+    
     function filterBrowse(category) {
       currentFilter = category;
       document.querySelectorAll('.tab-btn').forEach(t => t.classList.toggle('active', t.textContent === category));
 
       let filtered = category === 'All' ? [...allPlaces] : allPlaces.filter(p => p.Category === category);
 
-      // Apply Neighborhood Filter
-      const nhSelect = document.getElementById('browse-neighborhood-select');
-      if (nhSelect && nhSelect.value !== 'All') {
-        const selectedNh = nhSelect.value;
-        filtered = filtered.filter(p => p.Neighborhood && p.Neighborhood.trim() === selectedNh);
+      // Neighborhood Dropdown Filter
+      const selNeigh = document.getElementById('browse-neighborhood-select')?.value || 'All';
+      if (selNeigh !== 'All') {
+        filtered = filtered.filter(p => p.Neighborhood === selNeigh);
       }
 
       // Apply Open Now Filter
@@ -1345,65 +1445,38 @@ function exportFavoritesPDF() {
           return d <= MAX_DIST;
         });
 
-        // Near Me distance sort
         filtered.sort((a, b) => a.distance - b.distance || b.localScore - a.localScore);
       } else {
         filtered.forEach(p => p.distance = null);
 
-        // Standard Dual Sorting (By Locals vs Alpha)
         if (currentSortMode === 'alpha') {
-          filtered.sort((a, b) => (a.Name || '').localeCompare(b.Name || ''));
+          filtered.sort((a, b) => (cleanName(a.Name) || '').localeCompare(cleanName(b.Name) || ''));
         } else {
-          // Default: By Locals (descending localScore)
-          filtered.sort((a, b) => b.localScore - a.localScore || (a.Name || '').localeCompare(b.Name || ''));
+          filtered.sort((a, b) => b.localScore - a.localScore || (cleanName(a.Name) || '').localeCompare(cleanName(b.Name) || ''));
         }
       }
 
       const grid = document.getElementById('browse-results');
-      grid.innerHTML = '';
-
-      if (filtered.length === 0) {
-        grid.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3);font-weight:600;">No places found for selected criteria.</div>`;
-        return;
+      if (grid) {
+        grid.innerHTML = '';
+        if (filtered.length === 0) {
+          grid.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text2);font-weight:700;">No places found for selected criteria.</div>`;
+        } else {
+          window.lastFilteredPlaces = filtered;
+          filtered.forEach(place => {
+            const wrap = document.createElement('div');
+            wrap.innerHTML = createVenueCardHTML(place);
+            grid.appendChild(wrap.firstElementChild);
+          });
+        }
       }
 
-      filtered.forEach(place => {
-        const card = document.createElement('div');
-        card.className = 'place-card';
-
-        const distTag = place.distance !== null ? ` • 📍 ${place.distance.toFixed(2)} mi` : '';
-
-        window.lastFilteredPlaces = filtered;
       if (browseViewMode === 'map') {
         renderLeafletMap(filtered);
       }
-        
-        card.innerHTML = `
-          <div class="place-row-top">
-            <div class="place-main">
-              <div class="place-name">${cleanName(place.Name)}</div>
-              ${getCategoryBadgeHTML(place.Category, place.Subcategory)}
-            </div>
-            <div class="place-score" style="display:flex;align-items:center;gap:6px;">
-              <span class="place-score-num">★ ${place.localScore}</span>
-              <button class="btn-fav-card" onclick="event.stopPropagation(); toggleFavorite(event, '${place.ID}')" style="background:none;border:none;font-size:22px;cursor:pointer;padding:2px 4px;line-height:1;" title="Toggle Favorite">
-                ${isFavorite(place.ID) ? '❤️' : '🤍'}
-              </button>
-            </div>
-          </div>
-          <div class="place-address">📍 ${place.streetAddress || place.Address} (${place.Neighborhood})${distTag}</div>
-          <p class="place-why">${place.whyGo}</p>
-          <div class="place-tags">
-            ${place.interestsArray.slice(0,4).map(i => `<span class="tag-chip">#${i}</span>`).join('')}
-          </div>
-        `;
-
-        card.addEventListener('click', () => showDetailModal(place));
-        grid.appendChild(card);
-      });
     }
 
-    // ---- NEAR ME LOGIC ----
+
     function toggleNearMeBrowse() {
       const btn = document.getElementById('btn-browse-nearme');
       const bar = document.getElementById('browse-nearme-bar');
@@ -1623,6 +1696,7 @@ function exportFavoritesPDF() {
       renderDay(0);
     }
 
+    
     function renderDay(dayIndex) {
       currentDayIndex = dayIndex;
       const content = document.getElementById("itin-content");
@@ -1683,105 +1757,71 @@ function exportFavoritesPDF() {
 
         if (cLat && cLng) lastCoords = { lat: cLat, lng: cLng };
 
-        const mapStopUrl = buildMapUrl(s.data);
-        const isFav = isFavorite(s.data.ID);
-
         const placeObj = s.data;
         allLoadedPlacesMap.set(placeObj.ID, placeObj);
 
-        content.innerHTML += `
-          <div class="place-card slot-card" onclick="showDetailModal(allLoadedPlacesMap.get('${placeObj.ID}') || ${JSON.stringify(placeObj).replace(/"/g, '&quot;')})">
-            <div class="card-img-wrap"><img class="card-img" src="${getVenuePhotoUrl(placeObj)}"></div>
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);">
-              <span class="slot-time" style="font-size:11px;font-weight:800;color:var(--primary);text-transform:uppercase;letter-spacing:0.5px;">${s.time}</span>
-              <div style="display:flex;align-items:center;gap:8px;" onclick="event.stopPropagation();">
-                <button onclick="event.stopPropagation(); showInAppSingleStopMap(allLoadedPlacesMap.get('${placeObj.ID}') || ${JSON.stringify(placeObj).replace(/"/g, '&quot;')});" style="background:var(--teal-light);color:var(--teal-dark);padding:4px 10px;border-radius:12px;font-size:11px;font-weight:800;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;">📍 Map Stop</button>
-                <button onclick="event.stopPropagation(); toggleFavorite(event, '${placeObj.ID}'); renderDay(${dayIndex});" style="background:none;border:none;font-size:20px;cursor:pointer;padding:2px 4px;line-height:1;" title="Favorite">
-                  ${isFav ? '❤️' : '🤍'}
-                </button>
-              </div>
-            </div>
-            <div class="place-row-top">
-              <div class="place-main">
-                <div class="place-name" style="font-family:var(--font-s);font-size:18px;font-weight:800;color:var(--text);line-height:1.2;">${cleanName(placeObj.Name)}</div>
-                <span class="place-cat-badge" style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--primary);background:var(--primary-light);padding:3px 8px;border-radius:6px;display:inline-block;margin-top:4px;">${placeObj.Category} • ${placeObj.Subcategory || 'Attraction'}</span>
-              </div>
-              <div class="place-score">
-                <span class="place-score-num" style="background:linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);color:#92400E;border:1px solid #F59E0B;font-size:12px;font-weight:900;padding:4px 10px;border-radius:12px;display:inline-block;box-shadow:0 2px 6px rgba(245,158,11,0.25);">★ ${placeObj.localScore}</span>
-              </div>
-            </div>
-            <div class="place-address" style="font-size:12px;color:var(--text2);margin-top:4px;">📍 ${placeObj.streetAddress || placeObj.Address} (${placeObj.Neighborhood || ''})</div>
-            <p class="place-desc" style="font-size:12px;color:var(--text);margin-top:6px;font-style:italic;line-height:1.4;border-left:3px solid var(--accent);padding-left:8px;">"${placeObj.whyGo || placeObj.Description}"</p>
-            <div style="margin-top:8px;font-size:11px;font-weight:800;color:var(--primary);text-align:right;">Tap for Full Details →</div>
-          </div>
-        `;
+        const cardWrap = document.createElement('div');
+        cardWrap.innerHTML = createVenueCardHTML(placeObj, { slotTime: s.time, onFavToggle: `renderDay(${dayIndex});` });
+        content.appendChild(cardWrap.firstElementChild);
       });
     }
 
-    // ---- DETAIL MODAL ----
+
+    
     function showDetailModal(place) {
+      if (!place) return;
       const body = document.getElementById('modal-detail-body');
+      if (!body) return;
 
       const mapLink = buildMapUrl(place);
       const webLink = place.specificWebsiteUrl || place.Website;
       const noteVal = getPersonalNote(place.ID);
+      const escPlace = JSON.stringify(place).replace(/"/g, '&quot;');
 
       body.innerHTML = `
-        <div style="display:flex;align-items:center;justify-content:space-between;padding-right:48px;gap:10px;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;">
           ${getCategoryBadgeHTML(place.Category, place.Subcategory)}
-          <button onclick="toggleFavorite(event, '${place.ID}'); showDetailModal(place);" style="background:var(--primary-light);border:1px solid var(--primary);color:var(--primary-dark);padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;" title="Favorite">
+          <button onclick="toggleFavorite(event, '${place.ID}'); showDetailModal(allLoadedPlacesMap.get('${place.ID}') || ${escPlace});" style="background:var(--primary-light);border:1px solid var(--primary);color:var(--primary-dark);padding:6px 14px;border-radius:20px;font-size:12px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:6px;" title="Favorite">
             ${isFavorite(place.ID) ? '❤️ Saved' : '🤍 Save to Favorites'}
           </button>
         </div>
-        <h2 style="font-size:20px;font-weight:800;margin-top:2px;color:var(--text);">${cleanName(place.Name)}</h2>
-        <div style="font-size:13px;color:var(--text2);margin-top:2px;">📍 ${place.Address}</div>
+        <h2 style="font-family:var(--font-s);font-size:22px;font-weight:900;margin-top:2px;color:var(--text);line-height:1.2;">${cleanName(place.Name)}</h2>
+        <div style="font-size:13px;color:var(--text2);margin-top:4px;font-weight:600;">📍 ${place.Neighborhood || 'District'} • ${place.streetAddress || place.Address || ''}</div>
 
-        <div class="detail-row">
-          <span class="detail-label">Neighborhood</span>
-          <span style="font-weight:600;">${place.Neighborhood}</span>
+        <div style="background:var(--primary-light);border-radius:12px;padding:12px;margin:14px 0;display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:13px;font-weight:800;color:var(--primary-dark);">Local Authenticity Score</span>
+          <span style="font-size:16px;font-weight:900;color:var(--primary-dark);">★ ${place.localScore || '9.0'} / 10.0</span>
         </div>
 
-        <div class="detail-row">
-          <span class="detail-label">Local Score / Rating</span>
-          <span style="font-weight:700;color:var(--primary);">★ ${place.localScore} / 10.0</span>
+        <div style="margin:14px 0;">
+          <div style="font-size:11px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Why Go Insider Tip</div>
+          <p style="border-left:3px solid var(--accent);padding-left:10px;font-style:italic;font-size:14px;color:var(--text);line-height:1.5;margin:0;">“${place.whyGo || place.Description || ''}”</p>
         </div>
 
-        <div class="detail-row">
-          <span class="detail-label">Price Level</span>
-          <span style="font-weight:600;">${place.priceDisplay}</span>
+        ${place.Description ? `<div style="margin:14px 0;font-size:13px;color:var(--text2);line-height:1.5;">${place.Description}</div>` : ''}
+
+        <div style="margin:16px 0;">
+          <div style="font-size:12px;font-weight:800;color:var(--text);margin-bottom:6px;">📝 My Personal Trip Notes</div>
+          <textarea id="modal-note-input-${place.ID}" placeholder="Add a private note (e.g. must-try dish, reservation info)..." style="width:100%;height:70px;padding:10px;border-radius:10px;border:1px solid var(--border);font-family:var(--font-u);font-size:13px;background:var(--card);color:var(--text);resize:none;">${noteVal}</textarea>
+          <button onclick="savePersonalNote('${place.ID}', document.getElementById('modal-note-input-${place.ID}').value)" style="margin-top:6px;background:var(--primary);color:#fff;border:none;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;">💾 Save Note</button>
         </div>
 
-        <div class="detail-row">
-          <span class="detail-label">Opening Hours</span>
-          <span style="font-weight:600;">${place['Opening Hours'] || 'Standard Operating Hours'}</span>
+        <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;">
+          <button onclick="showInAppSingleStopMap(allLoadedPlacesMap.get('${place.ID}') || ${escPlace})" style="flex:1;min-width:120px;background:var(--teal-light);color:var(--teal-dark);border:1px solid var(--teal);padding:10px;border-radius:12px;font-size:13px;font-weight:800;cursor:pointer;">🗺️ Route Map</button>
+          ${webLink ? `<a href="${webLink}" target="_blank" style="flex:1;min-width:120px;background:var(--primary-light);color:var(--primary-dark);border:1px solid var(--primary);padding:10px;border-radius:12px;font-size:13px;font-weight:800;text-decoration:none;text-align:center;">🌐 Official Web</a>` : ''}
         </div>
 
-        <div class="detail-row" style="margin-top:12px;">
-          <span class="detail-label">Why Go</span>
-          <p style="font-size:13px;color:var(--text2);line-height:1.5;margin-top:2px;">"${place.whyGo}"</p>
-        </div>
-
-        <!-- USER PERSONALIZATION: PERSONAL NOTE -->
-        <div class="detail-row" style="margin-top:14px;flex-direction:column;align-items:flex-start;gap:6px;width:100%;box-sizing:border-box;">
-          <div style="display:flex;align-items:center;justify-content:space-between;width:100%;">
-            <span class="detail-label">📝 Personal Note</span>
-            ${noteVal ? '<span style="font-size:11px;color:var(--teal);font-weight:700;">Saved</span>' : ''}
-          </div>
-          <textarea id="modal-note-input-${place.ID}" placeholder="Add a private note (e.g. must-try dish, reservation info)..." style="width:100%;height:60px;padding:8px 12px;border:1px solid var(--border);border-radius:10px;font-family:var(--font-u);font-size:13px;resize:none;background:var(--bg);color:var(--text);box-sizing:border-box;">${noteVal}</textarea>
-          <button onclick="savePersonalNote('${place.ID}', document.getElementById('modal-note-input-${place.ID}').value)" style="align-self:flex-end;background:var(--teal);color:#fff;border:none;padding:5px 14px;border-radius:14px;font-size:12px;font-weight:700;cursor:pointer;margin-top:4px;">Save Note</button>
-        </div>
-
-        <div class="detail-btn-row">
-          <a href="${mapLink}" target="_blank" class="btn-action btn-map">View Map</a>
-          ${webLink && webLink !== 'N/A' ? `<a href="${webLink}" target="_blank" class="btn-action btn-web">Official Website</a>` : ''}
+        <!-- Sticky Bottom Close Button so user never gets cut off -->
+        <div style="position:sticky;bottom:-20px;background:var(--card);padding:12px 0 0 0;border-top:1px solid var(--border);margin-top:20px;text-align:center;">
+          <button onclick="document.getElementById('modal-detail').classList.remove('open')" style="width:100%;background:var(--primary);color:#fff;border:none;padding:12px;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;">Close Details ✕</button>
         </div>
       `;
 
-      document.getElementById('modal-detail').classList.add('open');
+      const modal = document.getElementById('modal-detail');
+      if (modal) modal.classList.add('open');
     }
 
-    // ---- INIT ON DOM CONTENT LOADED ----
-    
+
     // ---- OFFLINE & SERVICE WORKER LOGIC ----
     function initOfflineAndPWA() {
       function updateOnlineStatus() {
@@ -3663,59 +3703,46 @@ EDITORIAL REDESIGN — Boutique travel magazine
   
   <!-- MODAL HELP & GUIDE (App Guide Style) -->
     <!-- HELP & FAQS MODAL -->
+  <!-- HELP & GUIDE CENTER MODAL (v3.17) -->
   <div id="modal-help" class="modal">
-    <div class="modal-content" style="max-width:720px; width:95%; max-height:92vh; padding:28px 24px; border-radius:20px;">
+    <div class="modal-content" style="max-width:720px; width:95%; max-height:82vh; padding:28px 24px 80px 24px; border-radius:20px;">
       <button class="btn-close-modal" onclick="closeHelpModal()">✕</button>
-      
+
       <div style="text-align:center; margin-bottom:20px;">
-        <div style="font-size:36px; margin-bottom:4px;">❓</div>
-        <h2 style="font-size:24px; font-weight:900; color:var(--text); margin:0;">App Guide & Help Center</h2>
-        <p style="font-size:15px; color:var(--text2); margin-top:4px;">Everything you need to know about using Local Like a Local</p>
+        <div style="font-size:42px; margin-bottom:4px;">❓</div>
+        <h2 style="font-size:26px; font-weight:900; color:var(--text); margin:0;">App Guide & Help Center</h2>
+        <p style="font-size:16px; color:var(--text2); margin-top:4px;">Everything you need to know about using Local Like a Local</p>
       </div>
 
-      <!-- INFOGRAPHIC IMAGE 1 -->
-      <div style="background:var(--card); border:1px solid var(--border); border-radius:16px; padding:12px; margin-bottom:20px; box-shadow:var(--shadow);">
-        <img src="images/venue_card_anatomy.png" alt="Venue Card Anatomy & Features" style="width:100%; height:auto; border-radius:12px; display:block;">
+      <!-- VISUAL ANATOMY INFOGRAPHIC -->
+      <div style="background:var(--primary-light); border:1px solid var(--primary); border-radius:16px; padding:20px; margin-bottom:20px;">
+        <div style="font-size:13px; font-weight:800; color:var(--primary-dark); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">📖 VISUAL REFERENCE GUIDE</div>
+        <div style="font-size:20px; font-weight:900; color:var(--text); margin-bottom:12px;">Anatomy of a Local Venue Card</div>
+        <img src="images/venue_card_anatomy.png" alt="Venue Card Anatomy" style="width:100%; border-radius:12px; border:1px solid var(--border); box-shadow:0 4px 12px rgba(0,0,0,0.1); margin-bottom:12px;">
       </div>
 
-      <!-- FAQS IN LARGE READABLE FONT -->
-      <div style="display:flex; flex-direction:column; gap:16px; font-size:15px; line-height:1.6; color:var(--text);">
-        
-        <div style="background:var(--primary-light); border:1px solid var(--primary); border-radius:14px; padding:18px;">
-          <h3 style="font-size:17px; font-weight:800; color:var(--primary-dark); margin:0 0 6px 0;">📱 Adding to Home Screen (Offline App)</h3>
-          <p style="margin:0; font-size:15px; color:var(--text);"><b>iOS (Safari):</b> Tap Share icon → select <b>"Add to Home Screen"</b>.<br><b>Android (Chrome):</b> Tap menu ⋮ → select <b>"Install App"</b> or <b>"Add to Home Screen"</b>.</p>
+      <!-- FAQS WITH READABLE 15-18PX FONTS -->
+      <div style="display:flex; flex-direction:column; gap:16px;">
+        <div style="background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px;">
+          <div style="font-size:18px; font-weight:800; color:var(--text); margin-bottom:6px;">🗺️ Interactive Map Views & Route Maps</div>
+          <p style="font-size:15px; color:var(--text2); line-height:1.6; margin:0;">Tap <b>"🗺️ Map View"</b> in Browse to view all mapped venues on an interactive map. Inside your daily Itinerary, tap <b>"📍 Map Stop"</b> or <b>"🗺️ Map Day Route"</b> to view turn-by-turn walking/driving route lines with distance estimates.</p>
         </div>
 
         <div style="background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px;">
-          <h3 style="font-size:17px; font-weight:800; color:var(--text); margin:0 0 6px 0;">🏘️ City-Specific Neighborhood Filtering</h3>
-          <p style="margin:0; font-size:15px; color:var(--text2);">In the <b>Browse</b> tab, use the <b>🏘️ District</b> dropdown to filter spots by specific neighborhood (e.g. Jordaan in Amsterdam or Alfama in Lisbon).</p>
+          <div style="font-size:18px; font-weight:800; color:var(--text); margin-bottom:6px;">🏘️ District & Neighborhood Filters</div>
+          <p style="font-size:15px; color:var(--text2); line-height:1.6; margin:0;">Select a city, then use the <b>"District"</b> dropdown in Browse to filter places specifically by that city's historic quarters and neighborhoods.</p>
         </div>
 
         <div style="background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px;">
-          <h3 style="font-size:17px; font-weight:800; color:var(--text); margin:0 0 6px 0;">📅 Calendar Export & Vacation Start Dates</h3>
-          <p style="margin:0; font-size:15px; color:var(--text2);">In <b>Customize Trip</b>, select your vacation arrival date under <b>Trip Start Date</b>. Tap <b>"📅 Calendar"</b> on any day to export 5 pre-scheduled events with walking/driving buffers directly to Apple or Google Calendar.</p>
+          <div style="font-size:18px; font-weight:800; color:var(--text); margin-bottom:6px;">📤 Export & Sync Notes Between Devices</div>
+          <p style="font-size:15px; color:var(--text2); line-height:1.6; margin:0;">In Favorites or Help, tap <b>"📤 Export Notes"</b> to save a backup file. Import it on your computer or iPad to keep your trip notes and saved places in sync without requiring a cloud account!</p>
         </div>
-
-        <div style="background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px;">
-          <h3 style="font-size:17px; font-weight:800; color:var(--text); margin:0 0 6px 0;">📤 Syncing Notes Between iPad & Computer</h3>
-          <p style="margin:0; font-size:15px; color:var(--text2);">Tap <b>"📤 Export Notes & Favorites"</b> below to download a small <code>.json</code> backup file. Open the app on your computer and tap <b>"📥 Import Backup"</b> to restore all your trip notes instantly!</p>
-          <div style="display:flex; gap:10px; margin-top:12px;">
-            <button onclick="exportUserData()" style="flex:1; background:var(--primary); color:#fff; border:none; padding:12px; border-radius:12px; font-size:14px; font-weight:800; cursor:pointer;">📤 Export Notes & Favorites</button>
-            <button onclick="document.getElementById('import-file-input').click()" style="flex:1; background:var(--primary-light); color:var(--primary-dark); border:1px solid var(--primary); padding:12px; border-radius:12px; font-size:14px; font-weight:800; cursor:pointer;">📥 Import Backup</button>
-          </div>
-        </div>
-
       </div>
 
-      <button onclick="closeHelpModal(); showScreen('screen-onboarding');" style="margin-top:20px; width:100%; background:var(--teal-light); color:var(--teal-dark); border:1px solid var(--teal); padding:14px; border-radius:14px; font-size:15px; font-weight:800; cursor:pointer;">💡 App Tips & Onboarding Walkthrough</button>
-    </div>
-  </div>
-
-  <!-- MODAL DETAIL VIEW -->
-  <div id="modal-detail" class="modal">
-    <div class="modal-content">
-      <button id="btn-modal-detail-close" class="btn-close-modal">✕</button>
-      <div id="modal-detail-body"></div>
+      <!-- STICKY BOTTOM CLOSE BUTTON -->
+      <div style="position:sticky; bottom:-20px; background:var(--card); padding:16px 0 0 0; border-top:1px solid var(--border); margin-top:24px; text-align:center;">
+        <button class="btn-primary" onclick="closeHelpModal()" style="width:100%; padding:14px; font-size:16px; font-weight:800;">Close Help Center ✕</button>
+      </div>
     </div>
   </div>
 
