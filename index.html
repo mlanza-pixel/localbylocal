@@ -1785,8 +1785,7 @@ function exportFavoritesPDF() {
       const escPlace = JSON.stringify(place).replace(/"/g, '&quot;');
       const name = cleanName(place.Name);
 
-      const tipText = place.whyGo || place.Description || '';
-      const descText = (place.Description && place.Description !== place.whyGo) ? place.Description : '';
+      const descText = place.Description || place.whyGo || '';
 
       body.innerHTML = `
         <div style="display:flex;align-items:center;justify-content:flex-start;gap:10px;margin-bottom:12px;padding-right:50px;flex-wrap:wrap;">
@@ -1799,55 +1798,61 @@ function exportFavoritesPDF() {
         <h2 style="font-family:var(--font-s);font-size:22px;font-weight:900;margin-top:2px;color:var(--text);line-height:1.2;">${name}</h2>
         <div style="font-size:13px;color:var(--text2);margin-top:4px;font-weight:600;">📍 ${place.Neighborhood || 'District'} • ${place.streetAddress || place.Address || ''}</div>
 
-        <div style="background:var(--primary-light);border-radius:12px;padding:12px 14px;margin:14px 0;display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:center;">
-          <div>
-            <div style="font-size:11px;font-weight:800;color:var(--primary-dark);text-transform:uppercase;letter-spacing:0.5px;">Local Score</div>
-            <div style="font-size:16px;font-weight:900;color:var(--primary-dark);">★ ${place.localScore || '9.0'} / 10.0</div>
+        <!-- COMBINED SINGLE PILL BOX: SCORE, PRICE, HOURS -->
+        <div style="background:var(--primary-light);border:1px solid var(--primary);border-radius:14px;padding:12px 14px;margin:14px 0;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="font-size:16px;">★</span>
+            <div>
+              <div style="font-size:10px;font-weight:800;color:var(--primary-dark);text-transform:uppercase;letter-spacing:0.5px;">Local Score</div>
+              <div style="font-size:14px;font-weight:900;color:var(--primary-dark);">${place.localScore || '9.0'} / 10</div>
+            </div>
           </div>
-          <div>
-            <div style="font-size:11px;font-weight:800;color:var(--primary-dark);text-transform:uppercase;letter-spacing:0.5px;">Price Tier</div>
-            <div style="font-size:14px;font-weight:800;color:var(--primary-dark);">${place.Price || place.priceTier || '$$'}</div>
+          <div style="height:24px;width:1px;background:var(--border);align-self:center;"></div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="font-size:16px;">💰</span>
+            <div>
+              <div style="font-size:10px;font-weight:800;color:var(--primary-dark);text-transform:uppercase;letter-spacing:0.5px;">Price</div>
+              <div style="font-size:14px;font-weight:900;color:var(--primary-dark);">${place.Price || place.priceTier || '$$'}</div>
+            </div>
+          </div>
+          <div style="height:24px;width:1px;background:var(--border);align-self:center;"></div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="font-size:16px;">⏰</span>
+            <div>
+              <div style="font-size:10px;font-weight:800;color:var(--primary-dark);text-transform:uppercase;letter-spacing:0.5px;">Hours</div>
+              <div style="font-size:14px;font-weight:900;color:var(--primary-dark);">${place['Opening Hours'] || place.openingHours || '09:00 - 23:00'}</div>
+            </div>
           </div>
         </div>
 
-        <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:8px 12px;margin-bottom:14px;font-size:12px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px;">
-          <span>⏰</span> <span>Opening Hours: <strong>${place['Opening Hours'] || place.openingHours || '09:00 - 23:00'}</strong></span>
-        </div>
-
-        ${tipText ? `
-          <div style="margin:14px 0;">
-            <div style="font-size:11px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Why Go Insider Tip</div>
-            <p style="border-left:3px solid var(--accent);padding-left:10px;font-style:italic;font-size:14px;color:var(--text);line-height:1.5;margin:0;">“${tipText}”</p>
-          </div>
-        ` : ''}
-
-        ${descText ? `<div style="margin:12px 0;font-size:13px;color:var(--text2);line-height:1.5;">${descText}</div>` : ''}
+        ${descText ? `<div style="margin:14px 0;font-size:13px;color:var(--text);line-height:1.5;">${descText}</div>` : ''}
 
         <div style="display:flex;gap:8px;margin:16px 0;flex-wrap:wrap;">
-          <button onclick="showInAppSingleStopMap(allLoadedPlacesMap.get('${place.ID}') || ${escPlace})" style="flex:1;background:var(--primary);color:#fff;border:none;padding:8px 12px;border-radius:10px;font-size:12px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+          <button onclick="showInAppSingleStopMap(allLoadedPlacesMap.get('${place.ID}') || ${escPlace})" style="flex:1;background:var(--primary);color:#fff;border:none;padding:10px 14px;border-radius:12px;font-size:12px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
             📍 Map Location
           </button>
           ${webLink ? `
-            <a href="${webLink}" target="_blank" rel="noopener" style="flex:1;background:var(--primary-light);color:var(--primary-dark);text-decoration:none;padding:8px 12px;border-radius:10px;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--primary);">
-              🌐 Website
+            <a href="${webLink}" target="_blank" rel="noopener" style="flex:1;background:var(--primary-light);color:var(--primary-dark);text-decoration:none;padding:10px 14px;border-radius:12px;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--primary);">
+              🌐 Official Website
             </a>
           ` : ''}
         </div>
 
-        <div style="margin-top:18px;border-top:1px solid var(--border);padding-top:14px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-            <span style="font-size:13px;font-weight:800;color:var(--text);">📝 My Personal Trip Notes</span>
-            <button onclick="savePersonalNote('${place.ID}', document.getElementById('modal-note-input-${place.ID}').value)" style="background:var(--primary);color:#fff;border:none;padding:4px 12px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;box-shadow:0 2px 4px rgba(0,0,0,0.15);">💾 Save Note</button>
+        <!-- PERSONAL NOTES SECTION -->
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-top:16px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <div style="font-size:13px;font-weight:800;color:var(--text);">📝 My Personal Trip Notes</div>
+            <button onclick="savePersonalNote('${place.ID}', document.getElementById('modal-note-input-${place.ID}').value)" style="background:var(--primary);color:#fff;border:none;padding:5px 12px;border-radius:10px;font-size:11px;font-weight:800;cursor:pointer;">
+              💾 Save Note
+            </button>
           </div>
-          <textarea id="modal-note-input-${place.ID}" placeholder="Add a private note (e.g. must-try dish, reservation info)..." style="width:100%;height:70px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;font-family:var(--font-u);font-size:13px;margin-bottom:12px;">${noteVal}</textarea>
+          <textarea id="modal-note-input-${place.ID}" placeholder="Add a private note (e.g. must-try dish, reservation info)..." style="width:100%;height:70px;padding:8px;border:1px solid var(--border);border-radius:10px;font-family:inherit;font-size:12px;resize:vertical;">${noteVal}</textarea>
         </div>
       `;
 
       document.getElementById('modal-detail').classList.add('open');
     }
 
-
-    // ---- OFFLINE & SERVICE WORKER LOGIC ----
     function initOfflineAndPWA() {
       function updateOnlineStatus() {
         const bar = document.getElementById('offline-status-bar');
@@ -2050,6 +2055,7 @@ function exportFavoritesPDF() {
     });
   
     // Explicit Window Exports for Global Scope & Test Automation
+    window.showDetailModal = showDetailModal;
     window.showScreen = showScreen;
     window.filterBrowse = filterBrowse;
     window.setSortMode = setSortMode;
@@ -2066,6 +2072,7 @@ function exportFavoritesPDF() {
     // Global window exports
     window.cleanName = cleanName;
     window.loadCityData = loadCityData;
+    window.showDetailModal = showDetailModal;
     window.showScreen = showScreen;
     window.filterBrowse = filterBrowse;
     window.setSortMode = setSortMode;
@@ -2083,6 +2090,7 @@ function exportFavoritesPDF() {
     // Window exports for global scope & test automation
     window.loadCityData = loadCityData;
     window.buildItinerary = buildItinerary;
+    window.showDetailModal = showDetailModal;
     window.showScreen = showScreen;
     window.cleanName = cleanName;
     window.normalizeCityData = normalizeCityData;
