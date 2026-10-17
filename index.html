@@ -92,6 +92,9 @@
           { name: "Edinburgh, Scotland", file: "edinburgh" },
           { name: "London, England", file: "london" },
           { name: "Madrid, Spain", file: "madrid" },
+      { name: "Porto, Portugal", file: "porto" },
+      { name: "Lisbon, Portugal", file: "lisbon" },
+      { name: "Málaga, Spain", file: "malaga" },
           { name: "Munich, Germany", file: "munich" },
           { name: "Naples, Italy", file: "naples" },
           { name: "Paris, France", file: "paris" },
@@ -1121,6 +1124,17 @@ function exportFavoritesPDF() {
       allPlaces.forEach(p => allLoadedPlacesMap.set(p.ID, p));
 
       discoveredNeighborhoods = [...new Set(allPlaces.map(p => p.Neighborhood).filter(Boolean))].sort();
+
+      // Update City-Specific Neighborhoods Dropdown
+      const nhSelect = document.getElementById('browse-neighborhood-select');
+      if (nhSelect) {
+        let nhOptions = '<option value="All">All Neighborhoods (' + discoveredNeighborhoods.length + ')</option>';
+        discoveredNeighborhoods.forEach(nh => {
+          nhOptions += '<option value="' + nh.replace(/"/g, '&quot;') + '">' + nh + '</option>';
+        });
+        nhSelect.innerHTML = nhOptions;
+        nhSelect.value = 'All';
+      }
       discoveredCategories = [...new Set(allPlaces.map(p => p.Category).filter(Boolean))].sort();
       discoveredInterests = [...new Set(allPlaces.flatMap(p => p.interestsArray).filter(Boolean))].sort();
 
@@ -1213,7 +1227,8 @@ function exportFavoritesPDF() {
         if (resultsGrid) resultsGrid.style.display = 'none';
         if (mapContainer) mapContainer.style.display = 'block';
         renderLeafletMap(window.lastFilteredPlaces || allPlaces);
-        setTimeout(() => { if (leafletMap) leafletMap.invalidateSize(); }, 200);
+        setTimeout(() => { if (leafletMap) leafletMap.invalidateSize(); }, 150);
+        setTimeout(() => { if (leafletMap) leafletMap.invalidateSize(); }, 400);
       } else {
         if (btn) btn.innerHTML = '🗺️ Map View';
         if (resultsGrid) resultsGrid.style.display = 'grid';
@@ -1303,6 +1318,13 @@ function exportFavoritesPDF() {
 
       let filtered = category === 'All' ? [...allPlaces] : allPlaces.filter(p => p.Category === category);
 
+      // Apply Neighborhood Filter
+      const nhSelect = document.getElementById('browse-neighborhood-select');
+      if (nhSelect && nhSelect.value !== 'All') {
+        const selectedNh = nhSelect.value;
+        filtered = filtered.filter(p => p.Neighborhood && p.Neighborhood.trim() === selectedNh);
+      }
+
       // Apply Open Now Filter
       if (openNowFilterActive) {
         filtered = filtered.filter(p => isOpenNow(p['Opening Hours']));
@@ -1338,11 +1360,6 @@ function exportFavoritesPDF() {
       }
 
       const grid = document.getElementById('browse-results');
-      window.lastFilteredPlaces = filtered;
-      if (browseViewMode === 'map') {
-        renderLeafletMap(filtered);
-      }
-
       grid.innerHTML = '';
 
       if (filtered.length === 0) {
@@ -1356,6 +1373,11 @@ function exportFavoritesPDF() {
 
         const distTag = place.distance !== null ? ` • 📍 ${place.distance.toFixed(2)} mi` : '';
 
+        window.lastFilteredPlaces = filtered;
+      if (browseViewMode === 'map') {
+        renderLeafletMap(filtered);
+      }
+        
         card.innerHTML = `
           <div class="place-row-top">
             <div class="place-main">
@@ -1669,36 +1691,28 @@ function exportFavoritesPDF() {
 
         content.innerHTML += `
           <div class="place-card slot-card" onclick="showDetailModal(allLoadedPlacesMap.get('${placeObj.ID}') || ${JSON.stringify(placeObj).replace(/"/g, '&quot;')})">
+            <div class="card-img-wrap"><img class="card-img" src="${getVenuePhotoUrl(placeObj)}"></div>
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);">
               <span class="slot-time" style="font-size:11px;font-weight:800;color:var(--primary);text-transform:uppercase;letter-spacing:0.5px;">${s.time}</span>
               <div style="display:flex;align-items:center;gap:8px;" onclick="event.stopPropagation();">
-                <button onclick="event.stopPropagation(); showInAppSingleStopMap(allLoadedPlacesMap.get('${placeObj.ID}'));" style="background:var(--teal-light);color:var(--teal-dark);padding:4px 10px;border-radius:12px;font-size:11px;font-weight:800;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;">📍 Map Stop</button>
+                <button onclick="event.stopPropagation(); showInAppSingleStopMap(allLoadedPlacesMap.get('${placeObj.ID}') || ${JSON.stringify(placeObj).replace(/"/g, '&quot;')});" style="background:var(--teal-light);color:var(--teal-dark);padding:4px 10px;border-radius:12px;font-size:11px;font-weight:800;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;">📍 Map Stop</button>
                 <button onclick="event.stopPropagation(); toggleFavorite(event, '${placeObj.ID}'); renderDay(${dayIndex});" style="background:none;border:none;font-size:20px;cursor:pointer;padding:2px 4px;line-height:1;" title="Favorite">
                   ${isFav ? '❤️' : '🤍'}
                 </button>
               </div>
             </div>
-
-            <div class="card-img-wrap" style="height:140px;border-radius:12px;overflow:hidden;margin-bottom:10px;box-shadow:inset 0 2px 4px rgba(0,0,0,0.15);">
-              <img class="card-img" src="${getVenuePhotoUrl(placeObj)}" alt="${cleanName(placeObj.Name)}" style="width:100%;height:100%;object-fit:cover;">
-            </div>
-
             <div class="place-row-top">
               <div class="place-main">
-                <div class="place-name" style="font-family:var(--font-s);font-size:17px;font-weight:900;color:var(--text);line-height:1.2;">${cleanName(placeObj.Name)}</div>
-                <span class="place-cat-badge">${getCategoryBadgeHTML(placeObj.Category, placeObj.Subcategory)}</span>
+                <div class="place-name" style="font-family:var(--font-s);font-size:18px;font-weight:800;color:var(--text);line-height:1.2;">${cleanName(placeObj.Name)}</div>
+                <span class="place-cat-badge" style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--primary);background:var(--primary-light);padding:3px 8px;border-radius:6px;display:inline-block;margin-top:4px;">${placeObj.Category} • ${placeObj.Subcategory || 'Attraction'}</span>
               </div>
               <div class="place-score">
-                <span class="place-score-num">★ ${placeObj.localScore}</span>
+                <span class="place-score-num" style="background:linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);color:#92400E;border:1px solid #F59E0B;font-size:12px;font-weight:900;padding:4px 10px;border-radius:12px;display:inline-block;box-shadow:0 2px 6px rgba(245,158,11,0.25);">★ ${placeObj.localScore}</span>
               </div>
             </div>
-
-            <div class="place-address" style="font-size:12px;color:var(--text2);margin-top:6px;">📍 ${placeObj.streetAddress || placeObj.Address} (${placeObj.Neighborhood})</div>
-            <p class="place-desc" style="font-size:12px;color:var(--text);margin-top:8px;font-style:italic;border-left:3px solid var(--accent);padding-left:8px;">"${placeObj.whyGo}"</p>
-            
-            <div style="margin-top:8px;text-align:right;">
-              <span style="font-size:11px;font-weight:800;color:var(--primary);text-transform:uppercase;">Tap for Full Details →</span>
-            </div>
+            <div class="place-address" style="font-size:12px;color:var(--text2);margin-top:4px;">📍 ${placeObj.streetAddress || placeObj.Address} (${placeObj.Neighborhood || ''})</div>
+            <p class="place-desc" style="font-size:12px;color:var(--text);margin-top:6px;font-style:italic;line-height:1.4;border-left:3px solid var(--accent);padding-left:8px;">"${placeObj.whyGo || placeObj.Description}"</p>
+            <div style="margin-top:8px;font-size:11px;font-weight:800;color:var(--primary);text-align:right;">Tap for Full Details →</div>
           </div>
         `;
       });
@@ -1943,23 +1957,29 @@ function exportFavoritesPDF() {
 
 
     document.addEventListener('DOMContentLoaded', () => {
-      initOfflineAndPWA(); const dateEl = document.getElementById('pref-start-date'); if (dateEl && !dateEl.value) { const tom = new Date(); tom.setDate(tom.getDate() + 1); dateEl.value = tom.toISOString().split('T')[0]; }
-      document.getElementById('btn-start').addEventListener('click', handleStartApp);
-      document.getElementById('btn-cities-back').addEventListener('click', () => showScreen('screen-welcome'));
-      document.getElementById('btn-browse-back').addEventListener('click', () => showScreen('screen-cities'));
-      document.getElementById('btn-prefs-back').addEventListener('click', () => showScreen('screen-browse'));
-      document.getElementById('btn-itin-back').addEventListener('click', () => showScreen('screen-prefs'));
-      document.getElementById('btn-modal-detail-close').addEventListener('click', () => document.getElementById('modal-detail').classList.remove('open'));
+      initOfflineAndPWA(); 
+      const dateEl = document.getElementById('pref-start-date'); 
+      if (dateEl && !dateEl.value) { 
+        const tom = new Date(); 
+        tom.setDate(tom.getDate() + 1); 
+        dateEl.value = tom.toISOString().split('T')[0]; 
+      }
+      document.getElementById('btn-start')?.addEventListener('click', handleStartApp);
+      document.getElementById('btn-cities-back')?.addEventListener('click', () => showScreen('screen-welcome'));
+      document.getElementById('btn-browse-back')?.addEventListener('click', () => showScreen('screen-cities'));
+      document.getElementById('btn-prefs-back')?.addEventListener('click', () => showScreen('screen-browse'));
+      document.getElementById('btn-itin-back')?.addEventListener('click', () => showScreen('screen-prefs'));
+      document.getElementById('btn-modal-detail-close')?.addEventListener('click', () => document.getElementById('modal-detail')?.classList.remove('open'));
 
-      document.getElementById('btn-browse-prefs').addEventListener('click', () => {
+      document.getElementById('btn-browse-prefs')?.addEventListener('click', () => {
         renderPrefsScreen();
         showScreen('screen-prefs');
       });
 
-      document.getElementById('btn-browse-nearme').addEventListener('click', toggleNearMeBrowse);
-      document.getElementById('btn-days-minus').addEventListener('click', () => updateDays(-1));
-      document.getElementById('btn-days-plus').addEventListener('click', () => updateDays(1));
-      document.getElementById('btn-build-itinerary').addEventListener('click', buildItinerary);
+      document.getElementById('btn-browse-nearme')?.addEventListener('click', toggleNearMeBrowse);
+      document.getElementById('btn-days-minus')?.addEventListener('click', () => updateDays(-1));
+      document.getElementById('btn-days-plus')?.addEventListener('click', () => updateDays(1));
+      document.getElementById('btn-build-itinerary')?.addEventListener('click', buildItinerary);
 
       renderCityGrid();
     });
@@ -2720,27 +2740,14 @@ function exportFavoritesPDF() {
       }
     }
 
-    .place-card, .slot-card {
-      background: linear-gradient(145deg, #ffffff 0%, #fbfaf5 100%);
-      border: 1px solid rgba(216, 224, 220, 0.85);
-      border-top: 1px solid rgba(255, 255, 255, 0.95);
-      border-left: 1px solid rgba(255, 255, 255, 0.85);
-      border-radius: 16px;
-      padding: 14px;
-      box-shadow: 0 10px 22px -4px rgba(28, 45, 39, 0.12), 0 4px 8px -2px rgba(28, 45, 39, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    .place-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
       cursor: pointer;
-      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
-      position: relative;
-    }
-
-    .place-card:hover, .slot-card:hover {
-      transform: translateY(-4px) scale(1.005);
-      box-shadow: 0 18px 30px -6px rgba(28, 45, 39, 0.18), 0 8px 14px -3px rgba(28, 45, 39, 0.08);
-    }
-
-    .place-card:active, .slot-card:active {
-      transform: translateY(-1px) scale(0.99);
-      box-shadow: 0 6px 14px -2px rgba(28, 45, 39, 0.14);
+      transition: transform 0.15s;
     }
 
     .place-card:active {
@@ -2785,18 +2792,14 @@ function exportFavoritesPDF() {
     }
 
     .place-score-num {
-      background: linear-gradient(135deg, #FDE68A 0%, #F59E0B 100%);
-      color: #78350F;
-      border: 1px solid #D97706;
+      background: #FEF3C7;
+      color: #92400E;
+      border: 1px solid #FDE68A;
       font-size: 12px;
-      font-weight: 900;
-      padding: 4px 10px;
-      border-radius: 10px;
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      box-shadow: 0 3px 6px rgba(245, 158, 11, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.7);
-      text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 8px;
+      display: inline-block;
     }
 
     .place-address {
@@ -3449,78 +3452,25 @@ EDITORIAL REDESIGN — Boutique travel magazine
   <!-- 2. CITIES SELECT SCREEN -->
   
   <!-- =============================================
-       ONBOARDING VISUAL GUIDE SCREEN (DK Eyewitness Style)
+       ONBOARDING VISUAL GUIDE SCREEN (App Guide Style)
        ============================================= -->
+    <!-- WELCOME & ONBOARDING SCREEN -->
   <div id="screen-onboarding" class="screen">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-      <div style="font-size:12px;font-weight:800;color:var(--primary);text-transform:uppercase;letter-spacing:1px;">✨ Welcome to Local Like a Local</div>
-      <button onclick="finishOnboarding()" style="background:none;border:none;color:var(--text2);font-size:13px;font-weight:700;cursor:pointer;">Skip to Cities →</button>
+    <div style="max-width:700px; margin:0 auto; padding:20px 16px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+        <h2 style="font-size:24px; font-weight:900; color:var(--text); margin:0;">Welcome & Overview</h2>
+        <button onclick="finishOnboarding()" style="background:none; border:none; color:var(--primary); font-size:14px; font-weight:800; cursor:pointer;">Skip to Cities →</button>
+      </div>
+
+      <div style="background:var(--card); border:1px solid var(--border); border-radius:18px; padding:12px; box-shadow:var(--shadow); margin-bottom:20px;">
+        <img src="images/welcome_onboarding_infographic.png" alt="How Local Like a Local Works" style="width:100%; height:auto; border-radius:14px; display:block;">
+      </div>
+
+      <button onclick="finishOnboarding()" class="btn-primary" style="width:100%; padding:16px; font-size:17px; font-weight:900; border-radius:14px; box-shadow: 0 6px 18px rgba(224, 122, 95, 0.3);">Let's Explore! ✨</button>
     </div>
-
-    <h1 style="font-size:24px;font-weight:900;color:var(--text);margin-bottom:8px;line-height:1.2;">Your Insider Guide to Authentic Travel</h1>
-    <p style="font-size:14px;color:var(--text2);margin-bottom:20px;line-height:1.4;">Here is a quick look at how your visual travel guide works:</p>
-
-    <!-- Visual Feature 1: Curation -->
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,0.04);">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-        <span style="font-size:24px;">🏛️</span>
-        <div>
-          <div style="font-size:16px;font-weight:800;color:var(--text);">Authentic Local Curation</div>
-          <div style="font-size:11px;color:var(--primary);font-weight:700;">HAND-PICKED DESTINATIONS</div>
-        </div>
-      </div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
-        <span style="background:#FEF3C7;color:#92400E;font-size:11px;font-weight:800;padding:3px 8px;border-radius:6px;border:1px solid #FDE68A;">★ 9.5 Local Score</span>
-        <span style="background:var(--primary-light);color:var(--primary-dark);font-size:11px;font-weight:800;padding:3px 8px;border-radius:6px;">💎 Hidden Gem</span>
-        <span style="background:var(--teal-light);color:var(--teal-dark);font-size:11px;font-weight:800;padding:3px 8px;border-radius:6px;">🍺 Historic Tavern</span>
-      </div>
-      <p style="font-size:12px;color:var(--text2);line-height:1.4;margin:0;">Discover authentic spots, secret neighborhood favorites, and centuries-old taverns verified by real city insiders.</p>
-    </div>
-
-    <!-- Visual Feature 2: Smart Itineraries -->
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,0.04);">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-        <span style="font-size:24px;">🗓️</span>
-        <div>
-          <div style="font-size:16px;font-weight:800;color:var(--text);">Smart 1 to 7 Day Itineraries</div>
-          <div style="font-size:11px;color:var(--primary);font-weight:700;">CUSTOM DAY PLANS IN SECONDS</div>
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;background:var(--bg);padding:8px 10px;border-radius:10px;font-size:11px;font-weight:700;color:var(--text);">
-        <span>🌅 Morning</span>
-        <span style="color:var(--text2);">→</span>
-        <span>🍕 Lunch</span>
-        <span style="color:var(--text2);">→</span>
-        <span>🍷 Dinner</span>
-        <span style="margin-left:auto;background:var(--teal);color:#fff;padding:2px 6px;border-radius:4px;font-size:10px;">🚶 Route Map</span>
-      </div>
-      <p style="font-size:12px;color:var(--text2);line-height:1.4;margin:0;">Generate custom daily schedules complete with in-app walking route maps, travel time estimates, and zero bakery/cafe dinner mix-ups.</p>
-    </div>
-
-    <!-- Visual Feature 3: Offline Freedom -->
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:20px;box-shadow:0 2px 8px rgba(0,0,0,0.04);">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-        <span style="font-size:24px;">✈️</span>
-        <div>
-          <div style="font-size:16px;font-weight:800;color:var(--text);">100% Offline Freedom</div>
-          <div style="font-size:11px;color:var(--primary);font-weight:700;">NO ROAMING DATA REQUIRED</div>
-        </div>
-      </div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
-        <span style="background:#E0F2FE;color:#0369A1;font-size:11px;font-weight:800;padding:3px 8px;border-radius:6px;">📶 Offline PWA</span>
-        <span style="background:#DCFCE7;color:#15803D;font-size:11px;font-weight:800;padding:3px 8px;border-radius:6px;">📱 Add to Home Screen</span>
-        <span style="background:#F3E8FF;color:#6B21A8;font-size:11px;font-weight:800;padding:3px 8px;border-radius:6px;">🔒 100% Private</span>
-      </div>
-      <p style="font-size:12px;color:var(--text2);line-height:1.4;margin:0;">Explore city guides, view map locations, save favorites, and write personal trip notes completely offline without international roaming fees.</p>
-    </div>
-
-    <!-- CTA Button -->
-    <button onclick="finishOnboarding()" style="width:100%;background:linear-gradient(135deg, var(--primary), var(--primary-dark));color:#fff;border:none;padding:16px;border-radius:16px;font-size:16px;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:center;gap:8px;">
-      <span>Let's Explore! ✨</span>
-    </button>
   </div>
 
-<div id="screen-cities" class="screen">
+  <div id="screen-cities" class="screen">
     <div class="header-bar">
       <h2>Select Destination <span id="cities-header-count" style="font-size:12px;font-weight:700;background:var(--primary-light);color:var(--primary-dark);padding:3px 10px;border-radius:12px;margin-left:6px;"></span></h2>
       <button id="btn-cities-back" class="btn-back">← Home</button>
@@ -3559,12 +3509,18 @@ EDITORIAL REDESIGN — Boutique travel magazine
     <div class="filter-bar" style="border-top: none; padding-top: 4px; gap: 8px; justify-content: flex-start; overflow-x: auto;">
       <button id="btn-filter-opennow" class="toggle-filter-btn" onclick="toggleOpenNowFilter()">🟢 Open Now</button>
       <button id="btn-filter-hiddengems" class="toggle-filter-btn" onclick="toggleHiddenGemsFilter()">💎 Hidden Gems Only</button>
+      <div class="neighborhood-filter-wrap" style="display:flex; align-items:center; gap:6px;">
+        <span style="font-size:12px; font-weight:800; color:var(--text2);">🏘️ District:</span>
+        <select id="browse-neighborhood-select" class="neighborhood-select" onchange="filterBrowse(currentFilter)" style="padding:6px 12px; border-radius:10px; border:1px solid var(--border); background:var(--card); font-size:12px; font-weight:700; color:var(--text); cursor:pointer; max-width:180px;">
+          <option value="All">All Neighborhoods</option>
+        </select>
+      </div>
       <button id="btn-toggle-view" class="toggle-filter-btn" style="margin-left:auto; background:var(--teal-light); color:var(--teal-dark);" onclick="toggleBrowseView()">🗺️ Map View</button>
     </div>
 
     <!-- Results Grid -->
     <div class="browse-results" id="browse-results"></div>
-    <div id="browse-map-container" style="display:none; height: calc(100vh - 210px); width: 100%; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); box-shadow: var(--shadow); margin-top: 10px;">
+    <div id="browse-map-container" style="display:none; height: 500px; min-height: 400px; width: 100%; border-radius: 14px; overflow: hidden; border: 1px solid var(--border); box-shadow: var(--shadow); margin-top: 10px;">
       <div id="leaflet-map" style="height: 100%; width: 100%; z-index: 1;"></div>
     </div>
   </div>
@@ -3705,7 +3661,86 @@ EDITORIAL REDESIGN — Boutique travel magazine
   </div>
 
   
-  <!-- MODAL HELP & GUIDE (DK Eyewitness Style) -->
+  <!-- MODAL HELP & GUIDE (App Guide Style) -->
+    <!-- HELP & FAQS MODAL -->
+  <div id="modal-help" class="modal">
+    <div class="modal-content" style="max-width:720px; width:95%; max-height:92vh; padding:28px 24px; border-radius:20px;">
+      <button class="btn-close-modal" onclick="closeHelpModal()">✕</button>
+      
+      <div style="text-align:center; margin-bottom:20px;">
+        <div style="font-size:36px; margin-bottom:4px;">❓</div>
+        <h2 style="font-size:24px; font-weight:900; color:var(--text); margin:0;">App Guide & Help Center</h2>
+        <p style="font-size:15px; color:var(--text2); margin-top:4px;">Everything you need to know about using Local Like a Local</p>
+      </div>
+
+      <!-- INFOGRAPHIC IMAGE 1 -->
+      <div style="background:var(--card); border:1px solid var(--border); border-radius:16px; padding:12px; margin-bottom:20px; box-shadow:var(--shadow);">
+        <img src="images/venue_card_anatomy.png" alt="Venue Card Anatomy & Features" style="width:100%; height:auto; border-radius:12px; display:block;">
+      </div>
+
+      <!-- FAQS IN LARGE READABLE FONT -->
+      <div style="display:flex; flex-direction:column; gap:16px; font-size:15px; line-height:1.6; color:var(--text);">
+        
+        <div style="background:var(--primary-light); border:1px solid var(--primary); border-radius:14px; padding:18px;">
+          <h3 style="font-size:17px; font-weight:800; color:var(--primary-dark); margin:0 0 6px 0;">📱 Adding to Home Screen (Offline App)</h3>
+          <p style="margin:0; font-size:15px; color:var(--text);"><b>iOS (Safari):</b> Tap Share icon → select <b>"Add to Home Screen"</b>.<br><b>Android (Chrome):</b> Tap menu ⋮ → select <b>"Install App"</b> or <b>"Add to Home Screen"</b>.</p>
+        </div>
+
+        <div style="background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px;">
+          <h3 style="font-size:17px; font-weight:800; color:var(--text); margin:0 0 6px 0;">🏘️ City-Specific Neighborhood Filtering</h3>
+          <p style="margin:0; font-size:15px; color:var(--text2);">In the <b>Browse</b> tab, use the <b>🏘️ District</b> dropdown to filter spots by specific neighborhood (e.g. Jordaan in Amsterdam or Alfama in Lisbon).</p>
+        </div>
+
+        <div style="background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px;">
+          <h3 style="font-size:17px; font-weight:800; color:var(--text); margin:0 0 6px 0;">📅 Calendar Export & Vacation Start Dates</h3>
+          <p style="margin:0; font-size:15px; color:var(--text2);">In <b>Customize Trip</b>, select your vacation arrival date under <b>Trip Start Date</b>. Tap <b>"📅 Calendar"</b> on any day to export 5 pre-scheduled events with walking/driving buffers directly to Apple or Google Calendar.</p>
+        </div>
+
+        <div style="background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px;">
+          <h3 style="font-size:17px; font-weight:800; color:var(--text); margin:0 0 6px 0;">📤 Syncing Notes Between iPad & Computer</h3>
+          <p style="margin:0; font-size:15px; color:var(--text2);">Tap <b>"📤 Export Notes & Favorites"</b> below to download a small <code>.json</code> backup file. Open the app on your computer and tap <b>"📥 Import Backup"</b> to restore all your trip notes instantly!</p>
+          <div style="display:flex; gap:10px; margin-top:12px;">
+            <button onclick="exportUserData()" style="flex:1; background:var(--primary); color:#fff; border:none; padding:12px; border-radius:12px; font-size:14px; font-weight:800; cursor:pointer;">📤 Export Notes & Favorites</button>
+            <button onclick="document.getElementById('import-file-input').click()" style="flex:1; background:var(--primary-light); color:var(--primary-dark); border:1px solid var(--primary); padding:12px; border-radius:12px; font-size:14px; font-weight:800; cursor:pointer;">📥 Import Backup</button>
+          </div>
+        </div>
+
+      </div>
+
+      <button onclick="closeHelpModal(); showScreen('screen-onboarding');" style="margin-top:20px; width:100%; background:var(--teal-light); color:var(--teal-dark); border:1px solid var(--teal); padding:14px; border-radius:14px; font-size:15px; font-weight:800; cursor:pointer;">💡 App Tips & Onboarding Walkthrough</button>
+    </div>
+  </div>
+
+  <!-- MODAL DETAIL VIEW -->
+  <div id="modal-detail" class="modal">
+    <div class="modal-content">
+      <button id="btn-modal-detail-close" class="btn-close-modal">✕</button>
+      <div id="modal-detail-body"></div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  
+  <!-- IN-APP ROUTE MAP MODAL -->
+  <div id="modal-route-map" class="modal">
+    <div class="modal-content" style="padding:16px; max-height:92vh; display:flex; flex-direction:column; width:95%; max-width:520px;">
+      <button id="btn-route-map-close" class="btn-close-modal" onclick="closeRouteMapModal()" style="z-index:10; top:12px; right:12px;">✕</button>
+      <div style="font-size:16px; font-weight:800; color:var(--text); margin-bottom:12px; padding-right:32px;" id="route-map-modal-title">🗺️ Day Route Map</div>
+      <div id="inapp-leaflet-map-container" style="width:100%; height:280px; border-radius:12px; overflow:hidden; position:relative; background:var(--bg); border:1px solid var(--border); flex-shrink:0;">
+        <div id="inapp-leaflet-map" style="width:100%; height:100%;"></div>
+      </div>
+      <div id="route-map-modal-stops" style="margin-top:12px; overflow-y:auto; flex-grow:1; display:flex; flex-direction:column; gap:8px;"></div>
+      <div id="route-map-modal-actions" style="margin-top:12px; padding-top:10px; border-top:1px solid var(--border); display:flex; gap:8px; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+        <span id="route-map-dist-summary" style="font-size:12px; font-weight:700; color:var(--text2);"></span>
+        <button id="btn-external-maps-launch" style="background:var(--primary-light); color:var(--primary-dark); border:1px solid var(--primary); padding:6px 12px; border-radius:10px; font-size:12px; font-weight:700; cursor:pointer;">
+          🚀 Open in External Maps
+        </button>
+      </div>
+    </div>
+  </div>
+
+  
+  <!-- MODAL HELP & GUIDE (App Guide Style) -->
   <div id="modal-help" class="modal">
     <div class="modal-content" style="max-width:520px;padding:24px;">
       <button onclick="closeHelpModal()" class="btn-close-modal">✕</button>
@@ -3714,7 +3749,7 @@ EDITORIAL REDESIGN — Boutique travel magazine
         <span style="font-size:28px;">❓</span>
         <div>
           <h2 style="font-size:20px;font-weight:900;color:var(--text);margin:0;">App Guide & Help</h2>
-          <div style="font-size:12px;color:var(--primary);font-weight:700;">DK EYEWITNESS VISUAL REFERENCE</div>
+          <div style="font-size:12px;color:var(--primary);font-weight:700;">APP GUIDE & VISUAL OVERVIEW</div>
         </div>
       </div>
 
@@ -3739,7 +3774,7 @@ EDITORIAL REDESIGN — Boutique travel magazine
           • <b>Evening Spot:</b> 9:00 PM – 11:00 PM
         </div>
       </div>
-<!-- DK EYEWITNESS ANATOMY DIAGRAM -->
+<!-- Venue Card Anatomy -->
       <div style="background:var(--bg);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:20px;">
         <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:10px;text-align:center;">🔍 Anatomy of a Local Venue Card</div>
 
