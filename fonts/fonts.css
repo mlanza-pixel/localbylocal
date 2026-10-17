@@ -1,0 +1,30 @@
+/* Offline Typography Definitions for Local Like a Local */
+
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Fraunces Bold'), local('Fraunces-Bold'), serif;
+}
+
+@font-face {
+  font-family: 'DM Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('DM Sans Regular'), local('DMSans-Regular'), sans-serif;
+}
+
+@font-face {
+  font-family: 'DM Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('DM Sans Bold'), local('DMSans-Bold'), sans-serif;
+}
+
+:root {
+  --font-d: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-u: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
