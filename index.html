@@ -1986,14 +1986,18 @@ function setBudgetPref(b) {
         return;
       }
 
+      // Parse date-only values as local calendar dates, avoiding UTC timezone rollover.
       const dateInput = document.getElementById('pref-start-date')?.value;
-      let startDate = new Date();
-      if (dateInput) {
-        const parts = dateInput.split('-');
-        if (parts.length === 3) {
-          startDate = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10), 9, 0, 0);
+      let startDate;
+      if (dateInput && /^\d{4}-\d{2}-\d{2}$/.test(dateInput)) {
+        const [year, month, day] = dateInput.split('-').map(Number);
+        startDate = new Date(year, month - 1, day, 9, 0, 0, 0);
+        if (startDate.getFullYear() !== year || startDate.getMonth() !== month - 1 || startDate.getDate() !== day) {
+          showToast('Please choose a valid trip start date.');
+          return;
         }
       } else {
+        startDate = new Date();
         startDate.setDate(startDate.getDate() + 1);
         startDate.setHours(9, 0, 0, 0);
       }
@@ -2005,76 +2009,62 @@ function setBudgetPref(b) {
         { key: 'dinner', label: 'Dinner', startH: 18, startM: 30, endH: 20, endM: 30 },
         { key: 'evening', label: 'Evening Spot / Nightlife', startH: 21, startM: 0, endH: 23, endM: 0 }
       ];
-
-      const targetDays = (dayIndex !== null && dayIndex !== undefined && itinerary[dayIndex]) 
-        ? [dayIndex] 
+      const targetDays = (dayIndex !== null && dayIndex !== undefined && itinerary[dayIndex])
+        ? [dayIndex]
         : Array.from({ length: itinerary.length }, (_, i) => i);
-
-      let icsContent = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Local Like a Local Travel Guide//EN\r\nCALSCALE:GREGORIAN\r\nMETHOD:PUBLISH\r\n";
-
-      const pad = (n) => String(n).padStart(2, '0');
-      const formatICSDate = (dt) => {
-        return dt.getFullYear() +
-               pad(dt.getMonth() + 1) +
-               pad(dt.getDate()) + 'T' +
-               pad(dt.getHours()) +
-               pad(dt.getMinutes()) +
-               pad(dt.getSeconds());
-      };
+      let icsContent = 'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Local Like a Local Travel Guide//EN\r\nCALSCALE:GREGORIAN\r\nMETHOD:PUBLISH\r\n';
+      const pad = n => String(n).padStart(2, '0');
+      // DTSTART/DTEND are floating local times so imported events keep the intended local clock times.
+      const formatLocalICSDate = dt => `${dt.getFullYear()}${pad(dt.getMonth() + 1)}${pad(dt.getDate())}T${pad(dt.getHours())}${pad(dt.getMinutes())}${pad(dt.getSeconds())}`;
+      const formatUTCICSDate = dt => `${dt.getUTCFullYear()}${pad(dt.getUTCMonth() + 1)}${pad(dt.getUTCDate())}T${pad(dt.getUTCHours())}${pad(dt.getUTCMinutes())}${pad(dt.getUTCSeconds())}Z`;
+      const escapeICSText = value => String(value ?? '')
+        .replace(/\\/g, '\\\\')
+        .replace(/\r\n|\n|\r/g, '\\n')
+        .replace(/;/g, '\\;')
+        .replace(/,/g, '\\,');
 
       let eventCount = 0;
-
       targetDays.forEach(dIdx => {
         const dayPlan = itinerary[dIdx];
         if (!dayPlan) return;
-
         const currentDayDate = new Date(startDate);
         currentDayDate.setDate(startDate.getDate() + dIdx);
-
         slotTimes.forEach(slot => {
           const place = dayPlan[slot.key];
           if (!place) return;
-
           const dtStart = new Date(currentDayDate);
           dtStart.setHours(slot.startH, slot.startM, 0, 0);
-
           const dtEnd = new Date(currentDayDate);
           dtEnd.setHours(slot.endH, slot.endM, 0, 0);
-
           const title = `${cleanName(place.Name)} (${slot.label})`;
           const location = `${cleanName(place.Name)}, ${place.streetAddress || place.Address || ''}`;
-          const summary = `📍 ${place.streetAddress || place.Address || ''} (${place.Neighborhood || ''}) - "${place.whyGo || ''}" - Rating: ${place.localScore}/10`;
-
-          icsContent += "BEGIN:VEVENT\r\n";
-          icsContent += `UID:locallikealocal-${dIdx}-${slot.key}-${Date.now()}@guide\r\n`;
-          icsContent += `DTSTAMP:${formatICSDate(new Date())}\r\n`;
-          icsContent += `DTSTART:${formatICSDate(dtStart)}\r\n`;
-          icsContent += `DTEND:${formatICSDate(dtEnd)}\r\n`;
-          icsContent += `SUMMARY:${title.replace(/,/g, '\\,')}\r\n`;
-          icsContent += `LOCATION:${location.replace(/,/g, '\\,')}\r\n`;
-          icsContent += `DESCRIPTION:${summary.replace(/,/g, '\\,')}\r\n`;
-          icsContent += "END:VEVENT\r\n";
-
+          const description = `📍 ${place.streetAddress || place.Address || ''} (${place.Neighborhood || ''}) - "${place.whyGo || ''}" - Rating: ${place.localScore ?? 'N/A'}/10`;
+          icsContent += 'BEGIN:VEVENT\r\n';
+          icsContent += `UID:locallikealocal-${dIdx}-${slot.key}-${Date.now()}-${eventCount}@guide\r\n`;
+          icsContent += `DTSTAMP:${formatUTCICSDate(new Date())}\r\n`;
+          icsContent += `DTSTART:${formatLocalICSDate(dtStart)}\r\n`;
+          icsContent += `DTEND:${formatLocalICSDate(dtEnd)}\r\n`;
+          icsContent += `SUMMARY:${escapeICSText(title)}\r\n`;
+          icsContent += `LOCATION:${escapeICSText(location)}\r\n`;
+          icsContent += `DESCRIPTION:${escapeICSText(description)}\r\n`;
+          icsContent += 'END:VEVENT\r\n';
           eventCount++;
         });
       });
-
-      icsContent += "END:VCALENDAR\r\n";
-
+      icsContent += 'END:VCALENDAR\r\n';
       if (eventCount === 0) {
         showToast('No scheduled spots to export.');
         return;
       }
-
       const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `local_like_a_local_day_${(dayIndex !== null ? dayIndex + 1 : 'all')}.ics`);
+      link.setAttribute('download', `local_like_a_local_day_${(dayIndex !== null && dayIndex !== undefined ? dayIndex + 1 : 'all')}.ics`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       showToast(`Exported ${eventCount} spot(s) to Calendar! 📅`);
     }
 
@@ -2090,10 +2080,13 @@ function setBudgetPref(b) {
     document.addEventListener('DOMContentLoaded', () => {
       initOfflineAndPWA(); 
       const dateEl = document.getElementById('pref-start-date'); 
-      if (dateEl && !dateEl.value) { 
-        const tom = new Date(); 
-        tom.setDate(tom.getDate() + 1); 
-        dateEl.value = tom.toISOString().split('T')[0]; 
+      if (dateEl && !dateEl.value) {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const yyyy = tomorrow.getFullYear();
+        const mm = String(tomorrow.getMonth() + 1).padStart(2, '0');
+        const dd = String(tomorrow.getDate()).padStart(2, '0');
+        dateEl.value = `${yyyy}-${mm}-${dd}`;
       }
       document.getElementById('btn-start')?.addEventListener('click', handleStartApp);
       document.getElementById('btn-cities-back')?.addEventListener('click', () => showScreen('screen-welcome'));
@@ -3808,6 +3801,22 @@ EDITORIAL REDESIGN — Boutique travel magazine
         <p style="font-size:16px; color:var(--text2); margin-top:4px;">Everything you need to know about using Local Like a Local</p>
       </div>
 
+<!-- CALENDAR EXPORT FAQ -->
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:16px;">
+        <div style="font-size:12px;font-weight:800;color:var(--teal);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">📅 Calendar Export & Date Selection</div>
+        <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:6px;">How Calendar Times & Dates Get Populated</div>
+        <p style="font-size:12px;color:var(--text2);line-height:1.4;margin-bottom:8px;">
+          In <b>Customize Trip</b>, select your vacation arrival date under <b>Trip Start Date</b> (defaults to tomorrow). When you tap <b>"📅 Calendar"</b>, the app schedules your 5 daily slots with automatic travel/meal buffers:
+        </p>
+        <div style="background:var(--bg);border-radius:10px;padding:10px;font-size:11px;color:var(--text);line-height:1.6;">
+          • <b>Morning Spot:</b> 9:00 AM – 11:30 AM<br>
+          • <b>Lunch:</b> 12:00 PM – 1:30 PM<br>
+          • <b>Afternoon Spot:</b> 2:00 PM – 4:30 PM<br>
+          • <b>Dinner:</b> 6:30 PM – 8:30 PM<br>
+          • <b>Evening Spot:</b> 9:00 PM – 11:00 PM
+        </div>
+      </div>
+
       <!-- VISUAL ANATOMY INFOGRAPHIC -->
       <div style="background:var(--primary-light); border:1px solid var(--primary); border-radius:16px; padding:20px; margin-bottom:20px;">
         <div style="font-size:13px; font-weight:800; color:var(--primary-dark); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">📖 VISUAL REFERENCE GUIDE</div>
@@ -3843,120 +3852,11 @@ EDITORIAL REDESIGN — Boutique travel magazine
   <!-- TOAST NOTIFICATION -->
   
   <!-- IN-APP ROUTE MAP MODAL -->
-  <div id="modal-route-map" class="modal">
-    <div class="modal-content" style="padding:16px; max-height:92vh; display:flex; flex-direction:column; width:95%; max-width:520px;">
-      <button id="btn-route-map-close" class="btn-close-modal" onclick="closeRouteMapModal()" style="z-index:10; top:12px; right:12px;">✕</button>
-      <div style="font-size:16px; font-weight:800; color:var(--text); margin-bottom:12px; padding-right:32px;" id="route-map-modal-title">🗺️ Day Route Map</div>
-      <div id="inapp-leaflet-map-container" style="width:100%; height:280px; border-radius:12px; overflow:hidden; position:relative; background:var(--bg); border:1px solid var(--border); flex-shrink:0;">
-        <div id="inapp-leaflet-map" style="width:100%; height:100%;"></div>
-      </div>
-      <div id="route-map-modal-stops" style="margin-top:12px; overflow-y:auto; flex-grow:1; display:flex; flex-direction:column; gap:8px;"></div>
-      <div id="route-map-modal-actions" style="margin-top:12px; padding-top:10px; border-top:1px solid var(--border); display:flex; gap:8px; justify-content:space-between; align-items:center; flex-wrap:wrap;">
-        <span id="route-map-dist-summary" style="font-size:12px; font-weight:700; color:var(--text2);"></span>
-        <button id="btn-external-maps-launch" style="background:var(--primary-light); color:var(--primary-dark); border:1px solid var(--primary); padding:6px 12px; border-radius:10px; font-size:12px; font-weight:700; cursor:pointer;">
-          🚀 Open in External Maps
-        </button>
-      </div>
-    </div>
-  </div>
+  
 
   
   <!-- MODAL HELP & GUIDE (App Guide Style) -->
-  <div id="modal-help" class="modal">
-    <div class="modal-content" style="max-width:520px;padding:24px;">
-      <button onclick="closeHelpModal()" class="btn-close-modal">✕</button>
-
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
-        <span style="font-size:28px;">❓</span>
-        <div>
-          <h2 style="font-size:20px;font-weight:900;color:var(--text);margin:0;">App Guide & Help</h2>
-          <div style="font-size:12px;color:var(--primary);font-weight:700;">APP GUIDE & VISUAL OVERVIEW</div>
-        </div>
-      </div>
-
-      <!-- REPLAY ONBOARDING CTA -->
-      <button onclick="closeHelpModal(); showScreen('screen-onboarding');" style="width:100%;background:var(--primary-light);border:1px solid var(--primary);color:var(--primary-dark);padding:10px 14px;border-radius:12px;font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:18px;">
-        <span>💡 App Tips</span>
-      </button>
-
-      
-      <!-- CALENDAR EXPORT FAQ -->
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:16px;">
-        <div style="font-size:12px;font-weight:800;color:var(--teal);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">📅 Calendar Export & Date Selection</div>
-        <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:6px;">How Calendar Times & Dates Get Populated</div>
-        <p style="font-size:12px;color:var(--text2);line-height:1.4;margin-bottom:8px;">
-          In <b>Customize Trip</b>, select your vacation arrival date under <b>Trip Start Date</b> (defaults to tomorrow). When you tap <b>"📅 Calendar"</b>, the app schedules your 5 daily slots with automatic travel/meal buffers:
-        </p>
-        <div style="background:var(--bg);border-radius:10px;padding:10px;font-size:11px;color:var(--text);line-height:1.6;">
-          • <b>Morning Spot:</b> 9:00 AM – 11:30 AM<br>
-          • <b>Lunch:</b> 12:00 PM – 1:30 PM<br>
-          • <b>Afternoon Spot:</b> 2:00 PM – 4:30 PM<br>
-          • <b>Dinner:</b> 6:30 PM – 8:30 PM<br>
-          • <b>Evening Spot:</b> 9:00 PM – 11:00 PM
-        </div>
-      </div>
-<!-- Venue Card Anatomy -->
-      <div style="background:var(--bg);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:20px;">
-        <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:10px;text-align:center;">🔍 Anatomy of a Local Venue Card</div>
-
-        <!-- Sample Card Mockup -->
-        <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;position:relative;">
-          <div style="height:70px;background:linear-gradient(135deg,#f0abfc,#cbd5e1);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:10px;position:relative;">
-            🍽️
-            <span style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.6);color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:700;">[1] Photo Header</span>
-          </div>
-
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
-            <div>
-              <div style="font-size:15px;font-weight:800;color:var(--text);">The Anchor Bistro <span style="font-size:10px;color:var(--primary);font-weight:700;">[3] Clean Title</span></div>
-              <span style="background:var(--primary-light);color:var(--primary-dark);font-size:10px;font-weight:800;padding:2px 6px;border-radius:4px;display:inline-block;margin-top:2px;">Food • Bistro <span style="font-size:9px;">[2] Category</span></span>
-            </div>
-            <div style="background:#FEF3C7;color:#92400E;font-size:11px;font-weight:800;padding:3px 6px;border-radius:6px;border:1px solid #FDE68A;">★ 9.5 <span style="font-size:9px;">[4] Local Score</span></div>
-          </div>
-
-          <div style="font-size:11px;color:var(--text2);margin-top:6px;">📍 123 Harbor St, Inner Harbor <span style="font-size:9px;color:var(--teal-dark);font-weight:700;">[5] Location</span></div>
-
-          <div style="display:flex;gap:6px;margin-top:10px;">
-            <span style="background:var(--teal);color:#fff;padding:4px 8px;border-radius:6px;font-size:10px;font-weight:700;">📍 Directions [6]</span>
-            <span style="background:var(--primary);color:#fff;padding:4px 8px;border-radius:6px;font-size:10px;font-weight:700;">❤️ Save [7]</span>
-          </div>
-        </div>
-
-        <!-- Legend Callout Bullet Points -->
-        <div style="margin-top:12px;font-size:11px;color:var(--text2);line-height:1.5;">
-          <div><b>[1] Photo Header:</b> Curated imagery matching the destination.</div>
-          <div><b>[2] Category Badge:</b> Identifies venue type (Food, Culture, Nightlife).</div>
-          <div><b>[3] Clean Title:</b> Displays clean venue names without line reference numbers.</div>
-          <div><b>[4] Local Score:</b> Authenticity score (1.0 to 10.0) rated by local insiders.</div>
-          <div><b>[5] Location:</b> Street address and neighborhood name.</div>
-          <div><b>[6] Directions:</b> Opens embedded in-app walking route map or external GPS.</div>
-          <div><b>[7] Save:</b> Saves venue locally for quick offline access in <b>Saved</b> tab.</div>
-        </div>
-      </div>
-
-      <!-- QUICK FAQS -->
-      <div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:10px;">💬 Quick Travel FAQs</div>
-
-      <details style="margin-bottom:8px;background:var(--bg);border-radius:10px;padding:10px;font-size:12px;">
-        <summary style="font-weight:700;color:var(--text);cursor:pointer;">📶 How do I use this app 100% offline?</summary>
-        <p style="color:var(--text2);margin-top:6px;line-height:1.4;">Open the app once while connected to download the local guide. On iOS, tap <b>Share → Add to Home Screen</b>. On Android, tap <b>Install App</b>. Everything works offline!</p>
-      </details>
-
-      <details style="margin-bottom:8px;background:var(--bg);border-radius:10px;padding:10px;font-size:12px;">
-        <summary style="font-weight:700;color:var(--text);cursor:pointer;">🗺️ How do route maps work?</summary>
-        <p style="color:var(--text2);margin-top:6px;line-height:1.4;">Tapping <b>Map Day Route</b> or <b>Directions</b> displays an interactive map inside the app with numbered stops and travel times. Tap <b>Open in External Maps</b> for turn-by-turn GPS driving.</p>
-      </details>
-
-      <details style="margin-bottom:16px;background:var(--bg);border-radius:10px;padding:10px;font-size:12px;">
-        <summary style="font-weight:700;color:var(--text);cursor:pointer;">🔒 Is my travel data private?</summary>
-        <p style="color:var(--text2);margin-top:6px;line-height:1.4;">Yes! All your saved favorites, personal notes, and custom trip itineraries stay 100% on your device. No user accounts, tracking, or personal data collection.</p>
-      </details>
-
-      <button onclick="closeHelpModal()" style="width:100%;background:var(--primary);color:#fff;border:none;padding:12px;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;">
-        Got It! Back to Guide
-      </button>
-    </div>
-  </div>
+  
 
   <div id="toast" class="toast"></div>
 
