@@ -719,11 +719,14 @@ function exportFavoritesPDF() {
     }
 
     function normalizeCityData(rawPlaces) {
+      if (!Array.isArray(rawPlaces)) return [];
       return rawPlaces.map(p => {
+        if (!p || typeof p !== 'object') return p;
+
         // 1. Convert string booleans ("TRUE"/"FALSE") to real booleans
         const boolFields = ['Morning', 'Lunch', 'Afternoon', 'Drinks', 'Dinner', 'Nightlife'];
         boolFields.forEach(field => {
-          p[field] = String(p[field]).toUpperCase() === "TRUE";
+          p[field] = String(p[field]).toUpperCase() === "TRUE" || p[field] === true;
         });
         // Active defaults to true unless explicitly false or "FALSE"
         if (p.Active === undefined || p.Active === null || p.Active === '') {
@@ -741,9 +744,24 @@ function exportFavoritesPDF() {
           p.interestsArray = [];
         }
 
-        // 3. Address Mapping (Supports both New and Old Data Formats)
-        p.Address_Street = p.Address_Street || p['Address_Street'] || p['Address Street'] || '';
-        p.Address_City = p.Address_City || p['Address_City'] || p['Address City'] || '';
+        // 3. Local Score & Hidden Gem Score (support space, underscore, and camelCase keys)
+        const rawLocal = p['Local Score'] !== undefined ? p['Local Score'] : (p['Local_Score'] !== undefined ? p['Local_Score'] : p.localScore);
+        const parsedLocal = parseFloat(rawLocal || 0);
+        p.localScore = isNaN(parsedLocal) ? 0 : parsedLocal;
+        p['Local Score'] = p.localScore;
+        p['Local_Score'] = p.localScore;
+        p.Local_Score = p.localScore;
+
+        const rawGem = p['Hidden Gem Score'] !== undefined ? p['Hidden Gem Score'] : (p['Hidden_Gem_Score'] !== undefined ? p['Hidden_Gem_Score'] : p.hiddenGemScore);
+        const parsedGem = parseFloat(rawGem || 0);
+        p.hiddenGemScore = isNaN(parsedGem) ? 0 : parsedGem;
+        p['Hidden Gem Score'] = p.hiddenGemScore;
+        p['Hidden_Gem_Score'] = p.hiddenGemScore;
+        p.Hidden_Gem_Score = p.hiddenGemScore;
+
+        // 4. Address Mapping (Supports Address_Street, Address Street, Address)
+        p.Address_Street = p.Address_Street || p['Address_Street'] || p['Address Street'] || p.streetAddress || '';
+        p.Address_City = p.Address_City || p['Address_City'] || p['Address City'] || p.City || '';
         p.Address_State = p.Address_State || p['Address_State'] || p['Address State'] || '';
         p.Address_Zip = p.Address_Zip || p['Address_Zip'] || p['Address Zip'] || '';
 
@@ -757,14 +775,50 @@ function exportFavoritesPDF() {
           p.streetAddress = '';
           p.Address = '';
         }
+        p['Address'] = p.Address;
+        p['Address_Street'] = p.streetAddress;
+        p['Address Street'] = p.streetAddress;
 
-        // 4. Extended Metadata (Phone, Parking, Cost Context, Opening Hours)
+        // 5. Google Maps Link (Supports Google Maps Link, Google_Maps_Link, googleMapsLink)
+        const gMapLink = p['Google Maps Link'] || p['Google_Maps_Link'] || p.Google_Maps_Link || p.googleMapsLink || '';
+        p.googleMapsLink = gMapLink;
+        p['Google Maps Link'] = gMapLink;
+        p['Google_Maps_Link'] = gMapLink;
+        p.Google_Maps_Link = gMapLink;
+
+        // 6. Extended Metadata & Aliases
         p.Phone = p.Phone || p['Phone'] || '';
         p.Parking_Info = p.Parking_Info || p['Parking_Info'] || p['Parking Info'] || '';
+        p['Parking Info'] = p.Parking_Info;
+        
         p.Estimated_Cost_Context = p.Estimated_Cost_Context || p['Estimated_Cost_Context'] || p['Estimated Cost Context'] || '';
-        p.Opening_Hours = p.Opening_Hours || p['Opening Hours'] || p['Opening_Hours'] || '';
+        p['Estimated Cost Context'] = p.Estimated_Cost_Context;
 
-        // 5. Normalize Price & Budget filtering
+        const opHours = p['Opening Hours'] || p['Opening_Hours'] || p.Opening_Hours || p.openingHours || '';
+        p['Opening Hours'] = opHours;
+        p['Opening_Hours'] = opHours;
+        p.Opening_Hours = opHours;
+        p.openingHours = opHours;
+
+        const whyGoText = p['Why Go'] || p['Why_Go'] || p.Why_Go || p.whyGo || p.Description || '';
+        p.whyGo = whyGoText;
+        p['Why Go'] = whyGoText;
+        p['Why_Go'] = whyGoText;
+        p.Why_Go = whyGoText;
+
+        const tourConc = p['Tourist Concentration'] || p['Tourist_Concentration'] || p.Tourist_Concentration || p.touristConcentration || '';
+        p.touristConcentration = tourConc;
+        p['Tourist Concentration'] = tourConc;
+        p['Tourist_Concentration'] = tourConc;
+        p.Tourist_Concentration = tourConc;
+
+        const specWeb = p['Specific Website URL'] || p['Specific_Website_URL'] || p.Specific_Website_URL || p.specificWebsiteUrl || p.Website || '';
+        p.specificWebsiteUrl = specWeb;
+        p['Specific Website URL'] = specWeb;
+        p['Specific_Website_URL'] = specWeb;
+        p.Specific_Website_URL = specWeb;
+
+        // 7. Normalize Price & Budget filtering
         const priceStr = String(p.Price || '').trim();
         if (priceStr.toLowerCase() === 'free') {
           p.budgetNum = 0;
@@ -780,15 +834,7 @@ function exportFavoritesPDF() {
           p.priceDisplay = '$';
         }
 
-        // 6. Map keys with spaces / special characters to camelCase properties
-        p.localScore = parseFloat(p['Local Score'] || p.Local_Score || p.localScore || 0);
-        p.hiddenGemScore = parseFloat(p['Hidden Gem Score'] || p.Hidden_Gem_Score || p.hiddenGemScore || 0);
-        p.whyGo = p['Why Go'] || p.Why_Go || p.whyGo || p.Description || '';
-        p.touristConcentration = p['Tourist Concentration'] || p.Tourist_Concentration || p.touristConcentration || '';
-        p.specificWebsiteUrl = p['Specific Website URL'] || p.Specific_Website_URL || p.Website || '';
-        p.googleMapsLink = p['Google Maps Link'] || p.Google_Maps_Link || '';
         p.distance = null;
-
         return p;
       });
     }
