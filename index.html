@@ -208,7 +208,7 @@
       if (!visiblePlaces || visiblePlaces.length === 0) return;
 
       // Find center lat/lng from places
-      const validCoords = visiblePlaces.filter(p => p.Latitude && p.Longitude);
+      const validCoords = (visiblePlaces || []).filter(hasValidCoords);
       let centerLat = 39.2904, centerLng = -76.6122; // Default Baltimore
       if (validCoords.length > 0) {
         centerLat = validCoords.reduce((acc, p) => acc + parseFloat(p.Latitude), 0) / validCoords.length;
@@ -253,8 +253,31 @@
 
 
     
+    
+    // ---- ROBUST LOCALSTORAGE GETTER/SETTER (v3.21) ----
+    function safeGetStorage(key, fallback) {
+      try {
+        const val = localStorage.getItem(key);
+        if (!val) return fallback;
+        return JSON.parse(val);
+      } catch (e) {
+        console.warn(`[Storage] Corrupted data for key "${key}", clearing and using fallback.`, e);
+        try { localStorage.removeItem(key); } catch (err) {}
+        return fallback;
+      }
+    }
+
+    function safeSetStorage(key, val) {
+      try {
+        localStorage.setItem(key, JSON.stringify(val));
+      } catch (e) {
+        console.warn(`[Storage] Quota exceeded or error saving "${key}".`, e);
+        showToast('Storage quota reached. Note/Favorite saved for this session.');
+      }
+    }
+
     // ---- USER PERSONALIZATION: PERSONAL NOTES ----
-    let userNotes = JSON.parse(localStorage.getItem('local_like_a_local_notes') || '{}');
+    let userNotes = safeGetStorage('local_like_a_local_notes', {});
 
     function getPersonalNote(id) {
       return userNotes[id] || '';
@@ -266,7 +289,7 @@
       } else {
         delete userNotes[id];
       }
-      localStorage.setItem('local_like_a_local_notes', JSON.stringify(userNotes));
+      safeSetStorage('local_like_a_local_notes', userNotes);
       showToast('Note saved! 📝');
       if (document.getElementById('screen-favorites').classList.contains('active')) {
         filterFavoritesView();
@@ -380,7 +403,7 @@
     }
 
     // ---- FAVORITES & LOCALSTORAGE STATE ----
-    let favoritesList = JSON.parse(localStorage.getItem('local_like_a_local_favs') || '[]');
+    let favoritesList = safeGetStorage('local_like_a_local_favs', []);
     let allLoadedPlacesMap = new Map(); window.allLoadedPlacesMap = allLoadedPlacesMap; // Global registry across loaded cities
 
     function updateFavBadge() {
@@ -405,7 +428,7 @@
         favoritesList.push(placeId);
         showToast('Saved to Favorites ❤️');
       }
-      localStorage.setItem('local_like_a_local_favs', JSON.stringify(favoritesList));
+      safeSetStorage('local_like_a_local_favs', favoritesList);
       updateFavBadge();
 
       // Refresh current screen icons
@@ -815,7 +838,7 @@ function exportFavoritesPDF() {
         }
       }
 
-      const validStops = rawStops.filter(s => s.place.Latitude && s.place.Longitude);
+      const validStops = rawStops.filter(s => s.place && hasValidCoords(s.place));
       const latLngs = [];
       const bounds = [];
 
@@ -1173,31 +1196,32 @@ function exportFavoritesPDF() {
     }
 
     
+    // ---- OPEN NOW STATUS PARSER (v3.21) ----
     function isOpenNow(openingHoursStr) {
-      if (!openingHoursStr) return true;
+      if (!openingHoursStr) return false; // Unknown status -> Do not assume open!
       const str = String(openingHoursStr).trim().toLowerCase();
-      if (str.includes('24 hours') || str.includes('standard') || str.includes('n/a')) return true;
+      
+      if (str.includes('24 hours') || str.includes('24/7') || str.includes('24-hours') || str === 'open 24 hours') return true;
+      if (str.includes('closed') || str.includes('n/a') || str === 'none') return false;
 
-      const parts = str.split('-');
-      if (parts.length < 2) return true;
+      // Extract time range (e.g. "09:00 - 23:00" or "09:00-23:00" or "18:00 - 02:00")
+      const match = str.match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/);
+      if (!match) return false; // Unparseable hours -> Do not assume open!
 
-      const parseTime = (tStr) => {
-        const sub = tStr.trim().split(':');
-        if (sub.length < 2) return null;
-        return parseInt(sub[0], 10) + parseInt(sub[1], 10)/60;
-      };
-
-      const openH = parseTime(parts[0]);
-      const closeH = parseTime(parts[1]);
-      if (openH === null || closeH === null) return true;
+      const openH = parseInt(match[1], 10) + parseInt(match[2], 10) / 60;
+      const closeH = parseInt(match[3], 10) + parseInt(match[4], 10) / 60;
 
       const now = new Date();
-      const currentH = now.getHours() + now.getMinutes()/60;
+      const currentH = now.getHours() + now.getMinutes() / 60;
 
-      if (closeH < openH) {
-        return currentH >= openH || currentH < closeH;
-      } else {
+      if (closeH > openH) {
+        // Standard same-day window (e.g. 09:00 to 23:00)
         return currentH >= openH && currentH <= closeH;
+      } else if (closeH < openH) {
+        // Overnight window (e.g. 18:00 to 02:00 next morning)
+        return currentH >= openH || currentH <= closeH;
+      } else {
+        return true;
       }
     }
 
@@ -1300,11 +1324,24 @@ function exportFavoritesPDF() {
     }
 
 
+    
+    // ---- VALID COORDINATE HELPER (v3.21) ----
+    function hasValidCoords(p) {
+      if (!p) return false;
+      const latVal = p.Latitude !== undefined ? p.Latitude : (p.latitude !== undefined ? p.latitude : null);
+      const lngVal = p.Longitude !== undefined ? p.Longitude : (p.longitude !== undefined ? p.longitude : null);
+      if (latVal === null || latVal === undefined || latVal === '') return false;
+      if (lngVal === null || lngVal === undefined || lngVal === '') return false;
+      const lat = parseFloat(latVal);
+      const lng = parseFloat(lngVal);
+      return !isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+    }
+
     function renderLeafletMap(places) {
       const container = document.getElementById('leaflet-map');
       if (!container || typeof L === 'undefined') return;
 
-      const validPlaces = (places || []).filter(p => p.Latitude && p.Longitude);
+      const validPlaces = (places || []).filter(hasValidCoords);
       if (validPlaces.length === 0) return;
 
       const centerLat = parseFloat(validPlaces[0].Latitude) || 39.2904;
@@ -1444,7 +1481,7 @@ function exportFavoritesPDF() {
       if (nearMePrefActive && userLocation) {
         const MAX_DIST = 0.5;
         filtered = filtered.filter(p => {
-          if (!p.Latitude || !p.Longitude) return false;
+          if (!hasValidCoords(p)) return false;
           const d = getDistanceInMiles(userLocation.lat, userLocation.lng, parseFloat(p.Latitude), parseFloat(p.Longitude));
           p.distance = d;
           return d <= MAX_DIST;
@@ -1530,7 +1567,19 @@ function exportFavoritesPDF() {
       document.getElementById('days-val').textContent = prefs.days;
     }
 
-    function setBudgetPref(b) {
+    
+    function getPriceLevel(priceStr) {
+      if (!priceStr) return 2;
+      const s = String(priceStr).trim().toLowerCase();
+      if (s === 'free' || s === '0' || s === '$0') return 0;
+      if (s.includes('$$$$') || s === '4') return 4;
+      if (s.includes('$$$') || s === '3') return 3;
+      if (s.includes('$$') || s === '2') return 2;
+      if (s.includes('$') || s === '1') return 1;
+      return 2;
+    }
+
+function setBudgetPref(b) {
       prefs.budget = b;
       document.querySelectorAll('.budget-btn').forEach((btn, idx) => {
         btn.classList.toggle('active', idx + 1 === b);
@@ -1603,6 +1652,8 @@ function exportFavoritesPDF() {
       const selectedNeigh = document.getElementById('pref-neighborhood').value;
 
       // Smart multi-factor scoring engine for broad, inclusive matching
+      let userMaxBudget = prefs.budget || 2; // Default $$ (2)
+
       let scoredPlaces = allPlaces.map(p => {
         let score = (prefs.style === 'Off-the-beaten-path') ? (p.hiddenGemScore || p.localScore) : p.localScore;
         
@@ -1619,8 +1670,18 @@ function exportFavoritesPDF() {
 
         // Style bonus
         if (prefs.style === 'Food-focused' && p.Category === 'Food') score += 4;
-        
-        return { place: p, score: score };
+
+        // BUDGET MATCHING & SCORING (v3.20 Fix)
+        const venuePriceLevel = getPriceLevel(p.Price || p.priceTier);
+        if (venuePriceLevel <= userMaxBudget) {
+          score += 6; // Award bonus for budget-compliant venues
+          if (venuePriceLevel === userMaxBudget) score += 2; // Extra bonus for exact budget tier
+        } else {
+          const overstep = venuePriceLevel - userMaxBudget;
+          score -= (overstep * 10); // Heavy penalty for exceeding selected budget
+        }
+
+        return { place: p, score: score, priceLevel: venuePriceLevel };
       });
 
       // Sort candidate pool by match score descending
@@ -1722,7 +1783,7 @@ function exportFavoritesPDF() {
       let prevCoords = null;
 
       slots.forEach(s => {
-        if (s.data.Latitude && s.data.Longitude) {
+        if (hasValidCoords(s.data)) {
           const lat = parseFloat(s.data.Latitude);
           const lng = parseFloat(s.data.Longitude);
           if (prevCoords) {
@@ -1743,8 +1804,8 @@ function exportFavoritesPDF() {
       let lastCoords = null;
 
       slots.forEach((s, idx) => {
-        const cLat = s.data.Latitude ? parseFloat(s.data.Latitude) : null;
-        const cLng = s.data.Longitude ? parseFloat(s.data.Longitude) : null;
+        const cLat = hasValidCoords(s.data) ? parseFloat(s.data.Latitude) : null;
+        const cLng = hasValidCoords(s.data) ? parseFloat(s.data.Longitude) : null;
 
         if (idx > 0 && lastCoords && cLat && cLng) {
           const dist = getDistanceInMiles(lastCoords.lat, lastCoords.lng, cLat, cLng);
@@ -2113,7 +2174,7 @@ function exportFavoritesPDF() {
       reader.onload = function(e) {
         try {
           const parsed = JSON.parse(e.target.result);
-          if (parsed.notes) { userNotes = parsed.notes; localStorage.setItem('local_like_a_local_notes', JSON.stringify(userNotes)); }
+          if (parsed.notes) { userNotes = parsed.notes; safeSetStorage('local_like_a_local_notes', userNotes); }
           if (parsed.favorites) { favoritesList = parsed.favorites; localStorage.setItem('local_like_a_local_favorites', JSON.stringify(favoritesList)); }
           if (typeof showToast === 'function') showToast('Notes & Favorites synced successfully! 📥');
         } catch (err) {
