@@ -1684,7 +1684,7 @@ function exportFavoritesPDF() {
         <div class="place-card ${options.extraClass || ''}" onclick="showDetailModal(allLoadedPlacesMap.get('${place.ID}') || ${escPlace})">
           ${slotLabel}
           <div class="card-img-wrap" style="height:140px;border-radius:12px;overflow:hidden;margin-bottom:10px;position:relative;">
-            <img class="card-img" src="${photoUrl}" alt="${name}" style="width:100%;height:100%;object-fit:cover;">
+            <img class="card-img" src="${photoUrl}" onerror="this.onerror=null; this.src='images/welcome_bg.jpg';" alt="${name}" style="width:100%;height:100%;object-fit:cover;">
             <div style="position:absolute;top:8px;left:8px;">${catBadge}</div>
             <div style="position:absolute;top:8px;right:8px;display:flex;align-items:center;gap:6px;">
               <button onclick="event.stopPropagation(); toggleFavorite(event, '${place.ID}'); ${options.onFavToggle || ''}" style="background:rgba(255,255,255,0.92);border:none;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.3);line-height:1;" title="Toggle Favorite">
@@ -1713,14 +1713,38 @@ function exportFavoritesPDF() {
     function getVenuePhotoUrl(p) {
       if (!p) return 'images/welcome_bg.jpg';
       if (p.Photo || p.photoUrl) return p.Photo || p.photoUrl;
-      const cName = p.City || (typeof currentCityName !== 'undefined' ? currentCityName : null);
-      if (cName && CITY_PHOTO_MAP[cName]) {
-        return CITY_PHOTO_MAP[cName];
+
+      if (p.City && CITY_PHOTO_MAP[p.City]) return CITY_PHOTO_MAP[p.City];
+
+      if (typeof currentCityName !== 'undefined' && currentCityName && CITY_PHOTO_MAP[currentCityName]) {
+        return CITY_PHOTO_MAP[currentCityName];
       }
+
+      const cityAliases = {
+        'Palm Desert': 'Palm Springs',
+        'Indio': 'Palm Springs',
+        'Cathedral City': 'Palm Springs',
+        'Desert Hot Springs': 'Palm Springs',
+        'Bermuda Dunes': 'Palm Springs',
+        'La Quinta': 'Palm Springs',
+        'Rancho Mirage': 'Palm Springs',
+        'Yucca Valley': 'Palm Springs',
+        'Pioneertown': 'Palm Springs',
+        'Landers': 'Palm Springs',
+        'Joshua Tree': 'Palm Springs',
+        'Thousand Palms': 'Palm Springs',
+        'Brooklyn': 'New York',
+        'Manhattan': 'New York',
+        'Queens': 'New York'
+      };
+
+      if (p.City && cityAliases[p.City] && CITY_PHOTO_MAP[cityAliases[p.City]]) {
+        return CITY_PHOTO_MAP[cityAliases[p.City]];
+      }
+
       return 'images/welcome_bg.jpg';
     }
 
-    
     function filterBrowse(category) {
       currentFilter = category;
       document.querySelectorAll('.tab-btn').forEach(t => t.classList.toggle('active', t.textContent === category));
@@ -2111,10 +2135,21 @@ function setBudgetPref(b) {
       const isFav = isFavorite(place.ID);
       const escPlace = JSON.stringify(place).replace(/"/g, '&quot;');
       const name = cleanName(place.Name);
+      const photoUrl = getVenuePhotoUrl(place);
 
       const descText = place.Description || place.whyGo || '';
 
       body.innerHTML = `
+        <!-- VENUE CARD HEADER PHOTO BANNER -->
+        <div class="modal-card-banner" style="position:relative; height:180px; border-radius:14px; overflow:hidden; margin-bottom:14px; background:var(--bg);">
+          <img src="${photoUrl}" alt="${name}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='images/welcome_bg.jpg';">
+          <div style="position:absolute; top:10px; left:10px;">${getCategoryBadgeHTML(place.Category, place.Subcategory)}</div>
+          <div style="position:absolute; top:10px; right:10px;">
+            <button onclick="toggleFavorite(event, '${place.ID}'); showDetailModal(allLoadedPlacesMap.get('${place.ID}') || ${escPlace});" style="background:rgba(255,255,255,0.92); border:none; border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; font-size:18px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.3); line-height:1;" title="Toggle Favorite">
+              ${isFav ? '❤️' : '🤍'}
+            </button>
+          </div>
+        </div>
         <div style="display:flex;align-items:center;justify-content:flex-start;gap:10px;margin-bottom:12px;padding-right:50px;flex-wrap:wrap;">
           ${getCategoryBadgeHTML(place.Category, place.Subcategory)}
           <button onclick="toggleFavorite(event, '${place.ID}'); showDetailModal(allLoadedPlacesMap.get('${place.ID}') || ${escPlace});" style="background:var(--primary-light);border:1px solid var(--primary);color:var(--primary-dark);padding:6px 14px;border-radius:20px;font-size:12px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:6px;" title="Favorite">
@@ -2178,6 +2213,12 @@ function setBudgetPref(b) {
             </button>
           </div>
           <textarea id="modal-note-input-${place.ID}" placeholder="Add a private note (e.g. must-try dish, reservation info)..." style="width:100%;height:70px;padding:8px;border:1px solid var(--border);border-radius:10px;font-family:inherit;font-size:12px;resize:vertical;">${noteVal}</textarea>
+        </div>
+              <!-- STICKY BOTTOM CLOSE BAR -->
+        <div style="position:sticky; bottom:-20px; background:var(--card); padding:12px 0 0 0; border-top:1px solid var(--border); margin-top:20px; text-align:center; z-index:10;">
+          <button onclick="document.getElementById('modal-detail').classList.remove('open');" class="btn-primary" style="width:100%; padding:12px; font-size:14px; font-weight:800; border-radius:12px;">
+            Close Card ✕
+          </button>
         </div>
       `;
 
@@ -2836,7 +2877,7 @@ function setBudgetPref(b) {
       cursor: pointer;
       overflow: hidden;
       display: flex;
-      align-items: flex-end;
+      align-items: center !important; justify-content: center !important; padding: 16px !important;
       transition: transform 0.2s, box-shadow 0.2s;
       font-family: var(--font-u);
       background-size: cover;
@@ -3470,7 +3511,7 @@ function setBudgetPref(b) {
       inset: 0;
       z-index: 200;
       background: rgba(0,0,0,0.5);
-      align-items: flex-end;
+      align-items: center !important; justify-content: center !important; padding: 16px !important;
       justify-content: center;
     }
 
@@ -3482,7 +3523,7 @@ function setBudgetPref(b) {
       background: var(--card);
       width: 100%;
       max-width: 500px;
-      border-top-left-radius: 20px;
+      border-radius: 20px !important; margin: auto !important; max-width: 560px;
       border-top-right-radius: 20px;
       padding: 20px;
       max-height: 85vh;
