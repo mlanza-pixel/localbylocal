@@ -871,23 +871,16 @@ function exportFavoritesPDF() {
     function buildMapUrl(place) {
       if (!place) return '#';
       const nameStr = cleanName(place.Name) || '';
-      const street = place.streetAddress || place.Address_Street || '';
-      const city = place.Address_City || place.City || (typeof currentCityName !== 'undefined' ? currentCityName : '');
-      const state = place.Address_State || 'CA';
-      const zip = place.Address_Zip || '';
-      
-      let parts = [nameStr];
-      if (street) parts.push(street);
-      if (city && !parts.includes(city)) parts.push(city);
-      if (state && !parts.includes(state)) parts.push(state);
-      if (zip && !parts.includes(zip)) parts.push(zip);
-      
-      const queryStr = parts.filter(Boolean).join(', ');
-      const query = encodeURIComponent(queryStr);
-      
-      if (isIOSDevice()) {
+      const addrStr = place.Address || place.streetAddress || '';
+      const query = encodeURIComponent(nameStr + ' ' + addrStr);
+      if (isiPhone()) {
+        // Native Apple Maps app launcher on iPhone
+        return "https://maps.apple.com/?q=" + query + "&t=m";
+      } else if (isiPad()) {
+        // Apple Maps launcher optimized for iPad tablet display
         return "https://maps.apple.com/?q=" + query + "&t=m";
       } else {
+        // Standard Google Maps launcher for Android & Desktop
         return "https://www.google.com/maps/search/?api=1&query=" + query + "&t=m";
       }
     }
@@ -2137,92 +2130,95 @@ function setBudgetPref(b) {
       if (!body) return;
 
       const mapLink = buildMapUrl(place);
-      
-      // Clean Website URL check
-      let rawWeb = place.Website || place.specificWebsiteUrl || place.Specific_Website_URL || '';
-      if (typeof rawWeb === 'string') rawWeb = rawWeb.trim();
-      let webLink = null;
-      if (rawWeb && rawWeb !== '#' && rawWeb !== 'undefined' && (rawWeb.startsWith('http://') || rawWeb.startsWith('https://'))) {
-        webLink = rawWeb;
-      }
-
+      const webLink = place.specificWebsiteUrl || place.Website;
       const noteVal = getPersonalNote(place.ID);
       const isFav = isFavorite(place.ID);
       const escPlace = JSON.stringify(place).replace(/"/g, '&quot;');
       const name = cleanName(place.Name);
+      const photoUrl = getVenuePhotoUrl(place);
 
       const descText = place.Description || place.whyGo || '';
 
       body.innerHTML = `
-        <!-- TOP ACTION BAR: BADGE, SAVE BUTTON, CLOSE X BUTTON -->
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; gap:8px;">
-          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-            ${getCategoryBadgeHTML(place.Category, place.Subcategory)}
-            <button onclick="toggleFavorite(event, '${place.ID}'); showDetailModal(allLoadedPlacesMap.get('${place.ID}') || ${escPlace});" style="background:var(--primary-light); border:1px solid var(--primary); color:var(--primary-dark); padding:6px 14px; border-radius:20px; font-size:12px; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:6px;" title="Favorite">
-              ${isFav ? '❤️ Saved' : '🤍 Save'}
+        <!-- VENUE CARD HEADER PHOTO BANNER -->
+        <div class="modal-card-banner" style="position:relative; height:180px; border-radius:14px; overflow:hidden; margin-bottom:14px; background:var(--bg);">
+          <img src="${photoUrl}" alt="${name}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='images/welcome_bg.jpg';">
+          <div style="position:absolute; top:10px; left:10px;">${getCategoryBadgeHTML(place.Category, place.Subcategory)}</div>
+          <div style="position:absolute; top:10px; right:10px;">
+            <button onclick="toggleFavorite(event, '${place.ID}'); showDetailModal(allLoadedPlacesMap.get('${place.ID}') || ${escPlace});" style="background:rgba(255,255,255,0.92); border:none; border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; font-size:18px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.3); line-height:1;" title="Toggle Favorite">
+              ${isFav ? '❤️' : '🤍'}
             </button>
           </div>
-          <button onclick="document.getElementById('modal-detail').classList.remove('open');" style="background:var(--bg); border:1px solid var(--border); color:var(--text); width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:800; cursor:pointer; flex-shrink:0; line-height:1;" title="Close Modal">
-            ✕
+        </div>
+        <div style="display:flex;align-items:center;justify-content:flex-start;gap:10px;margin-bottom:12px;padding-right:50px;flex-wrap:wrap;">
+          ${getCategoryBadgeHTML(place.Category, place.Subcategory)}
+          <button onclick="toggleFavorite(event, '${place.ID}'); showDetailModal(allLoadedPlacesMap.get('${place.ID}') || ${escPlace});" style="background:var(--primary-light);border:1px solid var(--primary);color:var(--primary-dark);padding:6px 14px;border-radius:20px;font-size:12px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:6px;" title="Favorite">
+            ${isFav ? '❤️ Saved' : '🤍 Save'}
           </button>
         </div>
 
-        <h2 style="font-family:var(--font-s); font-size:22px; font-weight:900; margin-top:4px; color:var(--text); line-height:1.2;">${name}</h2>
-        <div style="font-size:13px; color:var(--text2); margin-top:4px; font-weight:600;">📍 ${place.Neighborhood || 'District'} • ${place.streetAddress || place.Address || ''}</div>
+        <h2 style="font-family:var(--font-s);font-size:22px;font-weight:900;margin-top:2px;color:var(--text);line-height:1.2;">${name}</h2>
+        <div style="font-size:13px;color:var(--text2);margin-top:4px;font-weight:600;">📍 ${place.Neighborhood || 'District'} • ${place.streetAddress || place.Address || ''}</div>
 
         <!-- COMBINED SINGLE PILL BOX: SCORE, PRICE, HOURS -->
-        <div style="background:var(--primary-light); border:1px solid var(--primary); border-radius:14px; padding:12px 14px; margin:14px 0; display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;">
-          <div style="display:flex; align-items:center; gap:6px;">
+        <div style="background:var(--primary-light);border:1px solid var(--primary);border-radius:14px;padding:12px 14px;margin:14px 0;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:6px;">
             ${getLocalSealHTML(place.localScore, { size: 'large' })}
           </div>
-          <div style="height:24px; width:1px; background:var(--border); align-self:center;"></div>
-          <div style="display:flex; align-items:center; gap:6px;">
+          <div style="height:24px;width:1px;background:var(--border);align-self:center;"></div>
+          <div style="display:flex;align-items:center;gap:6px;">
             <span style="font-size:16px;">💰</span>
             <div>
-              <div style="font-size:10px; font-weight:800; color:var(--primary-dark); text-transform:uppercase; letter-spacing:0.5px;">Price</div>
-              <div style="font-size:14px; font-weight:900; color:var(--primary-dark);">${place.Price || place.priceTier || '$$'}</div>
+              <div style="font-size:10px;font-weight:800;color:var(--primary-dark);text-transform:uppercase;letter-spacing:0.5px;">Price</div>
+              <div style="font-size:14px;font-weight:900;color:var(--primary-dark);">${place.Price || place.priceTier || '$$'}</div>
             </div>
           </div>
-          <div style="height:24px; width:1px; background:var(--border); align-self:center;"></div>
-          <div style="display:flex; align-items:center; gap:6px;">
+          <div style="height:24px;width:1px;background:var(--border);align-self:center;"></div>
+          <div style="display:flex;align-items:center;gap:6px;">
             <span style="font-size:16px;">⏰</span>
             <div>
-              <div style="font-size:10px; font-weight:800; color:var(--primary-dark); text-transform:uppercase; letter-spacing:0.5px;">Hours</div>
-              <div style="font-size:14px; font-weight:900; color:var(--primary-dark);">${place['Opening Hours'] || place.openingHours || '09:00 - 23:00'}</div>
+              <div style="font-size:10px;font-weight:800;color:var(--primary-dark);text-transform:uppercase;letter-spacing:0.5px;">Hours</div>
+              <div style="font-size:14px;font-weight:900;color:var(--primary-dark);">${place['Opening Hours'] || place.openingHours || '09:00 - 23:00'}</div>
             </div>
           </div>
         </div>
 
-        ${descText ? `<div style="margin:14px 0; font-size:13px; color:var(--text); line-height:1.5;">${descText}</div>` : ''}
+                ${descText ? `<div style="margin:14px 0;font-size:13px;color:var(--text);line-height:1.5;">${descText}</div>` : ''}
 
         ${place.Phone || place.Parking_Info || place.Estimated_Cost_Context ? `
-          <div style="background:var(--bg); border:1px solid var(--border); border-radius:12px; padding:12px; margin:14px 0; font-size:12px; display:flex; flex-direction:column; gap:6px; color:var(--text2);">
+          <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:12px;margin:14px 0;font-size:12px;display:flex;flex-direction:column;gap:6px;color:var(--text2);">
             ${place.Estimated_Cost_Context ? `<div>💵 <b>Est. Cost:</b> ${place.Estimated_Cost_Context}</div>` : ''}
-            ${place.Phone ? `<div>📞 <b>Phone:</b> <a href="tel:${place.Phone}" style="color:var(--primary); font-weight:700; text-decoration:none;">${place.Phone}</a></div>` : ''}
+            ${place.Phone ? `<div>📞 <b>Phone:</b> <a href="tel:${place.Phone}" style="color:var(--primary);font-weight:700;text-decoration:none;">${place.Phone}</a></div>` : ''}
             ${place.Parking_Info ? `<div>🅿️ <b>Parking:</b> ${place.Parking_Info}</div>` : ''}
           </div>
         ` : ''}
 
-        <div style="display:flex; gap:8px; margin:16px 0; flex-wrap:wrap;">
-          <button onclick="showInAppSingleStopMap(allLoadedPlacesMap.get('${place.ID}') || ${escPlace})" style="flex:1; background:var(--primary); color:#fff; border:none; padding:10px 14px; border-radius:12px; font-size:12px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
+        <div style="display:flex;gap:8px;margin:16px 0;flex-wrap:wrap;">
+          <button onclick="showInAppSingleStopMap(allLoadedPlacesMap.get('${place.ID}') || ${escPlace})" style="flex:1;background:var(--primary);color:#fff;border:none;padding:10px 14px;border-radius:12px;font-size:12px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
             📍 Map Location
           </button>
           ${webLink ? `
-            <a href="${webLink}" target="_blank" rel="noopener" style="flex:1; background:var(--primary-light); color:var(--primary-dark); text-decoration:none; padding:10px 14px; border-radius:12px; font-size:12px; font-weight:800; display:flex; align-items:center; justify-content:center; gap:6px; border:1px solid var(--primary);">
-              🌐 Website
+            <a href="${webLink}" target="_blank" rel="noopener" style="flex:1;background:var(--primary-light);color:var(--primary-dark);text-decoration:none;padding:10px 14px;border-radius:12px;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--primary);">
+              🌐 Official Website
             </a>
           ` : ''}
         </div>
 
         <!-- PERSONAL NOTES SECTION -->
-        <div style="background:var(--card); border:1px solid var(--border); border-radius:14px; padding:14px; margin-top:16px;">
-          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-            <div style="font-size:13px; font-weight:800; color:var(--text);">📝 My Personal Trip Notes</div>
-            <button onclick="savePersonalNote('${place.ID}', document.getElementById('modal-note-input-${place.ID}').value)" style="background:var(--primary); color:#fff; border:none; padding:5px 12px; border-radius:10px; font-size:11px; font-weight:800; cursor:pointer;">
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-top:16px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <div style="font-size:13px;font-weight:800;color:var(--text);">📝 My Personal Trip Notes</div>
+            <button onclick="savePersonalNote('${place.ID}', document.getElementById('modal-note-input-${place.ID}').value)" style="background:var(--primary);color:#fff;border:none;padding:5px 12px;border-radius:10px;font-size:11px;font-weight:800;cursor:pointer;">
               💾 Save Note
             </button>
           </div>
-          <textarea id="modal-note-input-${place.ID}" placeholder="Add a private note (e.g. must-try dish, reservation info)..." style="width:100%; height:70px; padding:8px; border:1px solid var(--border); border-radius:10px; font-family:inherit; font-size:12px; resize:vertical;">${noteVal}</textarea>
+          <textarea id="modal-note-input-${place.ID}" placeholder="Add a private note (e.g. must-try dish, reservation info)..." style="width:100%;height:70px;padding:8px;border:1px solid var(--border);border-radius:10px;font-family:inherit;font-size:12px;resize:vertical;">${noteVal}</textarea>
+        </div>
+              <!-- STICKY BOTTOM CLOSE BAR -->
+        <div style="position:sticky; bottom:-20px; background:var(--card); padding:12px 0 0 0; border-top:1px solid var(--border); margin-top:20px; text-align:center; z-index:10;">
+          <button onclick="document.getElementById('modal-detail').classList.remove('open');" class="btn-primary" style="width:100%; padding:12px; font-size:14px; font-weight:800; border-radius:12px;">
+            Close Card ✕
+          </button>
         </div>
       `;
 
@@ -4462,6 +4458,7 @@ EDITORIAL REDESIGN — Boutique travel magazine
   <!-- MODAL DETAIL VIEW -->
   <div id="modal-detail" class="modal">
     <div class="modal-content">
+      <button id="btn-modal-detail-close" class="btn-close-modal">✕</button>
       <div id="modal-detail-body"></div>
     </div>
   </div>
