@@ -237,7 +237,7 @@
             <div style="font-size:10px;font-weight:800;color:var(--primary);text-transform:uppercase;">${p.Category} • ${p.Subcategory || ''}</div>
             <div style="font-size:14px;font-weight:800;color:var(--text);margin-top:2px;">${cleanName(p.Name)}</div>
             <div style="font-size:11px;color:var(--text2);margin-top:2px;">📍 ${p.streetAddress || p.Address}</div>
-            <div style="font-size:11px;font-weight:700;color:#92400E;margin-top:4px;">★ ${p.localScore} / 10.0</div>
+            <div style="margin-top:4px;">${getLocalSealHTML(p.localScore)}</div>
             <button onclick="showDetailModal(allLoadedPlacesMap.get('${p.ID}'))" style="margin-top:8px;width:100%;background:var(--primary);color:#fff;border:none;padding:5px 8px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">View Spot</button>
           </div>
         `;
@@ -842,21 +842,50 @@ function exportFavoritesPDF() {
     // ---- CITY RENDER & LOAD ----
     
     // ---- STREET VIEW MAP UTILITIES (Roadmap Mode & IOS Support) ----
-    function isIOSDevice() {
-      return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        // ---- DEVICE DETECTION & MAP ROUTING (iPhone vs iPad vs Android/Desktop) ----
+    function isiPhone() {
+      return /iPhone|iPod/.test(navigator.userAgent);
     }
+
+    function isiPad() {
+      const isLegacyiPad = /iPad/.test(navigator.userAgent);
+      const isModerniPad = (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      return isLegacyiPad || isModerniPad;
+    }
+
+    function isIOSDevice() {
+      return isiPhone() || isiPad();
+    }
+
+    function getDeviceType() {
+      if (isiPhone()) return 'iPhone';
+      if (isiPad()) return 'iPad';
+      return 'Other';
+    }
+
+    window.isiPhone = isiPhone;
+    window.isiPad = isiPad;
+    window.isIOSDevice = isIOSDevice;
+    window.getDeviceType = getDeviceType;
 
     function buildMapUrl(place) {
       if (!place) return '#';
-      const query = encodeURIComponent((cleanName(place.Name) || '') + ' ' + (place.Address || place.streetAddress || ''));
-      if (isIOSDevice()) {
+      const nameStr = cleanName(place.Name) || '';
+      const addrStr = place.Address || place.streetAddress || '';
+      const query = encodeURIComponent(nameStr + ' ' + addrStr);
+      if (isiPhone()) {
+        // Native Apple Maps app launcher on iPhone
+        return "https://maps.apple.com/?q=" + query + "&t=m";
+      } else if (isiPad()) {
+        // Apple Maps launcher optimized for iPad tablet display
         return "https://maps.apple.com/?q=" + query + "&t=m";
       } else {
+        // Standard Google Maps launcher for Android & Desktop
         return "https://www.google.com/maps/search/?api=1&query=" + query + "&t=m";
       }
     }
+    window.buildMapUrl = buildMapUrl;
 
-    
     // ---- IN-APP MAP & ROUTE MODAL LOGIC ----
     let inAppMap = null;
     let inAppMapMarkersGroup = null;
@@ -1500,7 +1529,7 @@ function exportFavoritesPDF() {
             <div style="font-size:14px;font-weight:800;color:var(--text);">${cleanName(p.Name)}</div>
             <div style="margin:4px 0;">${badgeHTML}</div>
             <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">📍 ${p.streetAddress || p.Address}</div>
-            <div style="font-size:12px;font-weight:700;color:var(--primary);margin-bottom:8px;">★ ${p.localScore} / 10</div>
+            <div style="margin-bottom:8px;">${getLocalSealHTML(p.localScore)}</div>
             <div style="display:flex;gap:6px;">
               <a href="${mapStopUrl}" target="_blank" style="background:var(--teal);color:#fff;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:700;text-decoration:none;">Directions</a>
               <button onclick="showDetailModal(allLoadedPlacesMap.get('${p.ID}'))" style="background:var(--primary);color:#fff;border:none;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">Details</button>
@@ -1528,12 +1557,120 @@ function exportFavoritesPDF() {
 
     
     
+
+    const CITY_PHOTO_MAP = {
+      'Palm Springs': 'images/cities/palm_springs_banner.jpg',
+      'Baltimore': 'images/cities/baltimore_banner.jpg',
+      'Paris': 'images/cities/paris_banner.jpg',
+      'Madrid': 'images/cities/madrid_banner.jpg',
+      'Amsterdam': 'images/cities/amsterdam_banner.jpg',
+      'Barcelona': 'images/cities/barcelona_banner.jpg',
+      'Berlin': 'images/cities/berlin_banner.jpg',
+      'Boston': 'images/cities/boston_banner.jpg',
+      'Bruges': 'images/cities/bruges_banner.jpg',
+      'Brussels': 'images/cities/brussels_banner.jpg',
+      'Budapest': 'images/cities/budapest_banner.jpg',
+      'Charleston': 'images/cities/charleston_banner.jpg',
+      'Chicago': 'images/cities/chicago_banner.jpg',
+      'Dallas': 'images/cities/dallas_banner.jpg',
+      'Denver': 'images/cities/denver_banner.jpg',
+      'East Village': 'images/cities/east_village_banner.jpg',
+      'Edinburgh': 'images/cities/edinburgh_banner.jpg',
+      'Las Vegas': 'images/cities/las_vegas_banner.jpg',
+      'Lisbon': 'images/cities/lisbon_banner.jpg',
+      'London': 'images/cities/london_banner.jpg',
+      'Los Angeles': 'images/cities/los_angeles_banner.jpg',
+      'Málaga': 'images/cities/malaga_banner.jpg',
+      'Miami': 'images/cities/miami_banner.jpg',
+      'Montreal': 'images/cities/montreal_banner.jpg',
+      'Munich': 'images/cities/munich_banner.jpg',
+      'Naples': 'images/cities/naples_banner.jpg',
+      'New Orleans': 'images/cities/new_orleans_banner.jpg',
+      'New York': 'images/cities/new_york_banner.jpg',
+      'Oldest & Best Dive Bars': 'images/cities/dive_bars_banner.jpg',
+      'Porto': 'images/cities/porto_banner.jpg',
+      'Philadelphia': 'images/cities/philadelphia_banner.jpg',
+      'Portland': 'images/cities/portland_banner.jpg',
+      'Portland, ME': 'images/cities/portland_me_banner.jpg',
+      'Prague': 'images/cities/prague_banner.jpg',
+      'Quebec City': 'images/cities/quebec_banner.jpg',
+      'Rome': 'images/cities/rome_banner.jpg',
+      'San Francisco': 'images/cities/san_francisco_banner.jpg',
+      'Seattle': 'images/cities/seattle_banner.jpg',
+      'Toronto': 'images/cities/toronto_banner.jpg',
+      'Valencia': 'images/cities/valencia_banner.jpg',
+      'Vancouver': 'images/cities/vancouver_banner.jpg',
+      'Vienna': 'images/cities/vienna_banner.jpg',
+      'Washington, DC': 'images/cities/washington_dc_banner.jpg'
+    };
+
     function getCityPhotoUrl(query) {
+      if (typeof currentCityName !== 'undefined' && CITY_PHOTO_MAP[currentCityName]) {
+        return CITY_PHOTO_MAP[currentCityName];
+      }
       return 'images/welcome_bg.jpg';
     }
 
+
     
     // ---- UNIFIED VENUE CARD GENERATOR (v3.17) ----
+    
+    // ---- (L) CONCENTRIC RING MEDALLION SEAL BADGE GENERATOR (v3.30) ----
+    function getLocalSealHTML(score, options = {}) {
+      const num = parseFloat(score) || 8.0;
+      let tierClass = 'tier-gold';
+      let ringsCount = 3;
+      let labelText = 'Local Legend';
+      let titleAttr = `(L) 3-Ring Local Legend (Score ${num.toFixed(1)})`;
+
+      if (num >= 9.0) {
+        tierClass = 'tier-gold';
+        ringsCount = 3;
+        labelText = 'Local Legend';
+      } else if (num >= 8.0) {
+        tierClass = 'tier-teal';
+        ringsCount = 2;
+        labelText = 'Local Favorite';
+        titleAttr = `(L) 2-Ring Local Favorite (Score ${num.toFixed(1)})`;
+      } else {
+        tierClass = 'tier-slate';
+        ringsCount = 1;
+        labelText = 'Community Spot';
+        titleAttr = `(L) 1-Ring Community Spot (Score ${num.toFixed(1)})`;
+      }
+
+      let ringsSVG = '';
+      if (ringsCount === 3) {
+        ringsSVG = `
+          <circle cx="12" cy="12" r="11" class="seal-ring" />
+          <circle cx="12" cy="12" r="8.8" class="seal-ring" />
+          <circle cx="12" cy="12" r="6.6" class="seal-ring" />
+        `;
+      } else if (ringsCount === 2) {
+        ringsSVG = `
+          <circle cx="12" cy="12" r="11" class="seal-ring" />
+          <circle cx="12" cy="12" r="7.8" class="seal-ring" />
+        `;
+      } else {
+        ringsSVG = `
+          <circle cx="12" cy="12" r="10.5" class="seal-ring" />
+        `;
+      }
+
+      const hideLabel = options.compact ? 'display:none;' : '';
+      const inlineSize = options.size === 'large' ? 'transform:scale(1.08);' : '';
+
+      return `
+        <div class="local-seal-badge ${tierClass}" title="${titleAttr}" style="${inlineSize}">
+          <svg class="seal-svg" viewBox="0 0 24 24" width="22" height="22" style="display:block;">
+            ${ringsSVG}
+            <text x="12" y="16" text-anchor="middle" font-family="DM Sans, sans-serif" font-weight="900" font-size="11" class="seal-letter">L</text>
+          </svg>
+          <span class="seal-text-label" style="${hideLabel}">${labelText}</span>
+        </div>
+      `;
+    }
+
     function createVenueCardHTML(place, options = {}) {
       if (!place) return '';
       const isFav = isFavorite(place.ID);
@@ -1553,7 +1690,7 @@ function exportFavoritesPDF() {
               <button onclick="event.stopPropagation(); toggleFavorite(event, '${place.ID}'); ${options.onFavToggle || ''}" style="background:rgba(255,255,255,0.92);border:none;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.3);line-height:1;" title="Toggle Favorite">
                 ${isFav ? '❤️' : '🤍'}
               </button>
-              <div class="place-score-num" style="box-shadow:0 2px 6px rgba(0,0,0,0.2);">★ ${place.localScore || '9.0'}</div>
+              ${getLocalSealHTML(place.localScore)}
             </div>
           </div>
           <div class="place-row-top" style="margin-bottom:4px;">
@@ -1574,8 +1711,13 @@ function exportFavoritesPDF() {
 
 
     function getVenuePhotoUrl(p) {
+      if (!p) return 'images/welcome_bg.jpg';
       if (p.Photo || p.photoUrl) return p.Photo || p.photoUrl;
-      return getCityPhotoUrl(p.Category + ' ' + p.Name);
+      const cName = p.City || (typeof currentCityName !== 'undefined' ? currentCityName : null);
+      if (cName && CITY_PHOTO_MAP[cName]) {
+        return CITY_PHOTO_MAP[cName];
+      }
+      return 'images/welcome_bg.jpg';
     }
 
     
@@ -1986,11 +2128,7 @@ function setBudgetPref(b) {
         <!-- COMBINED SINGLE PILL BOX: SCORE, PRICE, HOURS -->
         <div style="background:var(--primary-light);border:1px solid var(--primary);border-radius:14px;padding:12px 14px;margin:14px 0;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
           <div style="display:flex;align-items:center;gap:6px;">
-            <span style="font-size:16px;">★</span>
-            <div>
-              <div style="font-size:10px;font-weight:800;color:var(--primary-dark);text-transform:uppercase;letter-spacing:0.5px;">Local Score</div>
-              <div style="font-size:14px;font-weight:900;color:var(--primary-dark);">${place.localScore || '9.0'} / 10</div>
-            </div>
+            ${getLocalSealHTML(place.localScore, { size: 'large' })}
           </div>
           <div style="height:24px;width:1px;background:var(--border);align-self:center;"></div>
           <div style="display:flex;align-items:center;gap:6px;">
@@ -2283,6 +2421,7 @@ function setBudgetPref(b) {
 
     // Global window exports
     window.cleanName = cleanName;
+    window.getLocalSealHTML = getLocalSealHTML;
     window.loadCityData = loadCityData;
     window.showDetailModal = showDetailModal;
     window.showScreen = showScreen;
@@ -2306,6 +2445,11 @@ function setBudgetPref(b) {
     window.showScreen = showScreen;
     window.cleanName = cleanName;
     window.normalizeCityData = normalizeCityData;
+    window.getLocalSealHTML = getLocalSealHTML;
+    window.createVenueCardHTML = createVenueCardHTML;
+    window.isiPhone = isiPhone;
+    window.isiPad = isiPad;
+    window.getDeviceType = getDeviceType;
     window.getItinerary = function() { return itinerary; };
     window.setAllPlaces = function(places) { allPlaces = places; };
     window.setPrefs = function(p) { prefs = p; };
@@ -3714,6 +3858,286 @@ EDITORIAL REDESIGN — Boutique travel magazine
       border: none;
     }
 
+  
+    /* ==========================================================================
+       RESPONSIVE CONTROLS & LAYOUT VERIFICATION (iPhone & iPad Layout Engine)
+       ========================================================================== */
+    
+    /* Global Container Overflow Boundaries to Prevent Off-Screen Overflow */
+    html, body {
+      max-width: 100vw !important;
+      overflow-x: hidden !important;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    /* Flex Controls & Header Bars Protection */
+    .header-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 12px 14px;
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      max-width: 100%;
+    }
+
+    .filter-bar, .favs-filter-bar {
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .favs-controls-row, .sort-controls, .prefs-quick-controls {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      width: 100%;
+      max-width: 100%;
+    }
+
+    .card-actions-bar {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    /* iPhone / Narrow Screen Mobile Specific (<= 600px) */
+    @media (max-width: 600px) {
+      .header-bar {
+        padding: 10px 12px;
+      }
+
+      .header-bar h2 {
+        font-size: 15px !important;
+        line-height: 1.2;
+        max-width: 100%;
+      }
+
+      .header-actions {
+        width: 100%;
+        justify-content: flex-start;
+      }
+
+      .header-actions button, .btn-header, .btn-back {
+        font-size: 11px !important;
+        padding: 6px 10px !important;
+        flex-shrink: 1;
+      }
+
+      .fav-city-select, #browse-neighborhood-select, #browse-sort-select, #pref-style, #pref-start-date {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+      }
+
+      .browse-results {
+        grid-template-columns: 1fr !important;
+        padding: 10px !important;
+        gap: 12px !important;
+      }
+
+      .place-card {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+      }
+
+      .card-actions-bar button, .btn-card-act {
+        flex: 1 1 auto !important;
+        min-width: 68px !important;
+        font-size: 11px !important;
+        padding: 6px 4px !important;
+        text-align: center;
+        justify-content: center;
+      }
+
+      .modal-content {
+        width: 94vw !important;
+        max-width: 94vw !important;
+        padding: 16px 12px max(60px, env(safe-area-inset-bottom, 60px)) 12px !important;
+        box-sizing: border-box !important;
+        margin: 0 auto !important;
+      }
+
+      .bottom-nav {
+        padding-bottom: max(10px, env(safe-area-inset-bottom, 10px)) !important;
+        padding-top: 6px !important;
+      }
+
+      .nav-item {
+        padding: 4px 2px !important;
+        min-width: 0 !important;
+        flex: 1 !important;
+      }
+
+      .nav-label {
+        font-size: 9px !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+      }
+    }
+
+    /* iPad / Tablet Specific (601px to 1024px) */
+    @media (min-width: 601px) and (max-width: 1024px) {
+      .browse-results {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 16px !important;
+        padding: 16px !important;
+      }
+
+      .modal-content {
+        max-width: 640px !important;
+        width: 90% !important;
+        border-radius: 20px !important;
+      }
+
+      .interests-grid {
+        grid-template-columns: repeat(3, 1fr) !important;
+      }
+
+      .header-bar {
+        padding: 16px 20px !important;
+      }
+    }
+
+    /* Desktop Layout (> 1024px) */
+    @media (min-width: 1025px) {
+      .browse-results {
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 20px !important;
+        padding: 20px !important;
+      }
+
+      .modal-content {
+        max-width: 720px !important;
+      }
+    }
+
+
+    /* ---- DK EYEWITNESS EDITORIAL STYLES (v3.29) ---- */
+    .dk-card {
+      background: #FFFFFF;
+      border: 1px solid #D4D4CE;
+      border-top: 4px solid var(--primary);
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      padding: 18px;
+      position: relative;
+      font-family: var(--font-u);
+      margin-bottom: 20px;
+    }
+    .dk-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+      margin-bottom: 14px;
+    }
+    .dk-card-title-tag {
+      font-family: var(--font-s);
+      font-size: 11px;
+      font-weight: 900;
+      color: var(--primary-dark);
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+    }
+    .dk-badge-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--primary);
+      color: #FFFFFF !important;
+      font-weight: 900;
+      font-size: 11px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      margin-right: 4px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+      flex-shrink: 0;
+      line-height: 1;
+    }
+    .place-card {
+      border-top: 3px solid var(--primary);
+    }
+
+    /* ---- (L) CONCENTRIC RING MEDALLION SEAL BADGES (v3.30) ---- */
+    .local-seal-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 9px 3px 4px;
+      border-radius: 16px;
+      font-family: var(--font-u);
+      font-size: 11px;
+      font-weight: 800;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      backdrop-filter: blur(4px);
+      user-select: none;
+      white-space: nowrap;
+      line-height: 1;
+    }
+    .local-seal-badge.tier-gold {
+      background: rgba(254, 243, 199, 0.96);
+      color: #92400E;
+      border: 1px solid #F59E0B;
+    }
+    .local-seal-badge.tier-gold .seal-ring {
+      fill: none;
+      stroke: #D97706;
+      stroke-width: 1.2;
+    }
+    .local-seal-badge.tier-gold .seal-letter {
+      fill: #B45309;
+    }
+    .local-seal-badge.tier-teal {
+      background: rgba(224, 245, 247, 0.96);
+      color: #065A66;
+      border: 1px solid #14B8A6;
+    }
+    .local-seal-badge.tier-teal .seal-ring {
+      fill: none;
+      stroke: #0C7A8A;
+      stroke-width: 1.2;
+    }
+    .local-seal-badge.tier-teal .seal-letter {
+      fill: #065A66;
+    }
+    .local-seal-badge.tier-slate {
+      background: rgba(241, 245, 249, 0.96);
+      color: #334155;
+      border: 1px solid #94A3B8;
+    }
+    .local-seal-badge.tier-slate .seal-ring {
+      fill: none;
+      stroke: #64748B;
+      stroke-width: 1.2;
+    }
+    .local-seal-badge.tier-slate .seal-letter {
+      fill: #334155;
+    }
+
   </style>
 </head>
 <body>
@@ -3741,17 +4165,90 @@ EDITORIAL REDESIGN — Boutique travel magazine
        ============================================= -->
     <!-- WELCOME & ONBOARDING SCREEN -->
   <div id="screen-onboarding" class="screen">
-    <div style="max-width:700px; margin:0 auto; padding:20px 16px;">
-      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
-        <h2 style="font-size:24px; font-weight:900; color:var(--text); margin:0;">Welcome & Overview</h2>
-        <button onclick="finishOnboarding()" style="background:none; border:none; color:var(--primary); font-size:14px; font-weight:800; cursor:pointer;">Skip to Cities →</button>
+    <div style="max-width:720px; margin:0 auto; padding:20px 16px;">
+      <!-- Top Nav Header -->
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px;">
+        <div>
+          <div style="font-family:var(--font-s); font-size:11px; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:1px;">📖 DK EYEWITNESS DIRECTORY GUIDE</div>
+          <h2 style="font-family:var(--font-s); font-size:26px; font-weight:900; color:var(--text); margin:2px 0 0 0;">Welcome & Explorer Guide</h2>
+        </div>
+        <button onclick="finishOnboarding()" style="background:var(--primary-light); border:1px solid var(--primary); color:var(--primary-dark); padding:8px 16px; border-radius:20px; font-size:13px; font-weight:800; cursor:pointer;">Skip to Cities →</button>
       </div>
 
-      <div style="background:var(--card); border:1px solid var(--border); border-radius:18px; padding:12px; box-shadow:var(--shadow); margin-bottom:20px;">
-        <img src="images/welcome_onboarding_infographic.png" alt="How Local Like a Local Works" style="width:100%; height:auto; border-radius:14px; display:block;">
+      <!-- FEATURED DK EYEWITNESS SAMPLE VENUE CARD -->
+      <div class="dk-card">
+        <div class="dk-card-header">
+          <div class="dk-card-title-tag">📖 FEATURED LOCAL INSIDER SPOT</div>
+          <div style="font-size:12px; font-weight:800; color:var(--text2);">🌴 Palm Springs, CA</div>
+        </div>
+
+        <!-- Card Image Header -->
+        <div style="position:relative; height:180px; border-radius:12px; overflow:hidden; margin-bottom:14px; border:1px solid var(--border);">
+          <img src="images/cities/palm_springs_banner.jpg" alt="Sherman's Deli & Bakery" style="width:100%; height:100%; object-fit:cover;">
+          <div style="position:absolute; top:10px; left:10px;">
+            <span style="background:rgba(255,255,255,0.95); backdrop-filter:blur(4px); color:var(--text); padding:4px 12px; border-radius:20px; font-size:11px; font-weight:800; border:1px solid rgba(0,0,0,0.1); display:inline-flex; align-items:center; gap:5px;">
+              <span>🥪</span> <span>FOOD • HISTORIC DELI</span>
+            </span>
+          </div>
+          <div style="position:absolute; top:10px; right:10px; display:flex; gap:6px; align-items:center;">
+            <div class="local-seal-badge tier-gold" title="(L) 3-Ring Local Legend (Score 9.4)">
+              <svg class="seal-svg" viewBox="0 0 24 24" width="22" height="22" style="display:block;">
+                <circle cx="12" cy="12" r="11" class="seal-ring" />
+                <circle cx="12" cy="12" r="8.8" class="seal-ring" />
+                <circle cx="12" cy="12" r="6.6" class="seal-ring" />
+                <text x="12" y="16" text-anchor="middle" font-family="DM Sans, sans-serif" font-weight="900" font-size="11" class="seal-letter">L</text>
+              </svg>
+              <span class="seal-text-label">Local Legend</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Title & Location -->
+        <h3 style="font-family:var(--font-s); font-size:22px; font-weight:900; color:var(--text); margin:0 0 4px 0; line-height:1.2;">Sherman's Deli & Bakery</h3>
+        <div style="font-size:13px; color:var(--text2); font-weight:600; margin-bottom:10px;">📍 Downtown Palm Springs • 401 E Tahquitz Canyon Way</div>
+
+        <!-- Why Go Quote -->
+        <p style="border-left:3px solid var(--primary); padding-left:10px; margin:10px 0; font-style:italic; font-size:13px; color:var(--text); line-height:1.5; background:var(--primary-light); padding:10px 12px; border-radius:0 10px 10px 0;">
+          “A beloved, no-frills local institution where generations of Coachella Valley residents gather for hearty, authentic deli fare and house-made pastries.”
+        </p>
+
+        <!-- Unified Metadata Bar -->
+        <div style="background:var(--bg); border:1px solid var(--border); border-radius:12px; padding:10px 14px; margin:12px 0; display:flex; justify-content:space-between; align-items:center; font-size:12px; font-weight:700; color:var(--text); flex-wrap:wrap; gap:8px;">
+          <div><span>💰 Price:</span> <strong>$$ ($12–$20)</strong></div>
+          <div style="width:1px; height:16px; background:var(--border);"></div>
+          <div><span>⏰ Hours:</span> <strong>Daily 08:00–21:00</strong></div>
+          <div style="width:1px; height:16px; background:var(--border);"></div>
+          <div><span>🅿️ Parking:</span> <strong>Free Lot</strong></div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div style="display:flex; gap:8px; margin-top:14px; flex-wrap:wrap;">
+          <button onclick="finishOnboarding()" style="flex:1; background:var(--teal-light); color:var(--teal-dark); border:1px solid var(--teal); padding:9px; border-radius:10px; font-size:12px; font-weight:800; cursor:pointer;">📍 Map Location</button>
+          <button onclick="finishOnboarding()" style="flex:1; background:var(--primary-light); color:var(--primary-dark); border:1px solid var(--primary); padding:9px; border-radius:10px; font-size:12px; font-weight:800; cursor:pointer;">❤️ Saved Spot</button>
+          <button onclick="finishOnboarding()" style="flex:1; background:var(--primary); color:#fff; border:none; padding:9px; border-radius:10px; font-size:12px; font-weight:800; cursor:pointer;">View Details →</button>
+        </div>
       </div>
 
-      <button onclick="finishOnboarding()" class="btn-primary" style="width:100%; padding:16px; font-size:17px; font-weight:900; border-radius:14px; box-shadow: 0 6px 18px rgba(224, 122, 95, 0.3);">Let's Explore! ✨</button>
+      <!-- 3-STEP DK EYEWITNESS EXPLORER GRID -->
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px; margin-bottom:20px;">
+        <div style="background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px;">
+          <div style="font-size:24px; margin-bottom:6px;">🏙️</div>
+          <div style="font-weight:900; font-size:15px; color:var(--text); margin-bottom:4px;">1. Choose City</div>
+          <p style="font-size:13px; color:var(--text2); margin:0; line-height:1.4;">Explore 45 curated global destinations and 2,890+ authentic local venues.</p>
+        </div>
+        <div style="background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px;">
+          <div style="font-size:24px; margin-bottom:6px;">📅</div>
+          <div style="font-weight:900; font-size:15px; color:var(--text); margin-bottom:4px;">2. Build Itinerary</div>
+          <p style="font-size:13px; color:var(--text2); margin:0; line-height:1.4;">Select budget level, travel style, start date, and core interests for personalized daily routes.</p>
+        </div>
+        <div style="background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px;">
+          <div style="font-size:24px; margin-bottom:6px;">📲</div>
+          <div style="font-weight:900; font-size:15px; color:var(--text); margin-bottom:4px;">3. Map & Export</div>
+          <p style="font-size:13px; color:var(--text2); margin:0; line-height:1.4;">View walking map routes offline and sync 1-tap iCal calendar events to Apple/Google.</p>
+        </div>
+      </div>
+
+      <button onclick="finishOnboarding()" class="btn-primary" style="width:100%; padding:16px; font-size:17px; font-weight:900; border-radius:14px; box-shadow: 0 6px 18px rgba(212, 85, 10, 0.3);">Start Exploring Global Cities ✨</button>
     </div>
   </div>
 
@@ -3959,11 +4456,100 @@ EDITORIAL REDESIGN — Boutique travel magazine
         <p style="font-size:16px; color:var(--text2); margin-top:4px;">Everything you need to know about using Local Like a Local</p>
       </div>
 
-      <!-- VISUAL ANATOMY INFOGRAPHIC -->
-      <div style="background:var(--primary-light); border:1px solid var(--primary); border-radius:16px; padding:20px; margin-bottom:20px;">
-        <div style="font-size:13px; font-weight:800; color:var(--primary-dark); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">📖 VISUAL REFERENCE GUIDE</div>
-        <div style="font-size:20px; font-weight:900; color:var(--text); margin-bottom:12px;">Anatomy of a Local Venue Card</div>
-        <img src="images/venue_card_anatomy.png" alt="Venue Card Anatomy" style="width:100%; border-radius:12px; border:1px solid var(--border); box-shadow:0 4px 12px rgba(0,0,0,0.1); margin-bottom:12px;">
+      <!-- DK EYEWITNESS VISUAL VENUE CARD ANATOMY BREAKDOWN -->
+      <div style="background:var(--card); border:1px solid var(--border); border-top:4px solid var(--primary); border-radius:16px; padding:20px; margin-bottom:20px; box-shadow:var(--shadow);">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:8px; margin-bottom:14px;">
+          <div style="font-family:var(--font-s); font-size:11px; font-weight:900; color:var(--primary-dark); text-transform:uppercase; letter-spacing:1.2px;">📖 DK EYEWITNESS FIELD GUIDE</div>
+          <div style="font-size:11px; font-weight:800; color:var(--text2);">ANNOTATED VENUE CARD DIAGRAM</div>
+        </div>
+
+        <!-- ANNOTATED SAMPLE CARD -->
+        <div style="background:var(--bg); border:1px solid var(--border); border-radius:14px; padding:14px; position:relative; margin-bottom:16px;">
+          
+          <!-- ❶ Photo Header -->
+          <div style="position:relative; height:150px; border-radius:10px; overflow:hidden; margin-bottom:10px; border:1px solid var(--border);">
+            <img src="images/cities/paris_banner.jpg" alt="Sample Venue" style="width:100%; height:100%; object-fit:cover;">
+            
+            <!-- ❷ Category Badge -->
+            <div style="position:absolute; top:8px; left:8px;">
+              <span style="background:rgba(255,255,255,0.95); color:var(--text); padding:4px 10px; border-radius:14px; font-size:11px; font-weight:800; display:inline-flex; align-items:center; gap:4px; box-shadow:0 2px 4px rgba(0,0,0,0.15);">
+                <span class="dk-badge-num">❷</span> <span>🇫🇷 FOOD • BISTRO</span>
+              </span>
+            </div>
+
+            <!-- ❸ Local Seal Badge -->
+            <div style="position:absolute; top:8px; right:8px; display:flex; align-items:center; gap:4px;">
+              <span class="dk-badge-num" style="z-index:2; margin-right:-4px;">❸</span>
+              <div class="local-seal-badge tier-gold" title="(L) 3-Ring Local Legend">
+                <svg class="seal-svg" viewBox="0 0 24 24" width="20" height="20" style="display:block;">
+                  <circle cx="12" cy="12" r="11" class="seal-ring" />
+                  <circle cx="12" cy="12" r="8.8" class="seal-ring" />
+                  <circle cx="12" cy="12" r="6.6" class="seal-ring" />
+                  <text x="12" y="16" text-anchor="middle" font-family="DM Sans, sans-serif" font-weight="900" font-size="11" class="seal-letter">L</text>
+                </svg>
+                <span class="seal-text-label">Local Legend</span>
+              </div>
+            </div>
+
+            <!-- ❶ Photo Callout Badge Overlay -->
+            <div style="position:absolute; bottom:8px; right:8px; background:rgba(0,0,0,0.75); color:#fff; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:800; display:inline-flex; align-items:center; gap:4px;">
+              <span class="dk-badge-num" style="width:16px; height:16px; font-size:10px;">❶</span> <span>Photo Header</span>
+            </div>
+          </div>
+
+          <!-- ❹ Clean Title -->
+          <div style="display:flex; align-items:center; gap:6px; margin-bottom:2px;">
+            <span class="dk-badge-num">❹</span>
+            <h3 style="font-family:var(--font-s); font-size:19px; font-weight:900; color:var(--text); margin:0;">Le Petit Marché</h3>
+          </div>
+
+          <!-- ❺ Address -->
+          <div style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text2); font-weight:600; margin-bottom:8px;">
+            <span class="dk-badge-num" style="background:var(--teal);">❺</span>
+            <span>📍 Le Marais District • 9 Rue de Béarn, 75003 Paris</span>
+          </div>
+
+          <!-- ❻ Why Go Insider Tip -->
+          <div style="background:var(--primary-light); border-left:3px solid var(--primary); padding:8px 10px; border-radius:0 8px 8px 0; margin-bottom:10px; font-size:12px; font-style:italic; color:var(--text); display:flex; align-items:flex-start; gap:6px;">
+            <span class="dk-badge-num" style="flex-shrink:0; margin-top:2px;">❻</span>
+            <span>“Famous neighborhood bistro serving creative French-Asian fusion duck confit and tuna carpaccio in a warm, artistic atmosphere.”</span>
+          </div>
+
+          <!-- ❼ Quick Action Bar -->
+          <div style="display:flex; gap:6px; align-items:center; justify-content:space-between; margin-bottom:8px;">
+            <button style="flex:1; background:var(--teal-light); color:var(--teal-dark); border:none; padding:6px; border-radius:8px; font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; gap:4px;">
+              <span class="dk-badge-num" style="background:var(--teal); width:16px; height:16px; font-size:9px;">❼</span> 📍 Map Stop
+            </button>
+            <button style="flex:1; background:var(--primary-light); color:var(--primary-dark); border:none; padding:6px; border-radius:8px; font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; gap:4px;">
+              ❤️ Save
+            </button>
+            <button style="flex:1; background:var(--primary); color:#fff; border:none; padding:6px; border-radius:8px; font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; gap:4px;">
+              Details →
+            </button>
+          </div>
+
+          <!-- ❽ Extended Metadata & Notes -->
+          <div style="background:#fff; border:1px solid var(--border); border-radius:8px; padding:8px; font-size:11px; font-weight:700; color:var(--text2); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:4px;">
+            <div style="display:flex; align-items:center; gap:4px;">
+              <span class="dk-badge-num" style="width:16px; height:16px; font-size:9px; background:#6B7280;">❽</span>
+              <span>⏰ Daily 12:00–23:00</span>
+            </div>
+            <div>💰 Price: $$ (€15–€25)</div>
+            <div>📝 Private Notes Supported</div>
+          </div>
+        </div>
+
+        <!-- ANNOTATED LEGEND BREAKDOWN GRID -->
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:8px; font-size:12px; color:var(--text); line-height:1.5;">
+          <div><span class="dk-badge-num">❶</span> <b>Photo Banner:</b> Curated imagery matching destination.</div>
+          <div><span class="dk-badge-num">❷</span> <b>Category Pill:</b> Venue category badge & price tier.</div>
+          <div><span class="dk-badge-num">❸</span> <b>Local Seal Badge:</b> (L) Medallion with concentric rings (3 gold rings for Local Legend 9.0+).</div>
+          <div><span class="dk-badge-num">❹</span> <b>Clean Title:</b> Clean venue name without reference clutter.</div>
+          <div><span class="dk-badge-num">❺</span> <b>Location:</b> Historic neighborhood and street address.</div>
+          <div><span class="dk-badge-num">❻</span> <b>Insider Tip:</b> Curated "Why Go" local recommendation.</div>
+          <div><span class="dk-badge-num">❼</span> <b>Quick Map:</b> 1-tap Leaflet walking route & GPS launch.</div>
+          <div><span class="dk-badge-num">❽</span> <b>Trip Notes:</b> Operating hours, price, and personal notes.</div>
+        </div>
       </div>
 
       <!-- FAQS WITH READABLE 15-18PX FONTS -->
