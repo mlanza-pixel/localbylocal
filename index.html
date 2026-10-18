@@ -871,16 +871,22 @@ function exportFavoritesPDF() {
     function buildMapUrl(place) {
       if (!place) return '#';
       const nameStr = cleanName(place.Name) || '';
-      const addrStr = place.Address || place.streetAddress || '';
-      const query = encodeURIComponent(nameStr + ' ' + addrStr);
-      if (isiPhone()) {
-        // Native Apple Maps app launcher on iPhone
-        return "https://maps.apple.com/?q=" + query + "&t=m";
-      } else if (isiPad()) {
-        // Apple Maps launcher optimized for iPad tablet display
+      const streetStr = place.streetAddress || place.Address_Street || place.Address || '';
+      const cityStr = place.Address_City || place.City || (typeof currentCityName !== 'undefined' ? currentCityName : '');
+      const stateStr = place.Address_State || 'CA';
+      const zipStr = place.Address_Zip || '';
+
+      let fullAddrStr = streetStr;
+      if (cityStr && !fullAddrStr.includes(cityStr)) fullAddrStr += (fullAddrStr ? ', ' : '') + cityStr;
+      if (stateStr && !fullAddrStr.includes(stateStr)) fullAddrStr += (fullAddrStr ? ', ' : '') + stateStr;
+      if (zipStr && !fullAddrStr.includes(zipStr)) fullAddrStr += ' ' + zipStr;
+
+      const fullQuery = (nameStr ? nameStr + ', ' : '') + fullAddrStr;
+      const query = encodeURIComponent(fullQuery.trim());
+
+      if (isIOSDevice()) {
         return "https://maps.apple.com/?q=" + query + "&t=m";
       } else {
-        // Standard Google Maps launcher for Android & Desktop
         return "https://www.google.com/maps/search/?api=1&query=" + query + "&t=m";
       }
     }
