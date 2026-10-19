@@ -376,6 +376,34 @@
     let browseViewMode = 'list'; // 'list' or 'map'
     let leafletMap = null;
     let leafletMarkersLayer = null;
+    let leafletBaseLayer = null;
+    let leafletTileFallbackUsed = false;
+
+    // Real street-map tiles. If the primary provider fails, try OpenStreetMap once.
+    function addStreetTiles(map, onFailure) {
+      const providers = [
+        { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', options: { subdomains: 'abcd', maxZoom: 19, attribution: '© OpenStreetMap © CARTO' } },
+        { url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', options: { subdomains: 'abc', maxZoom: 19, attribution: '© OpenStreetMap contributors' } }
+      ];
+      let providerIndex = 0;
+      let tileErrors = 0;
+      const attachProvider = () => {
+        const provider = providers[providerIndex];
+        const layer = L.tileLayer(provider.url, provider.options);
+        layer.on('tileerror', () => {
+          tileErrors++;
+          // A burst of errors indicates this provider is unavailable; try the alternate once.
+          if (tileErrors >= 3 && providerIndex < providers.length - 1) {
+            map.removeLayer(layer); providerIndex++; tileErrors = 0; attachProvider();
+          } else if (tileErrors >= 3 && onFailure) {
+            onFailure();
+          }
+        });
+        layer.addTo(map);
+        return layer;
+      };
+      return attachProvider();
+    }
 
     
     // ---- SKELETON SHIMMER GENERATOR ----
@@ -413,80 +441,26 @@
     let currentBrowseViewMode = 'list';
 
     function switchBrowseView(mode) {
-      currentBrowseViewMode = mode;
-      document.getElementById('btn-view-list')?.classList.toggle('active', mode === 'list');
-      document.getElementById('btn-view-map')?.classList.toggle('active', mode === 'map');
-
+      // Keep the legacy buttons/API synchronized with the single browse-map implementation.
+      browseViewMode = mode === 'map' ? 'map' : 'list';
+      currentBrowseViewMode = browseViewMode;
+      const btn = document.getElementById('btn-toggle-view');
       const listGrid = document.getElementById('browse-results');
       const mapContainer = document.getElementById('browse-map-container');
-
-      if (mode === 'map') {
-        if (listGrid) listGrid.style.display = 'none';
-        if (mapContainer) mapContainer.style.display = 'block';
-        initAndRenderMap();
-      } else {
-        if (listGrid) listGrid.style.display = 'grid';
-        if (mapContainer) mapContainer.style.display = 'none';
+      if (btn) btn.textContent = browseViewMode === 'map' ? '📋 List View' : '🗺️ Map View';
+      if (listGrid) listGrid.style.display = browseViewMode === 'map' ? 'none' : 'grid';
+      if (mapContainer) mapContainer.style.display = browseViewMode === 'map' ? 'block' : 'none';
+      if (browseViewMode === 'map') {
+        renderLeafletMap(window.lastFilteredPlaces || allPlaces);
+        setTimeout(() => { if (leafletMap) leafletMap.invalidateSize(); }, 150);
+        setTimeout(() => { if (leafletMap) leafletMap.invalidateSize(); }, 450);
       }
     }
 
     function initAndRenderMap() {
-      if (typeof L === 'undefined') {
-        showToast('Map library loading...');
-        return;
-      }
-
-      const visiblePlaces = window.lastFilteredPlaces || allPlaces;
-      if (!visiblePlaces || visiblePlaces.length === 0) return;
-
-      // Find center lat/lng from places
-      const validCoords = (visiblePlaces || []).filter(hasValidCoords);
-      let centerLat = 39.2904, centerLng = -76.6122; // Default Baltimore
-      if (validCoords.length > 0) {
-        centerLat = validCoords.reduce((acc, p) => acc + parseFloat(p.Latitude), 0) / validCoords.length;
-        centerLng = validCoords.reduce((acc, p) => acc + parseFloat(p.Longitude), 0) / validCoords.length;
-      }
-
-      if (!leafletMap) {
-        leafletMap = L.map('leaflet-map').setView([centerLat, centerLng], 13);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-          subdomains: 'abcd',
-          maxZoom: 19,
-          attribution: '© OpenStreetMap © CARTO'
-        }).addTo(leafletMap);
-        leafletMarkersLayer = L.layerGroup().addTo(leafletMap);
-      } else {
-        leafletMap.setView([centerLat, centerLng], 13);
-      }
-
-      leafletMarkersLayer.clearLayers();
-
-      validCoords.forEach(p => {
-        const lat = parseFloat(p.Latitude);
-        const lng = parseFloat(p.Longitude);
-        
-        const popupContent = `
-          <div style="font-family:var(--font-u);">
-            <div style="font-size:10px;font-weight:800;color:var(--primary);text-transform:uppercase;">${p.Category} • ${p.Subcategory || ''}</div>
-            <div style="font-size:14px;font-weight:800;color:var(--text);margin-top:2px;">${cleanName(p.Name)}</div>
-            <div style="font-size:11px;color:var(--text2);margin-top:2px;">📍 ${p.streetAddress || p.Address}</div>
-            <div style="margin-top:4px;">${getLocalSealHTML(p.localScore)}</div>
-            <button onclick="showDetailModal(allLoadedPlacesMap.get('${p.ID}'))" style="margin-top:8px;width:100%;background:var(--primary);color:#fff;border:none;padding:5px 8px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">View Spot</button>
-          </div>
-        `;
-
-        const marker = L.marker([lat, lng]).bindPopup(popupContent);
-        leafletMarkersLayer.addLayer(marker);
-      });
-
-      setTimeout(() => {
-        if (leafletMap) leafletMap.invalidateSize();
-      }, 200);
+      renderLeafletMap(window.lastFilteredPlaces || allPlaces);
     }
 
-
-    
-    
     // ---- ROBUST LOCALSTORAGE GETTER/SETTER (v3.21) ----
     function safeGetStorage(key, fallback) {
       try {
@@ -1188,7 +1162,7 @@ function exportFavoritesPDF() {
       const validStops = rawStops.filter(s => s.place && hasValidCoords(s.place));
       const omittedStops = rawStops.filter(s => !s.place || !hasValidCoords(s.place));
 
-      const isOnline = (typeof L !== 'undefined') && window.navigator.onLine;
+      const isOnline = (typeof L !== 'undefined');
       let leafletAvailable = isOnline;
 
       const mapContainer = document.getElementById('inapp-leaflet-map-container');
@@ -1208,17 +1182,9 @@ function exportFavoritesPDF() {
           const center = getCityCenterCoords(validStops.map(s => s.place));
           inAppMap = L.map('inapp-leaflet-map').setView(center, 13);
 
-          const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '© OpenStreetMap'
+          addStreetTiles(inAppMap, () => {
+            showToast('Street-map tiles could not load. Check your connection; the stop list remains available below.');
           });
-
-          tileLayer.on('tileerror', function() {
-            console.warn('[Map Engine] Tile load error, switching to SVG schematic view');
-            renderSVGFallbackMap('inapp-leaflet-map-container', validStops);
-          });
-
-          tileLayer.addTo(inAppMap);
           inAppMapMarkersGroup = L.layerGroup().addTo(inAppMap);
         } catch (e) {
           console.warn('[Map Engine] Leaflet init error, falling back:', e);
@@ -1344,17 +1310,13 @@ function exportFavoritesPDF() {
       const lng = parseFloat(place.Longitude);
       const hasCoords = !isNaN(lat) && !isNaN(lng) && lat !== 0;
 
-      let leafletAvailable = (typeof L !== 'undefined') && window.navigator.onLine;
+      let leafletAvailable = (typeof L !== 'undefined');
 
       if (leafletAvailable && hasCoords) {
         try {
           if (!inAppMap) {
             inAppMap = L.map('inapp-leaflet-map').setView([lat, lng], 15);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-          subdomains: 'abcd',
-          maxZoom: 19,
-              attribution: '© OpenStreetMap © CARTO'
-            }).addTo(inAppMap);
+            addStreetTiles(inAppMap, () => showToast('Street-map tiles could not load. Check your connection.'));
             inAppMapMarkersGroup = L.layerGroup().addTo(inAppMap);
           }
           if (inAppMapMarkersGroup && typeof inAppMapMarkersGroup.clearLayers === "function") inAppMapMarkersGroup.clearLayers(); else inAppMapMarkersGroup = L.layerGroup().addTo(inAppMap);
@@ -1677,26 +1639,10 @@ function exportFavoritesPDF() {
     }
 
     function toggleBrowseView() {
-      browseViewMode = (browseViewMode === 'list') ? 'map' : 'list';
-      const btn = document.getElementById('btn-toggle-view');
-      const resultsGrid = document.getElementById('browse-results');
-      const mapContainer = document.getElementById('browse-map-container');
-
-      if (browseViewMode === 'map') {
-        if (btn) btn.innerHTML = '📋 List View';
-        if (resultsGrid) resultsGrid.style.display = 'none';
-        if (mapContainer) mapContainer.style.display = 'block';
-        renderLeafletMap(window.lastFilteredPlaces || allPlaces);
-        setTimeout(() => { if (leafletMap) leafletMap.invalidateSize(); }, 150);
-        setTimeout(() => { if (leafletMap) leafletMap.invalidateSize(); }, 400);
-      } else {
-        if (btn) btn.innerHTML = '🗺️ Map View';
-        if (resultsGrid) resultsGrid.style.display = 'grid';
-        if (mapContainer) mapContainer.style.display = 'none';
-      }
+      switchBrowseView(browseViewMode === 'list' ? 'map' : 'list');
     }
 
-    
+
     // ---- SVG FALLBACK MAP ENGINE (v3.17) ----
     function renderSvgFallbackMap(container, validPlaces) {
       if (!container || !validPlaces || validPlaces.length === 0) return;
@@ -1766,71 +1712,74 @@ function exportFavoritesPDF() {
     }
 
     function renderLeafletMap(places) {
-      const container = document.getElementById('leaflet-map');
-      if (!container) return;
+      const host = document.getElementById('leaflet-map');
+      if (!host) return;
       const validPlaces = (places || []).filter(hasValidCoords);
-      const isOnline = (typeof L !== 'undefined') && window.navigator.onLine;
+      const invalidCount = (places || []).length - validPlaces.length;
 
-      if (!isOnline) {
-        if (leafletMap) {
-          try { leafletMap.remove(); } catch(e) {}
-          leafletMap = null;
-          leafletMarkersLayer = null;
-        }
-        renderSVGFallbackMap('leaflet-map', validPlaces);
+      // Keep the street-map canvas in place if a previous offline schematic replaced it.
+      let mapElement = document.getElementById('leaflet-map');
+      if (!mapElement) {
+        const mapContainer = document.getElementById('browse-map-container');
+        if (!mapContainer) return;
+        mapContainer.innerHTML = '<div id="leaflet-map" style="height:100%;min-height:400px;width:100%;z-index:1;"></div>';
+        mapElement = document.getElementById('leaflet-map');
+      }
+
+      if (typeof L === 'undefined') {
+        mapElement.innerHTML = '<div style="padding:24px;text-align:center;background:#fff7e6;color:#704b00;font-weight:700;">The interactive map library did not load. Check that vendor/js/leaflet.js and vendor/css/leaflet.css are published beside this app.</div>';
         return;
       }
-      if (validPlaces.length === 0) return;
+      if (validPlaces.length === 0) {
+        if (leafletMap) { try { leafletMap.remove(); } catch(e) {} }
+        leafletMap = null; leafletMarkersLayer = null; leafletBaseLayer = null;
+        mapElement.innerHTML = '<div style="padding:24px;text-align:center;background:#fff7e6;color:#704b00;font-weight:700;">No usable latitude/longitude coordinates were found for the currently filtered businesses.</div>';
+        return;
+      }
 
-      const centerLat = parseFloat(validPlaces[0].Latitude) || 39.2904;
-      const centerLng = parseFloat(validPlaces[0].Longitude) || -76.6122;
-
+      // Avoid creating multiple Leaflet instances for the same DOM element.
+      if (!mapElement.classList.contains('leaflet-container')) {
+        if (leafletMap) { try { leafletMap.remove(); } catch(e) {} }
+        leafletMap = null; leafletMarkersLayer = null; leafletBaseLayer = null;
+        mapElement.innerHTML = '';
+      }
+      const coords = validPlaces.map(p => [Number(p.Latitude ?? p.latitude), Number(p.Longitude ?? p.longitude)]);
       if (!leafletMap) {
-        leafletMap = L.map('leaflet-map').setView([centerLat, centerLng], 13);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-          subdomains: 'abcd',
-          maxZoom: 19,
-          attribution: '© OpenStreetMap © CARTO'
-        }).addTo(leafletMap);
+        leafletMap = L.map(mapElement, { zoomControl: true, preferCanvas: true });
+        leafletMap.setView(coords[0], 13);
+        leafletBaseLayer = addStreetTiles(leafletMap, () => {
+          showToast('Street-map tiles could not load. Check your connection; business coordinates are still available in the data.');
+        });
         leafletMarkersLayer = L.layerGroup().addTo(leafletMap);
       } else {
-        leafletMap.setView([centerLat, centerLng], 13);
-        leafletMarkersLayer.clearLayers();
+        if (leafletMarkersLayer) leafletMarkersLayer.clearLayers();
       }
+      if (!leafletMarkersLayer) leafletMarkersLayer = L.layerGroup().addTo(leafletMap);
 
       const bounds = [];
-
       validPlaces.forEach(p => {
-        const lat = parseFloat(p.Latitude);
-        const lng = parseFloat(p.Longitude);
-        if (isNaN(lat) || isNaN(lng)) return;
-
+        const lat = Number(p.Latitude ?? p.latitude);
+        const lng = Number(p.Longitude ?? p.longitude);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
         bounds.push([lat, lng]);
-
-        const mapStopUrl = buildMapUrl(p);
-        const badgeHTML = getCategoryBadgeHTML(p.Category, p.Subcategory);
-
-        const popupContent = `
-          <div style="font-family:var(--font-u);padding:4px;min-width:180px;">
-            <div style="font-size:14px;font-weight:800;color:var(--text);">${cleanName(p.Name)}</div>
-            <div style="margin:4px 0;">${badgeHTML}</div>
-            <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">📍 ${p.streetAddress || p.Address}</div>
-            <div style="margin-bottom:8px;">${getLocalSealHTML(p.localScore)}</div>
-            <div style="display:flex;gap:6px;">
-              <a href="${mapStopUrl}" target="_blank" style="background:var(--teal);color:#fff;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:700;text-decoration:none;">Directions</a>
-              <button onclick="showDetailModal(allLoadedPlacesMap.get('${p.ID}'))" style="background:var(--primary);color:#fff;border:none;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">Details</button>
-            </div>
-          </div>
-        `;
-
-        const marker = L.marker([lat, lng]).bindPopup(popupContent);
-        leafletMarkersLayer.addLayer(marker);
+        const name = escapeHTML(cleanName(p.Name || p.name || 'Unnamed business'));
+        const category = escapeHTML(p.Category || 'Place');
+        const subcategory = escapeHTML(p.Subcategory || '');
+        const address = escapeHTML(p.streetAddress || p.Address || p.address || 'Address not supplied');
+        const placeId = String(p.ID || p.id || '').replace(/[^a-zA-Z0-9_-]/g, '');
+        const popupContent = `<div style="min-width:180px;font-family:system-ui,sans-serif;">
+          <div style="font-size:14px;font-weight:800;margin-bottom:4px;">${name}</div>
+          <div style="font-size:11px;color:#555;margin-bottom:6px;">${category}${subcategory ? ' • ' + subcategory : ''}</div>
+          <div style="font-size:12px;margin-bottom:8px;">📍 ${address}</div>
+          <div style="font-size:11px;color:#555;margin-bottom:8px;">${lat.toFixed(6)}, ${lng.toFixed(6)}</div>
+          <button onclick="showDetailModal(allLoadedPlacesMap.get('${placeId}'))" style="background:#D4550A;color:#fff;border:0;border-radius:6px;padding:6px 9px;font-weight:700;cursor:pointer;">View business</button>
+        </div>`;
+        leafletMarkersLayer.addLayer(L.marker([lat, lng]).bindPopup(popupContent));
       });
-
-      if (bounds.length > 0 && leafletMap) {
-        leafletMap.fitBounds(bounds, { padding: [30, 30] });
-        setTimeout(() => { if (leafletMap) leafletMap.invalidateSize(); }, 200);
-      }
+      if (bounds.length === 1) leafletMap.setView(bounds[0], 16);
+      else if (bounds.length > 1) leafletMap.fitBounds(bounds, { padding: [28, 28], maxZoom: 16 });
+      setTimeout(() => { if (leafletMap) leafletMap.invalidateSize(true); }, 100);
+      if (invalidCount > 0) showToast(`${invalidCount} business(es) have missing or invalid coordinates and cannot be pinned.`);
     }
 
 
