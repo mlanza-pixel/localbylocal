@@ -16,15 +16,169 @@
   
   <!-- Leaflet.js for Interactive Map View -->
   <link rel="stylesheet" href="vendor/css/leaflet.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  
   <script src="vendor/js/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  
   <script>
 
     function cleanName(str) {
       if (!str) return '';
       return str.replace(/\s*#\d+$/, '');
     }
+
+    // ==== VERSION 3.37 UTILITY & SECURITY FUNCTIONS ====
+    function escapeHTML(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+    window.escapeHTML = escapeHTML;
+
+    function getValidWebsiteUrl(p) {
+      if (!p) return null;
+      const candidates = [
+        p.Website,
+        p.website,
+        p.specificWebsiteUrl,
+        p.Specific_Website_URL,
+        p['Specific Website URL'],
+        p['Specific_Website_URL']
+      ];
+      for (let cand of candidates) {
+        if (typeof cand === 'string') {
+          const trimmed = cand.trim();
+          if (trimmed && (trimmed.startsWith('http://') || trimmed.startsWith('https://')) && trimmed.includes('.')) {
+            return trimmed;
+          }
+        }
+      }
+      return null;
+    }
+    window.getValidWebsiteUrl = getValidWebsiteUrl;
+
+    function getCityCenterCoords(placesArr) {
+      const valid = (placesArr || []).filter(p => p && !isNaN(parseFloat(p.Latitude)) && !isNaN(parseFloat(p.Longitude)) && parseFloat(p.Latitude) !== 0);
+      if (valid.length > 0) {
+        const sumLat = valid.reduce((acc, p) => acc + parseFloat(p.Latitude), 0);
+        const sumLng = valid.reduce((acc, p) => acc + parseFloat(p.Longitude), 0);
+        return [sumLat / valid.length, sumLng / valid.length];
+      }
+      if (typeof allPlaces !== 'undefined' && allPlaces.length > 0) {
+        const allValid = allPlaces.filter(p => p && !isNaN(parseFloat(p.Latitude)) && !isNaN(parseFloat(p.Longitude)) && parseFloat(p.Latitude) !== 0);
+        if (allValid.length > 0) {
+          const sumLat = allValid.reduce((acc, p) => acc + parseFloat(p.Latitude), 0);
+          const sumLng = allValid.reduce((acc, p) => acc + parseFloat(p.Longitude), 0);
+          return [sumLat / allValid.length, sumLng / allValid.length];
+        }
+      }
+      return [33.8138, -116.5266]; // Palm Springs default fallback
+    }
+    window.getCityCenterCoords = getCityCenterCoords;
+
+    function isOpenNow(openingHoursStr) {
+      if (!openingHoursStr) return true; // If hours unspecified, don't falsely exclude
+      const str = String(openingHoursStr).trim().toLowerCase();
+      if (str.includes('24 hours') || str.includes('24/7') || str.includes('always open') || str.includes('open 24')) return true;
+      if (str.includes('closed') || str === 'n/a') return false;
+
+      const now = new Date();
+      const currentH = now.getHours() + now.getMinutes() / 60;
+
+      const timeRegex = /(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\s*-\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i;
+      const match = str.match(timeRegex);
+      if (!match) return true; // Natural text phrase -> default open to prevent false negative
+
+      let h1 = parseInt(match[1], 10);
+      let m1 = match[2] ? parseInt(match[2], 10) : 0;
+      let p1 = match[3] ? match[3].toLowerCase() : null;
+
+      let h2 = parseInt(match[4], 10);
+      let m2 = match[5] ? parseInt(match[5], 10) : 0;
+      let p2 = match[6] ? match[6].toLowerCase() : null;
+
+      if (p1 === 'pm' && h1 < 12) h1 += 12;
+      if (p1 === 'am' && h1 === 12) h1 = 0;
+      if (p2 === 'pm' && h2 < 12) h2 += 12;
+      if (p2 === 'am' && h2 === 12) h2 = 0;
+
+      const openH = h1 + m1 / 60;
+      const closeH = h2 + m2 / 60;
+
+      if (closeH > openH) {
+        return currentH >= openH && currentH <= closeH;
+      } else if (closeH < openH) {
+        return currentH >= openH || currentH <= closeH;
+      }
+      return true;
+    }
+    window.isOpenNow = isOpenNow;
+
+    function renderSVGFallbackMap(containerId, stops) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      const valid = (stops || []).filter(s => {
+        const item = s && s.place ? s.place : s;
+        return item && !isNaN(parseFloat(item.Latitude)) && !isNaN(parseFloat(item.Longitude)) && parseFloat(item.Latitude) !== 0;
+      });
+
+      if (valid.length === 0) {
+        container.innerHTML = `<div style="padding:30px;text-align:center;color:var(--text2);font-weight:700;font-size:13px;">📍 No geographic coordinates available for map rendering.</div>`;
+        return;
+      }
+
+      const lats = valid.map(s => parseFloat(s.place ? s.place.Latitude : s.Latitude));
+      const lngs = valid.map(s => parseFloat(s.place ? s.place.Longitude : s.Longitude));
+      const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+      const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+
+      const points = valid.map((s, i) => {
+        const item = s.place ? s.place : s;
+        const lat = parseFloat(item.Latitude);
+        const lng = parseFloat(item.Longitude);
+        const x = (maxLng === minLng) ? 250 : 50 + ((lng - minLng) / (maxLng - minLng)) * 400;
+        const y = (maxLat === minLat) ? 140 : 230 - ((lat - minLat) / (maxLat - minLat)) * 180;
+        const name = cleanName(item.Name);
+        return { x, y, name, idx: i + 1 };
+      });
+
+      let svgContent = `<svg width="100%" height="100%" viewBox="0 0 500 280" style="background:#f0f4f8;border-radius:12px;">
+        <defs>
+          <pattern id="gridPattern" width="25" height="25" patternUnits="userSpaceOnUse">
+            <path d="M 25 0 L 0 0 0 25" fill="none" stroke="#d0d7de" stroke-width="0.5"/>
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#gridPattern)" />`;
+
+      if (points.length > 1) {
+        const pathStr = points.map((p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`)).join(' ');
+        svgContent += `<path d="${pathStr}" stroke="var(--primary)" stroke-width="2" stroke-dasharray="4,4" fill="none"/>`;
+      }
+
+      points.forEach(p => {
+        svgContent += `
+          <circle cx="${p.x}" cy="${p.y}" r="12" fill="var(--primary)" stroke="#ffffff" stroke-width="2"/>
+          <text x="${p.x}" y="${p.y + 4}" fill="#ffffff" font-size="11" font-weight="bold" text-anchor="middle">${p.idx}</text>
+          <text x="${p.x}" y="${p.y + 24}" fill="var(--text)" font-size="10" font-weight="bold" text-anchor="middle">${escapeHTML(p.name)}</text>
+        `;
+      });
+
+      svgContent += `</svg>`;
+      container.innerHTML = `
+        <div style="position:relative;width:100%;height:100%;">
+          ${svgContent}
+          <div style="position:absolute;top:8px;right:8px;background:rgba(255,255,255,0.92);padding:4px 8px;border-radius:6px;font-size:10px;font-weight:800;color:var(--text2);border:1px solid var(--border);">
+            ⚡ Offline Map Schematic
+          </div>
+        </div>
+      `;
+    }
+    window.renderSVGFallbackMap = renderSVGFallbackMap;
+
+
 
     
     // ---- ONBOARDING & HELP MODAL FUNCTIONS ----
@@ -130,7 +284,7 @@
     // ---- APP STATE ----
     let currentCity = null;
     let currentCityName = '';
-    let allPlaces = [];
+    window.allPlaces = []; let allPlaces = window.allPlaces;
     let itinerary = [];
     let currentFilter = 'All';
     let currentSortMode = 'locals'; // 'locals' or 'alpha'
@@ -720,8 +874,10 @@ function exportFavoritesPDF() {
 
     function normalizeCityData(rawPlaces) {
       if (!Array.isArray(rawPlaces)) return [];
-      return rawPlaces.map(p => {
+      return rawPlaces.map((p, pIdx) => {
         if (!p || typeof p !== 'object') return p;
+        p.ID = String(p.ID || p.id || p.Id || `PLACE-${pIdx + 1}`);
+        p.id = p.ID;
 
         // 1. Convert string booleans ("TRUE"/"FALSE") to real booleans
         const boolFields = ['Morning', 'Lunch', 'Afternoon', 'Drinks', 'Dinner', 'Nightlife'];
@@ -812,7 +968,7 @@ function exportFavoritesPDF() {
         p['Tourist_Concentration'] = tourConc;
         p.Tourist_Concentration = tourConc;
 
-        const specWeb = p['Specific Website URL'] || p['Specific_Website_URL'] || p.Specific_Website_URL || p.specificWebsiteUrl || p.Website || '';
+        const specWeb = getValidWebsiteUrl(p) || '';
         p.specificWebsiteUrl = specWeb;
         p['Specific Website URL'] = specWeb;
         p['Specific_Website_URL'] = specWeb;
@@ -922,7 +1078,7 @@ function exportFavoritesPDF() {
       if (modal) modal.classList.remove('open');
     }
 
-    function showInAppRouteMap(dayIndex) {
+    async function showInAppRouteMap(dayIndex) {
       const day = itinerary[dayIndex];
       if (!day) return;
       const rawStops = [
@@ -944,72 +1100,93 @@ function exportFavoritesPDF() {
       const distEl = document.getElementById('route-map-dist-summary');
       const extBtn = document.getElementById('btn-external-maps-launch');
 
-      if (titleEl) titleEl.textContent = `🗺️ Day ${dayIndex + 1} Route Map (${currentCityName})`;
+      if (titleEl) titleEl.textContent = `🗺️ Day ${dayIndex + 1} Route Map (${escapeHTML(currentCityName)})`;
 
       modal.classList.add('open');
 
-      if (typeof L !== 'undefined') {
-        if (!inAppMap) {
-          inAppMap = L.map('inapp-leaflet-map').setView([39.2904, -76.6122], 13);
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '© OpenStreetMap'
-          }).addTo(inAppMap);
-          inAppMapMarkersGroup = L.layerGroup().addTo(inAppMap);
-        }
-        if (inAppMapMarkersGroup && typeof inAppMapMarkersGroup.clearLayers === "function") inAppMapMarkersGroup.clearLayers(); else inAppMapMarkersGroup = L.layerGroup().addTo(inAppMap);
-        if (inAppMapPolyline) {
-          inAppMap.removeLayer(inAppMapPolyline);
-          inAppMapPolyline = null;
+      const validStops = rawStops.filter(s => s.place && hasValidCoords(s.place));
+      const omittedStops = rawStops.filter(s => !s.place || !hasValidCoords(s.place));
+
+      let leafletAvailable = (typeof L !== 'undefined');
+
+      if (leafletAvailable) {
+        try {
+          if (!inAppMap) {
+            const center = getCityCenterCoords(validStops.map(s => s.place));
+            inAppMap = L.map('inapp-leaflet-map').setView(center, 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+              maxZoom: 19,
+              attribution: '© OpenStreetMap'
+            }).addTo(inAppMap);
+            inAppMapMarkersGroup = L.layerGroup().addTo(inAppMap);
+          }
+          if (inAppMapMarkersGroup && typeof inAppMapMarkersGroup.clearLayers === "function") {
+            inAppMapMarkersGroup.clearLayers();
+          } else {
+            inAppMapMarkersGroup = L.layerGroup().addTo(inAppMap);
+          }
+          if (inAppMapPolyline) {
+            inAppMap.removeLayer(inAppMapPolyline);
+            inAppMapPolyline = null;
+          }
+        } catch (e) {
+          console.warn('[Map Engine] Leaflet init error, falling back:', e);
+          leafletAvailable = false;
         }
       }
 
-      const validStops = rawStops.filter(s => s.place && hasValidCoords(s.place));
-      const latLngs = [];
-      const bounds = [];
+      if (!leafletAvailable) {
+        renderSVGFallbackMap('inapp-leaflet-map-container', validStops);
+      }
 
       stopsContainer.innerHTML = '';
+
+      if (omittedStops.length > 0) {
+        stopsContainer.innerHTML += `
+          <div style="background:#fff3cd; border:1px solid #ffeeba; color:#856404; padding:8px 12px; border-radius:8px; font-size:12px; font-weight:700;">
+            ⚠️ ${omittedStops.length} stop(s) (${omittedStops.map(s => escapeHTML(cleanName(s.place.Name))).join(', ')}) omitted from map plot due to missing coordinates.
+          </div>
+        `;
+      }
+
+      const latLngs = [];
+      const bounds = [];
       let totalDistMiles = 0;
 
       validStops.forEach((s, idx) => {
         const lat = parseFloat(s.place.Latitude);
         const lng = parseFloat(s.place.Longitude);
-        if (!isNaN(lat) && !isNaN(lng)) {
-          latLngs.push([lat, lng]);
-          bounds.push([lat, lng]);
+        latLngs.push([lat, lng]);
+        bounds.push([lat, lng]);
 
-          if (typeof L !== 'undefined' && inAppMapMarkersGroup) {
-            const markerIcon = L.divIcon({
-              className: 'custom-route-marker',
-              html: `<div style="background:var(--primary);color:#fff;font-weight:900;font-size:12px;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.3);border:2px solid #fff;">${idx + 1}</div>`,
-              iconSize: [26, 26],
-              iconAnchor: [13, 13]
-            });
+        if (leafletAvailable && inAppMapMarkersGroup) {
+          const markerIcon = L.divIcon({
+            className: 'custom-route-marker',
+            html: `<div style="background:var(--primary);color:#fff;font-weight:900;font-size:12px;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.3);border:2px solid #fff;">${idx + 1}</div>`,
+            iconSize: [26, 26],
+            iconAnchor: [13, 13]
+          });
 
-            const popupText = `
-              <div style="font-family:var(--font-u);padding:2px;">
-                <div style="font-size:11px;font-weight:800;color:var(--primary);">${idx + 1}. ${s.name.toUpperCase()}</div>
-                <div style="font-size:13px;font-weight:800;color:var(--text);">${cleanName(s.place.Name)}</div>
-                <div style="font-size:11px;color:var(--text2);">📍 ${s.place.streetAddress || s.place.Address}</div>
-              </div>
-            `;
+          const popupText = `
+            <div style="font-family:var(--font-u);padding:2px;">
+              <div style="font-size:11px;font-weight:800;color:var(--primary);">${idx + 1}. ${escapeHTML(s.name.toUpperCase())}</div>
+              <div style="font-size:13px;font-weight:800;color:var(--text);">${escapeHTML(cleanName(s.place.Name))}</div>
+              <div style="font-size:11px;color:var(--text2);">📍 ${escapeHTML(s.place.streetAddress || s.place.Address)}</div>
+            </div>
+          `;
 
-            const marker = L.marker([lat, lng], { icon: markerIcon }).bindPopup(popupText);
-            inAppMapMarkersGroup.addLayer(marker);
-          }
+          const marker = L.marker([lat, lng], { icon: markerIcon }).bindPopup(popupText);
+          inAppMapMarkersGroup.addLayer(marker);
         }
 
         let distText = '';
         if (idx < validStops.length - 1) {
           const nextPlace = validStops[idx + 1].place;
-          const d = getDistanceInMiles(
-            parseFloat(s.place.Latitude), parseFloat(s.place.Longitude),
-            parseFloat(nextPlace.Latitude), parseFloat(nextPlace.Longitude)
-          );
+          const d = getDistanceInMiles(lat, lng, parseFloat(nextPlace.Latitude), parseFloat(nextPlace.Longitude));
           if (d !== null) {
             totalDistMiles += d;
             const walkMin = Math.max(1, Math.round(d * 20));
-            distText = d < 1.0 ? `🚶 ${d.toFixed(2)} mi (~${walkMin} min walk)` : `🚕 ${d.toFixed(2)} mi (~${Math.round(4 + d * 3)} min drive)`;
+            distText = d < 1.0 ? `🚶 ~${d.toFixed(2)} mi (~${walkMin} min walk)` : `🚕 ~${d.toFixed(2)} mi (~${Math.round(4 + d * 3)} min drive)`;
           }
         }
 
@@ -1019,12 +1196,12 @@ function exportFavoritesPDF() {
               ${idx + 1}
             </div>
             <div style="flex-grow:1; min-width:0;">
-              <div style="font-size:10px; font-weight:800; color:var(--primary); text-transform:uppercase;">${s.name}</div>
-              <div style="font-size:13px; font-weight:800; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${cleanName(s.place.Name)}</div>
-              <div style="font-size:11px; color:var(--text2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">📍 ${s.place.streetAddress || s.place.Address}</div>
+              <div style="font-size:10px; font-weight:800; color:var(--primary); text-transform:uppercase;">${escapeHTML(s.name)}</div>
+              <div style="font-size:13px; font-weight:800; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHTML(cleanName(s.place.Name))}</div>
+              <div style="font-size:11px; color:var(--text2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">📍 ${escapeHTML(s.place.streetAddress || s.place.Address)}</div>
               ${distText ? `<div style="font-size:11px; font-weight:700; color:var(--teal); margin-top:2px;">↳ Next Stop: ${distText}</div>` : ''}
             </div>
-            <button onclick="closeRouteMapModal(); showDetailModal(allLoadedPlacesMap.get('${s.place.ID}'));" style="background:var(--primary-light); color:var(--primary-dark); border:none; padding:5px 10px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; flex-shrink:0;">
+            <button onclick="closeRouteMapModal(); showDetailModal(allLoadedPlacesMap.get('${escapeHTML(s.place.ID)}'));" style="background:var(--primary-light); color:var(--primary-dark); border:none; padding:5px 10px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; flex-shrink:0;">
               Details
             </button>
           </div>
@@ -1032,10 +1209,33 @@ function exportFavoritesPDF() {
       });
 
       if (distEl) {
-        distEl.textContent = totalDistMiles > 0 ? `Total Route: ~${totalDistMiles.toFixed(1)} miles (${validStops.length} stops)` : `${validStops.length} stops mapped`;
+        distEl.textContent = totalDistMiles > 0 ? `Proximity Distance: ~${totalDistMiles.toFixed(1)} miles (${validStops.length} stops)` : `${validStops.length} stops mapped`;
       }
 
-      if (typeof L !== 'undefined' && inAppMap && latLngs.length > 1) {
+      let osrmSuccess = false;
+      if (leafletAvailable && inAppMap && validStops.length > 1 && window.navigator.onLine) {
+        try {
+          const osrmCoordsStr = validStops.map(s => `${parseFloat(s.place.Longitude)},${parseFloat(s.place.Latitude)}`).join(';');
+          const osrmUrl = 'https://' + 'router.project-osrm.org/route/v1/foot/' + `${osrmCoordsStr}?overview=full&geometries=geojson`;
+          const res = await fetch(osrmUrl);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.routes && data.routes[0] && data.routes[0].geometry && data.routes[0].geometry.coordinates) {
+              const streetLatLngs = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+              inAppMapPolyline = L.polyline(streetLatLngs, {
+                color: '#0C7A8A',
+                weight: 5,
+                opacity: 0.9
+              }).addTo(inAppMap);
+              osrmSuccess = true;
+            }
+          }
+        } catch (err) {
+          // Fallback
+        }
+      }
+
+      if (leafletAvailable && inAppMap && latLngs.length > 1 && !osrmSuccess) {
         inAppMapPolyline = L.polyline(latLngs, {
           color: '#0C7A8A',
           weight: 4,
@@ -1045,17 +1245,18 @@ function exportFavoritesPDF() {
       }
 
       if (extBtn) {
+        extBtn.textContent = '🚀 Export Driving/Walking GPS';
         extBtn.onclick = () => launchExternalNavigationForDay(validStops.map(s => s.place));
       }
 
       setTimeout(() => {
-        if (inAppMap) {
+        if (leafletAvailable && inAppMap) {
           if (bounds.length > 0) {
             inAppMap.fitBounds(bounds, { padding: [30, 30] });
           }
           inAppMap.invalidateSize();
         }
-      }, 250);
+      }, 200);
     }
 
     function showInAppSingleStopMap(place) {
@@ -1066,79 +1267,63 @@ function exportFavoritesPDF() {
       const distEl = document.getElementById('route-map-dist-summary');
       const extBtn = document.getElementById('btn-external-maps-launch');
 
-      if (titleEl) titleEl.textContent = `📍 ${cleanName(place.Name)}`;
+      if (titleEl) titleEl.textContent = `📍 ${escapeHTML(cleanName(place.Name))}`;
 
       modal.classList.add('open');
 
-      if (typeof L !== 'undefined') {
-        if (!inAppMap) {
-          inAppMap = L.map('inapp-leaflet-map').setView([39.2904, -76.6122], 13);
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '© OpenStreetMap'
-          }).addTo(inAppMap);
-          inAppMapMarkersGroup = L.layerGroup().addTo(inAppMap);
-        }
-        if (inAppMapMarkersGroup && typeof inAppMapMarkersGroup.clearLayers === "function") inAppMapMarkersGroup.clearLayers(); else inAppMapMarkersGroup = L.layerGroup().addTo(inAppMap);
-        if (inAppMapPolyline) {
-          inAppMap.removeLayer(inAppMapPolyline);
-          inAppMapPolyline = null;
+      const lat = parseFloat(place.Latitude);
+      const lng = parseFloat(place.Longitude);
+      const hasCoords = !isNaN(lat) && !isNaN(lng) && lat !== 0;
+
+      let leafletAvailable = (typeof L !== 'undefined');
+
+      if (leafletAvailable && hasCoords) {
+        try {
+          if (!inAppMap) {
+            inAppMap = L.map('inapp-leaflet-map').setView([lat, lng], 15);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+              maxZoom: 19,
+              attribution: '© OpenStreetMap'
+            }).addTo(inAppMap);
+            inAppMapMarkersGroup = L.layerGroup().addTo(inAppMap);
+          }
+          if (inAppMapMarkersGroup && typeof inAppMapMarkersGroup.clearLayers === "function") inAppMapMarkersGroup.clearLayers(); else inAppMapMarkersGroup = L.layerGroup().addTo(inAppMap);
+          if (inAppMapPolyline) {
+            inAppMap.removeLayer(inAppMapPolyline);
+            inAppMapPolyline = null;
+          }
+          inAppMap.setView([lat, lng], 15);
+          const marker = L.marker([lat, lng]).bindPopup(`<b>${escapeHTML(cleanName(place.Name))}</b><br>${escapeHTML(place.streetAddress || place.Address)}`);
+          inAppMapMarkersGroup.addLayer(marker);
+          marker.openPopup();
+        } catch (e) {
+          leafletAvailable = false;
         }
       }
 
-      const lat = parseFloat(place.Latitude);
-      const lng = parseFloat(place.Longitude);
+      if (!leafletAvailable || !hasCoords) {
+        renderSVGFallbackMap('inapp-leaflet-map-container', [place]);
+      }
 
       stopsContainer.innerHTML = `
         <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:12px;">
-          <div style="font-size:11px; font-weight:800; color:var(--primary); text-transform:uppercase;">${place.Category} • ${place.Subcategory || 'Attraction'}</div>
-          <div style="font-size:15px; font-weight:800; color:var(--text); margin-top:2px;">${cleanName(place.Name)}</div>
-          <div style="font-size:12px; color:var(--text2); margin-top:4px;">📍 ${place.streetAddress || place.Address} (${place.Neighborhood || ''})</div>
-          <p style="font-size:12px; color:var(--text); margin-top:8px; line-height:1.4;">"${place.whyGo || place.Description}"</p>
+          <div style="font-size:11px; font-weight:800; color:var(--primary); text-transform:uppercase;">${escapeHTML(place.Category)} • ${escapeHTML(place.Subcategory || 'Attraction')}</div>
+          <div style="font-size:15px; font-weight:800; color:var(--text); margin-top:2px;">${escapeHTML(cleanName(place.Name))}</div>
+          <div style="font-size:12px; color:var(--text2); margin-top:4px;">📍 ${escapeHTML(place.streetAddress || place.Address)} (${escapeHTML(place.Neighborhood || '')})</div>
+          <p style="font-size:12px; color:var(--text); margin-top:8px; line-height:1.4;">"${escapeHTML(place.whyGo || place.Description)}"</p>
         </div>
       `;
 
       if (distEl) distEl.textContent = `★ ${place.localScore} / 10.0 Rating`;
 
-      if (!isNaN(lat) && !isNaN(lng) && typeof L !== 'undefined' && inAppMapMarkersGroup) {
-        inAppMap.setView([lat, lng], 15);
-        const marker = L.marker([lat, lng]).bindPopup(`<b>${cleanName(place.Name)}</b><br>${place.streetAddress || place.Address}`);
-        inAppMapMarkersGroup.addLayer(marker);
-        marker.openPopup();
-      }
-
       if (extBtn) {
+        extBtn.textContent = '🚀 Export Driving/Walking GPS';
         extBtn.onclick = () => launchExternalNavigationForSingle(place);
       }
 
       setTimeout(() => {
-        if (inAppMap) inAppMap.invalidateSize();
-      }, 250);
-    }
-
-    function launchExternalNavigationForDay(places) {
-      const stops = places.filter(Boolean);
-      if (stops.length === 0) return;
-      if (isIOSDevice()) {
-        const saddr = encodeURIComponent(cleanName(stops[0].Name) + ' ' + (stops[0].Address || ''));
-        const daddr = encodeURIComponent(cleanName(stops[stops.length - 1].Name) + ' ' + (stops[stops.length - 1].Address || ''));
-        let url = "https://maps.apple.com/?saddr=" + saddr + "&daddr=" + daddr + "&t=m";
-        if (stops.length > 2) {
-          stops.slice(1, -1).forEach(st => {
-            url += "&via=" + encodeURIComponent(cleanName(st.Name) + ' ' + (st.Address || ''));
-          });
-        }
-        window.open(url, '_blank');
-      } else {
-        const origin = encodeURIComponent(cleanName(stops[0].Name) + ' ' + (stops[0].Address || ''));
-        const destination = encodeURIComponent(cleanName(stops[stops.length - 1].Name) + ' ' + (stops[stops.length - 1].Address || ''));
-        let url = "https://www.google.com/maps/dir/?api=1&origin=" + origin + "&destination=" + destination + "&travelmode=walking&t=m";
-        if (stops.length > 2) {
-          const waypoints = stops.slice(1, -1).map(st => encodeURIComponent(cleanName(st.Name) + ' ' + (st.Address || ''))).join('|');
-          url += "&waypoints=" + waypoints;
-        }
-        window.open(url, '_blank');
-      }
+        if (leafletAvailable && inAppMap) inAppMap.invalidateSize();
+      }, 200);
     }
 
     function launchExternalNavigationForSingle(place) {
@@ -1276,12 +1461,6 @@ function exportFavoritesPDF() {
       allPlaces.forEach(p => allLoadedPlacesMap.set(p.ID, p));
 
       discoveredNeighborhoods = [...new Set(allPlaces.map(p => p.Neighborhood).filter(Boolean))].sort();
-      const neighSelect = document.getElementById('browse-neighborhood-select');
-      if (neighSelect) {
-        neighSelect.innerHTML = `<option value="All">🏘️ All Neighborhoods (${discoveredNeighborhoods.length})</option>` +
-          discoveredNeighborhoods.map(n => `<option value="${n}">📍 ${n}</option>`).join('');
-      }
-
       // Update City-Specific Neighborhoods Dropdown
       const nhSelect = document.getElementById('browse-neighborhood-select');
       if (nhSelect) {
@@ -1965,12 +2144,13 @@ function setBudgetPref(b) {
     // ---- ITINERARY BUILDER ----
     function buildItinerary() {
       itinerary = [];
-      const selectedNeigh = document.getElementById('pref-neighborhood').value;
+      const neighEl = document.getElementById('pref-neighborhood'); const selectedNeigh = neighEl ? neighEl.value : 'All';
 
       // Smart multi-factor scoring engine for broad, inclusive matching
       let userMaxBudget = prefs.budget || 2; // Default $$ (2)
 
-      let scoredPlaces = allPlaces.map(p => {
+      const placesPool = (window.allPlaces && window.allPlaces.length > 0) ? window.allPlaces : allPlaces;
+      let scoredPlaces = placesPool.map(p => {
         let score = (prefs.style === 'Off-the-beaten-path') ? (p.hiddenGemScore || p.localScore) : p.localScore;
         
         // Neighborhood preference bonus
@@ -2006,7 +2186,7 @@ function setBudgetPref(b) {
 
       // Fallback: Ensure candidate pool is never empty
       if (candidatePool.length < 5) {
-        candidatePool = [...allPlaces].sort((a, b) => b.localScore - a.localScore);
+        candidatePool = [...placesPool].sort((a, b) => b.localScore - a.localScore);
       }
 
       let usedIDs = new Set();
@@ -2023,7 +2203,7 @@ function setBudgetPref(b) {
           }
           if (!found) {
             // Tier 2 Fallback: Any unused spot in allPlaces
-            found = allPlaces.find(p => !usedIDs.has(p.ID));
+            found = placesPool.find(p => !usedIDs.has(p.ID));
           }
           if (found) {
             usedIDs.add(found.ID);
@@ -2054,6 +2234,7 @@ function setBudgetPref(b) {
       }
 
       window.itinerary = itinerary;
+      window.itinerary = itinerary;
       renderItinerary();
       showScreen('screen-itinerary');
     }
@@ -2061,6 +2242,7 @@ function setBudgetPref(b) {
     function renderItinerary() {
       const daysBar = document.getElementById('itin-days-bar');
       const content = document.getElementById('itin-content');
+      if (!daysBar || !content) return;
       daysBar.innerHTML = '';
       content.innerHTML = '';
 
@@ -2157,39 +2339,45 @@ function setBudgetPref(b) {
       if (!body) return;
 
       const mapLink = buildMapUrl(place);
-      
-      // Clean Website URL check
-      let rawWeb = place.Website || place.specificWebsiteUrl || place.Specific_Website_URL || '';
-      if (typeof rawWeb === 'string') rawWeb = rawWeb.trim();
-      let webLink = null;
-      if (rawWeb && rawWeb !== '#' && rawWeb !== 'undefined' && (rawWeb.startsWith('http://') || rawWeb.startsWith('https://'))) {
-        webLink = rawWeb;
-      }
-
-      const noteVal = getPersonalNote(place.ID);
+      const webLink = getValidWebsiteUrl(place);
+      const noteVal = getPersonalNote(place.ID) || '';
       const isFav = isFavorite(place.ID);
-      const escPlace = JSON.stringify(place).replace(/"/g, '&quot;');
-      const name = cleanName(place.Name);
-      const descText = place.Description || place.whyGo || '';
+      const escPlace = escapeHTML(JSON.stringify(place));
+      const name = escapeHTML(cleanName(place.Name));
+      const category = escapeHTML(place.Category);
+      const subcategory = escapeHTML(place.Subcategory || 'Attraction');
+      const neighborhood = escapeHTML(place.Neighborhood || 'District');
+      const address = escapeHTML(place.streetAddress || place.Address || '');
+      const price = escapeHTML(place.Price || place.priceTier || '$$');
+      const hours = escapeHTML(place['Opening Hours'] || place.openingHours || '09:00 - 23:00');
+      const descText = escapeHTML(place.Description || place.whyGo || '');
+      const phone = escapeHTML(place.Phone || '');
+      const parking = escapeHTML(place.Parking_Info || '');
+      const costContext = escapeHTML(place.Estimated_Cost_Context || '');
+
+      const lat = parseFloat(place.Latitude);
+      const lng = parseFloat(place.Longitude);
+      const hasCoords = !isNaN(lat) && !isNaN(lng) && lat !== 0;
+      const staticMapUrl = hasCoords ? getStaticMapImageUrl(lat, lng, 15) : null;
 
       body.innerHTML = `
         <!-- TOP ACTION ROW: BADGE ON LEFT, SAVE & CLOSE X ON RIGHT -->
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; gap:8px;">
-          <div>
-            ${getCategoryBadgeHTML(place.Category, place.Subcategory)}
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; gap:8px;">
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            ${getCategoryBadgeHTML(category, subcategory)}
           </div>
           <div style="display:flex; align-items:center; gap:8px;">
-            <button onclick="toggleFavorite(event, '${place.ID}'); showDetailModal(allLoadedPlacesMap.get('${place.ID}') || ${escPlace});" style="background:var(--primary-light); border:1px solid var(--primary); color:var(--primary-dark); padding:6px 14px; border-radius:20px; font-size:12px; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:6px;" title="Favorite">
+            <button onclick="toggleFavorite(event, '${escapeHTML(place.ID)}'); showDetailModal(allLoadedPlacesMap.get('${escapeHTML(place.ID)}') || ${escPlace});" style="background:var(--primary-light); border:1px solid var(--primary); color:var(--primary-dark); padding:6px 14px; border-radius:20px; font-size:12px; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:6px;" title="Favorite">
               ${isFav ? '❤️ Saved' : '🤍 Save'}
             </button>
-            <button onclick="document.getElementById('modal-detail').classList.remove('open');" style="background:var(--bg); border:1px solid var(--border); color:var(--text); width:32px; height:32px; border-radius:50%; font-size:16px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1;" title="Close">
+            <button onclick="document.getElementById('modal-detail').classList.remove('open');" style="background:var(--bg); border:1px solid var(--border); color:var(--text); width:32px; height:32px; border-radius:50%; font-size:16px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1;" title="Close Modal">
               ✕
             </button>
           </div>
         </div>
 
         <h2 style="font-family:var(--font-s); font-size:22px; font-weight:900; margin-top:2px; color:var(--text); line-height:1.2;">${name}</h2>
-        <div style="font-size:13px; color:var(--text2); margin-top:4px; font-weight:600;">📍 ${place.Neighborhood || 'District'} • ${place.streetAddress || place.Address || ''}</div>
+        <div style="font-size:13px; color:var(--text2); margin-top:4px; font-weight:600;">📍 ${neighborhood} • ${address}</div>
 
         <!-- COMBINED SINGLE PILL BOX: SCORE, PRICE, HOURS -->
         <div style="background:var(--primary-light); border:1px solid var(--primary); border-radius:14px; padding:12px 14px; margin:14px 0; display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;">
@@ -2201,7 +2389,7 @@ function setBudgetPref(b) {
             <span style="font-size:16px;">💰</span>
             <div>
               <div style="font-size:10px; font-weight:800; color:var(--primary-dark); text-transform:uppercase; letter-spacing:0.5px;">Price</div>
-              <div style="font-size:14px; font-weight:900; color:var(--primary-dark);">${place.Price || place.priceTier || '$$'}</div>
+              <div style="font-size:14px; font-weight:900; color:var(--primary-dark);">${price}</div>
             </div>
           </div>
           <div style="height:24px; width:1px; background:var(--border); align-self:center;"></div>
@@ -2209,38 +2397,36 @@ function setBudgetPref(b) {
             <span style="font-size:16px;">⏰</span>
             <div>
               <div style="font-size:10px; font-weight:800; color:var(--primary-dark); text-transform:uppercase; letter-spacing:0.5px;">Hours</div>
-              <div style="font-size:14px; font-weight:900; color:var(--primary-dark);">${place['Opening Hours'] || place.openingHours || '09:00 - 23:00'}</div>
+              <div style="font-size:14px; font-weight:900; color:var(--primary-dark);">${hours}</div>
             </div>
           </div>
         </div>
 
-        ${descText ? `<div style="margin:14px 0; font-size:13px; color:var(--text); line-height:1.5;">${descText}</div>` : ''}
-
-        ${place.Phone || place.Parking_Info || place.Estimated_Cost_Context ? `
-          <div style="background:var(--bg); border:1px solid var(--border); border-radius:12px; padding:12px; margin:14px 0; font-size:12px; display:flex; flex-direction:column; gap:6px; color:var(--text2);">
-            ${place.Estimated_Cost_Context ? `<div>💵 <b>Est. Cost:</b> ${place.Estimated_Cost_Context}</div>` : ''}
-            ${place.Phone ? `<div>📞 <b>Phone:</b> <a href="tel:${place.Phone}" style="color:var(--primary); font-weight:700; text-decoration:none;">${place.Phone}</a></div>` : ''}
-            ${place.Parking_Info ? `<div>🅿️ <b>Parking:</b> ${place.Parking_Info}</div>` : ''}
-          </div>
-        ` : ''}
-
-        <!-- STATIC MAP PREVIEW PICTURE -->
-        ${hasValidCoords(place) ? `
-          <div onclick="showInAppSingleStopMap(allLoadedPlacesMap.get('${place.ID}') || ${escPlace})" style="position:relative; width:100%; height:140px; border-radius:12px; overflow:hidden; margin:14px 0; border:1px solid var(--border); cursor:pointer; background:var(--bg);" title="Tap to expand interactive map">
-            <img src="${getStaticMapImageUrl(place.Latitude, place.Longitude)}" alt="Map Preview" style="width:100%; height:100%; object-fit:cover;" onerror="this.parentElement.style.display='none';">
-            <div style="position:absolute; bottom:8px; right:8px; background:rgba(0,0,0,0.7); color:#fff; padding:4px 8px; border-radius:6px; font-size:10px; font-weight:700; display:flex; align-items:center; gap:4px;">
-              🗺️ Tap to Expand Map
+        ${staticMapUrl ? `
+          <div onclick="showInAppSingleStopMap(allLoadedPlacesMap.get('${escapeHTML(place.ID)}') || ${escPlace})" style="position:relative; width:100%; height:140px; border-radius:12px; overflow:hidden; margin:14px 0; border:1px solid var(--border); cursor:pointer; background:var(--bg);" title="Tap to expand interactive map">
+            <img src="${staticMapUrl}" alt="${name} Map" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none';">
+            <div style="position:absolute; bottom:8px; right:8px; background:rgba(0,0,0,0.75); color:#fff; padding:4px 8px; border-radius:6px; font-size:10px; font-weight:800; display:flex; align-items:center; gap:4px;">
+              🔍 Tap to Expand Map
             </div>
           </div>
         ` : ''}
 
-        <!-- ACTION BUTTONS: MAP & WEBSITE -->
+        ${descText ? `<div style="margin:14px 0; font-size:13px; color:var(--text); line-height:1.5;">${descText}</div>` : ''}
+
+        ${phone || parking || costContext ? `
+          <div style="background:var(--bg); border:1px solid var(--border); border-radius:12px; padding:12px; margin:14px 0; font-size:12px; display:flex; flex-direction:column; gap:6px; color:var(--text2);">
+            ${costContext ? `<div>💵 <b>Est. Cost:</b> ${costContext}</div>` : ''}
+            ${phone ? `<div>📞 <b>Phone:</b> <a href="tel:${phone}" style="color:var(--primary); font-weight:700; text-decoration:none;">${phone}</a></div>` : ''}
+            ${parking ? `<div>🅿️ <b>Parking:</b> ${parking}</div>` : ''}
+          </div>
+        ` : ''}
+
         <div style="display:flex; gap:8px; margin:16px 0; flex-wrap:wrap;">
-          <button onclick="showInAppSingleStopMap(allLoadedPlacesMap.get('${place.ID}') || ${escPlace})" style="flex:1; background:var(--primary); color:#fff; border:none; padding:10px 14px; border-radius:12px; font-size:12px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
+          <button onclick="showInAppSingleStopMap(allLoadedPlacesMap.get('${escapeHTML(place.ID)}') || ${escPlace})" style="flex:1; background:var(--primary); color:#fff; border:none; padding:10px 14px; border-radius:12px; font-size:12px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
             📍 Map Location
           </button>
           ${webLink ? `
-            <a href="${webLink}" target="_blank" rel="noopener" style="flex:1; background:var(--primary-light); color:var(--primary-dark); text-decoration:none; padding:10px 14px; border-radius:12px; font-size:12px; font-weight:800; display:flex; align-items:center; justify-content:center; gap:6px; border:1px solid var(--primary);">
+            <a href="${escapeHTML(webLink)}" target="_blank" rel="noopener" style="flex:1; background:var(--primary-light); color:var(--primary-dark); text-decoration:none; padding:10px 14px; border-radius:12px; font-size:12px; font-weight:800; display:flex; align-items:center; justify-content:center; gap:6px; border:1px solid var(--primary);">
               🌐 Website
             </a>
           ` : ''}
@@ -2250,11 +2436,11 @@ function setBudgetPref(b) {
         <div style="background:var(--card); border:1px solid var(--border); border-radius:14px; padding:14px; margin-top:16px;">
           <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
             <div style="font-size:13px; font-weight:800; color:var(--text);">📝 My Personal Trip Notes</div>
-            <button onclick="savePersonalNote('${place.ID}', document.getElementById('modal-note-input-${place.ID}').value)" style="background:var(--primary); color:#fff; border:none; padding:5px 12px; border-radius:10px; font-size:11px; font-weight:800; cursor:pointer;">
+            <button onclick="savePersonalNote('${escapeHTML(place.ID)}', document.getElementById('modal-note-input-${escapeHTML(place.ID)}').value)" style="background:var(--primary); color:#fff; border:none; padding:5px 12px; border-radius:10px; font-size:11px; font-weight:800; cursor:pointer;">
               💾 Save Note
             </button>
           </div>
-          <textarea id="modal-note-input-${place.ID}" placeholder="Add a private note (e.g. must-try dish, reservation info)..." style="width:100%; height:70px; padding:8px; border:1px solid var(--border); border-radius:10px; font-family:inherit; font-size:12px; resize:vertical;">${noteVal}</textarea>
+          <textarea id="modal-note-input-${escapeHTML(place.ID)}" placeholder="Add a private note (e.g. must-try dish, reservation info)..." style="width:100%; height:70px; padding:8px; border:1px solid var(--border); border-radius:10px; font-family:inherit; font-size:12px; resize:vertical;">${escapeHTML(noteVal)}</textarea>
         </div>
       `;
 
@@ -2505,6 +2691,11 @@ function setBudgetPref(b) {
     window.filterBrowse = filterBrowse;
     window.setSortMode = setSortMode;
     window.buildItinerary = buildItinerary;
+
+    window.prefs = prefs;
+    window.allPlaces = allPlaces;
+    window.allLoadedPlacesMap = allLoadedPlacesMap;
+
     window.generateItinerary = buildItinerary;
     window.mapDayRoute = mapDayRoute;
     window.closeRouteMapModal = closeRouteMapModal;
@@ -2518,6 +2709,11 @@ function setBudgetPref(b) {
     // Window exports for global scope & test automation
     window.loadCityData = loadCityData;
     window.buildItinerary = buildItinerary;
+
+    window.prefs = prefs;
+    window.allPlaces = allPlaces;
+    window.allLoadedPlacesMap = allLoadedPlacesMap;
+
     window.showDetailModal = showDetailModal;
     window.showScreen = showScreen;
     window.cleanName = cleanName;
