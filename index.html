@@ -3922,6 +3922,7 @@ function setBudgetPref(b) {
   
     /* ---- BOTTOM NAVIGATION BAR ---- */
     .bottom-nav {
+      display: none; /* Hidden by default */
       position: fixed;
       bottom: 0;
       left: 0;
@@ -3930,11 +3931,21 @@ function setBudgetPref(b) {
       background: rgba(255, 255, 255, 0.95);
       backdrop-filter: blur(10px);
       border-top: 1px solid var(--border);
-      display: flex;
       align-items: center;
       justify-content: space-around;
       z-index: 1000;
       padding-bottom: env(safe-area-inset-bottom);
+    }
+    #screen-cities.active ~ .bottom-nav,
+    #screen-browse.active ~ .bottom-nav,
+    #screen-itinerary.active ~ .bottom-nav,
+    #screen-favorites.active ~ .bottom-nav,
+    .bottom-nav.visible {
+      display: flex !important;
+    }
+    #screen-welcome.active ~ .bottom-nav,
+    #screen-onboarding.active ~ .bottom-nav {
+      display: none !important;
     }
 
     .nav-item {
@@ -4159,28 +4170,7 @@ EDITORIAL REDESIGN — Boutique travel magazine
 }
 
 #screen-welcome { background: #263D36 !important; }
-.welcome-wrap {
-  min-height: 100vh; padding: clamp(28px, 7vh, 76px) 24px 36px;
-  display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start; text-align: left; color: white;
-  position: relative; overflow: hidden; isolation: isolate;
-}
-.welcome-wrap::before {
-  content: 'A FIELD GUIDE TO THE GOOD STUFF'; position: absolute; top: 30px; left: 26px;
-  font-size: 10px; font-weight: 700; letter-spacing: .2em; color: rgba(255,255,255,.72);
-}
-.welcome-bg {
-  position: absolute; inset: 0; z-index: 0;
-  background-color: #263D36;
-  background-image: linear-gradient(180deg, rgba(23,35,30,.12) 0%, rgba(23,35,30,.18) 34%, rgba(23,35,30,.90) 100%),
-  url('https://images.unsplash.com/photo-1516483638261-f4dbaf036963?auto=format&fit=crop&w=2000&q=85');
-  background-size: cover; background-position: center;
-  transform: scale(1.015);
-}
-.welcome-icon { display: none !important; }
-.welcome-wrap h1 {
-  font-family: var(--font-d); font-size: clamp(48px, 11vw, 76px); font-weight: 900;
-  letter-spacing: -.03em; line-height: .92; margin-bottom: 14px; text-shadow: 0 4px 20px rgba(0,0,0,.35);
-}
+
 .tagline {
   font-size: clamp(15px, 2.2vw, 18px); color: rgba(255,255,255,.88); font-weight: 400;
   line-height: 1.45; margin-bottom: 28px; max-width: 380px; text-shadow: 0 2px 10px rgba(0,0,0,.3);
