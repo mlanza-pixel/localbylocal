@@ -201,24 +201,93 @@
       if (modal) modal.classList.remove('open');
     }
 
+    
+    // ---- GRAPHIC MULTI-PAGE WALKTHROUGH ENGINE (v3.42) ----
+    let currentWalkthroughStep = 1;
+
+    function renderWalkthroughStep(step) {
+      currentWalkthroughStep = step;
+      for (let i = 1; i <= 4; i++) {
+        const el = document.getElementById(`walkthrough-step-${i}`);
+        if (el) el.style.display = (i === step) ? 'block' : 'none';
+      }
+
+      // Update Dots
+      const dots = document.querySelectorAll('.walkthrough-dot');
+      dots.forEach((dot, idx) => {
+        if (idx === (step - 1)) {
+          dot.style.background = 'var(--primary)';
+          dot.style.transform = 'scale(1.2)';
+        } else {
+          dot.style.background = 'var(--border)';
+          dot.style.transform = 'scale(1.0)';
+        }
+      });
+
+      // Update Prev / Next Buttons
+      const prevBtn = document.getElementById('btn-walkthrough-prev');
+      const nextBtn = document.getElementById('btn-walkthrough-next');
+      if (prevBtn) prevBtn.disabled = (step === 1);
+      if (nextBtn) {
+        if (step === 4) {
+          nextBtn.textContent = '🚀 Start Exploring Cities';
+          nextBtn.style.background = 'var(--primary-dark)';
+        } else {
+          nextBtn.textContent = 'Next Step ➔';
+          nextBtn.style.background = 'var(--primary)';
+        }
+      }
+
+      // Sync Checkbox state
+      const chk = document.getElementById('chk-disable-walkthrough');
+      if (chk) {
+        chk.checked = (localStorage.getItem('local_app_disable_walkthrough') === 'true');
+      }
+    }
+
+    function changeWalkthroughStep(delta) {
+      const target = currentWalkthroughStep + delta;
+      if (target >= 1 && target <= 4) {
+        renderWalkthroughStep(target);
+      } else if (target > 4) {
+        finishOnboarding();
+      }
+    }
+
+    function startWalkthroughFromPage1() {
+      renderWalkthroughStep(1);
+      showScreen('screen-onboarding');
+    }
+
+    function toggleDisableWalkthrough(isDisabled) {
+      if (isDisabled) {
+        localStorage.setItem('local_app_disable_walkthrough', 'true');
+      } else {
+        localStorage.setItem('local_app_disable_walkthrough', 'false');
+      }
+    }
+
     function finishOnboarding() {
       localStorage.setItem('hasSeenOnboarding', 'true');
       showScreen('screen-cities');
     }
 
     function handleStartApp() {
-      const hasSeen = localStorage.getItem('hasSeenOnboarding');
-      if (hasSeen === 'true') {
+      const isDisabled = (localStorage.getItem('local_app_disable_walkthrough') === 'true');
+      if (isDisabled) {
         showScreen('screen-cities');
       } else {
-        showScreen('screen-onboarding');
+        startWalkthroughFromPage1();
       }
     }
 
-    window.openHelpModal = openHelpModal;
-    window.closeHelpModal = closeHelpModal;
+    window.renderWalkthroughStep = renderWalkthroughStep;
+    window.changeWalkthroughStep = changeWalkthroughStep;
+    window.startWalkthroughFromPage1 = startWalkthroughFromPage1;
+    window.toggleDisableWalkthrough = toggleDisableWalkthrough;
     window.finishOnboarding = finishOnboarding;
     window.handleStartApp = handleStartApp;
+
 
     // ---- DATA REGISTRY (36 Cities + Dive Bars) ----
     const CITIES_BY_REGION = [
@@ -817,20 +886,22 @@ function exportFavoritesPDF() {
       targetScreen.classList.add('active');
       window.scrollTo(0,0);
 
+      // Hide bottom navigation bar on Splash (welcome) and Walkthrough (onboarding) screens
+      const bottomNav = document.querySelector('.bottom-nav');
+      if (bottomNav) {
+        if (id === 'screen-welcome' || id === 'screen-onboarding') {
+          bottomNav.style.display = 'none';
+        } else {
+          bottomNav.style.display = 'flex';
+        }
+      }
+
       // Update bottom nav active tabs
       document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
       if (id === 'screen-cities') document.getElementById('nav-cities')?.classList.add('active');
       if (id === 'screen-browse') document.getElementById('nav-browse')?.classList.add('active');
-      if (id === 'screen-favorites') document.getElementById('nav-favs')?.classList.add('active');
       if (id === 'screen-itinerary') document.getElementById('nav-itin')?.classList.add('active');
-      if (id === 'screen-onboarding') document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
-    }
-
-    function showToast(msg) {
-      const t = document.getElementById('toast');
-      t.textContent = msg;
-      t.classList.add('visible');
-      setTimeout(() => t.classList.remove('visible'), 2500);
+      if (id === 'screen-favorites') document.getElementById('nav-favs')?.classList.add('active');
     }
 
     function addLog(msg, type = 'info') {
@@ -1117,29 +1188,38 @@ function exportFavoritesPDF() {
       const validStops = rawStops.filter(s => s.place && hasValidCoords(s.place));
       const omittedStops = rawStops.filter(s => !s.place || !hasValidCoords(s.place));
 
-      let leafletAvailable = (typeof L !== 'undefined') && window.navigator.onLine;
+      const isOnline = (typeof L !== 'undefined') && window.navigator.onLine;
+      let leafletAvailable = isOnline;
 
-      if (leafletAvailable) {
+      const mapContainer = document.getElementById('inapp-leaflet-map-container');
+      if (leafletAvailable && mapContainer) {
         try {
-          if (!inAppMap) {
-            const center = getCityCenterCoords(validStops.map(s => s.place));
-            inAppMap = L.map('inapp-leaflet-map').setView(center, 13);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-          subdomains: 'abcd',
-          maxZoom: 19,
-              attribution: '© OpenStreetMap © CARTO'
-            }).addTo(inAppMap);
-            inAppMapMarkersGroup = L.layerGroup().addTo(inAppMap);
-          }
-          if (inAppMapMarkersGroup && typeof inAppMapMarkersGroup.clearLayers === "function") {
-            inAppMapMarkersGroup.clearLayers();
-          } else {
-            inAppMapMarkersGroup = L.layerGroup().addTo(inAppMap);
-          }
-          if (inAppMapPolyline) {
-            inAppMap.removeLayer(inAppMapPolyline);
+          // Teardown previous Leaflet map instance to avoid detached DOM node errors
+          if (inAppMap) {
+            try { inAppMap.remove(); } catch(e) {}
+            inAppMap = null;
+            inAppMapMarkersGroup = null;
             inAppMapPolyline = null;
           }
+
+          // Reset DOM element inside container
+          mapContainer.innerHTML = '<div id="inapp-leaflet-map" style="width:100%; height:100%;"></div>';
+
+          const center = getCityCenterCoords(validStops.map(s => s.place));
+          inAppMap = L.map('inapp-leaflet-map').setView(center, 13);
+
+          const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+          });
+
+          tileLayer.on('tileerror', function() {
+            console.warn('[Map Engine] Tile load error, switching to SVG schematic view');
+            renderSVGFallbackMap('inapp-leaflet-map-container', validStops);
+          });
+
+          tileLayer.addTo(inAppMap);
+          inAppMapMarkersGroup = L.layerGroup().addTo(inAppMap);
         } catch (e) {
           console.warn('[Map Engine] Leaflet init error, falling back:', e);
           leafletAvailable = false;
@@ -1153,9 +1233,10 @@ function exportFavoritesPDF() {
       stopsContainer.innerHTML = '';
 
       if (omittedStops.length > 0) {
+        const omittedNames = omittedStops.map(s => escapeHTML(cleanName(s.place ? s.place.Name : ''))).join(', ');
         stopsContainer.innerHTML += `
-          <div style="background:#fff3cd; border:1px solid #ffeeba; color:#856404; padding:8px 12px; border-radius:8px; font-size:12px; font-weight:700;">
-            ⚠️ ${omittedStops.length} stop(s) (${omittedStops.map(s => escapeHTML(cleanName(s.place.Name))).join(', ')}) omitted from map plot due to missing coordinates.
+          <div style="background:#fff3cd; border:1px solid #ffeeba; color:#856404; padding:8px 12px; border-radius:8px; font-size:12px; font-weight:700; margin-bottom:8px;">
+            ⚠️ ${omittedStops.length} stop(s) (${omittedNames}) omitted from map plot due to missing coordinates.
           </div>
         `;
       }
@@ -1177,7 +1258,6 @@ function exportFavoritesPDF() {
             iconSize: [26, 26],
             iconAnchor: [13, 13]
           });
-
           const popupText = `
             <div style="font-family:var(--font-u);padding:2px;">
               <div style="font-size:11px;font-weight:800;color:var(--primary);">${idx + 1}. ${escapeHTML(s.name.toUpperCase())}</div>
@@ -1185,7 +1265,6 @@ function exportFavoritesPDF() {
               <div style="font-size:11px;color:var(--text2);">📍 ${escapeHTML(s.place.streetAddress || s.place.Address)}</div>
             </div>
           `;
-
           const marker = L.marker([lat, lng], { icon: markerIcon }).bindPopup(popupText);
           inAppMapMarkersGroup.addLayer(marker);
         }
@@ -1193,11 +1272,14 @@ function exportFavoritesPDF() {
         let distText = '';
         if (idx < validStops.length - 1) {
           const nextPlace = validStops[idx + 1].place;
-          const d = getDistanceInMiles(lat, lng, parseFloat(nextPlace.Latitude), parseFloat(nextPlace.Longitude));
+          const d = getDistanceInMiles(
+            parseFloat(s.place.Latitude), parseFloat(s.place.Longitude),
+            parseFloat(nextPlace.Latitude), parseFloat(nextPlace.Longitude)
+          );
           if (d !== null) {
             totalDistMiles += d;
             const walkMin = Math.max(1, Math.round(d * 20));
-            distText = d < 1.0 ? `🚶 ~${d.toFixed(2)} mi (~${walkMin} min walk)` : `🚕 ~${d.toFixed(2)} mi (~${Math.round(4 + d * 3)} min drive)`;
+            distText = d < 1.0 ? `🚶 ${d.toFixed(2)} mi (~${walkMin} min walk)` : `🚕 ${d.toFixed(2)} mi (~${Math.round(4 + d * 3)} min drive)`;
           }
         }
 
@@ -1220,44 +1302,20 @@ function exportFavoritesPDF() {
       });
 
       if (distEl) {
-        distEl.textContent = totalDistMiles > 0 ? `Proximity Distance: ~${totalDistMiles.toFixed(1)} miles (${validStops.length} stops)` : `${validStops.length} stops mapped`;
+        distEl.textContent = totalDistMiles > 0 ? `Total Route: ~${totalDistMiles.toFixed(1)} miles (${validStops.length} stops)` : `${validStops.length} stops mapped`;
       }
 
-      let osrmSuccess = false;
-      if (leafletAvailable && inAppMap && validStops.length > 1 && window.navigator.onLine) {
-        try {
-          const osrmCoordsStr = validStops.map(s => `${parseFloat(s.place.Longitude)},${parseFloat(s.place.Latitude)}`).join(';');
-          const osrmUrl = 'https://' + 'router.project-osrm.org/route/v1/foot/' + `${osrmCoordsStr}?overview=full&geometries=geojson`;
-          const res = await fetch(osrmUrl);
-          if (res.ok) {
-            const data = await res.json();
-            if (data.routes && data.routes[0] && data.routes[0].geometry && data.routes[0].geometry.coordinates) {
-              const streetLatLngs = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
-              inAppMapPolyline = L.polyline(streetLatLngs, {
-                color: '#0C7A8A',
-                weight: 5,
-                opacity: 0.9
-              }).addTo(inAppMap);
-              osrmSuccess = true;
-            }
-          }
-        } catch (err) {
-          // Fallback
-        }
+      if (extBtn) {
+        extBtn.onclick = () => launchExternalNavigationForDay(validStops.map(s => s.place));
       }
 
-      if (leafletAvailable && inAppMap && latLngs.length > 1 && !osrmSuccess) {
+      if (leafletAvailable && inAppMap && latLngs.length > 1) {
         inAppMapPolyline = L.polyline(latLngs, {
           color: '#0C7A8A',
           weight: 4,
           opacity: 0.85,
           dashArray: '6, 8'
         }).addTo(inAppMap);
-      }
-
-      if (extBtn) {
-        extBtn.textContent = '🚀 Export Driving/Walking GPS';
-        extBtn.onclick = () => launchExternalNavigationForDay(validStops.map(s => s.place));
       }
 
       setTimeout(() => {
@@ -1722,8 +1780,6 @@ function exportFavoritesPDF() {
         renderSVGFallbackMap('leaflet-map', validPlaces);
         return;
       }
-
-      const validPlaces = (places || []).filter(hasValidCoords);
       if (validPlaces.length === 0) return;
 
       const centerLat = parseFloat(validPlaces[0].Latitude) || 39.2904;
@@ -2395,8 +2451,8 @@ function setBudgetPref(b) {
             <button onclick="toggleFavorite(event, '${escapeHTML(place.ID)}'); showDetailModal(allLoadedPlacesMap.get('${escapeHTML(place.ID)}') || ${escPlace});" style="background:var(--primary-light); border:1px solid var(--primary); color:var(--primary-dark); padding:6px 14px; border-radius:20px; font-size:12px; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:6px;" title="Favorite">
               ${isFav ? '❤️ Saved' : '🤍 Save'}
             </button>
-            <button onclick="document.getElementById('modal-detail').classList.remove('open');" style="background:var(--bg); border:1px solid var(--border); color:var(--text); width:32px; height:32px; border-radius:50%; font-size:16px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1;" title="Close Modal">
-              ✕
+            <button onclick="document.getElementById('modal-detail').classList.remove('open');" style="background:var(--primary-light); border:1.5px solid var(--primary); color:var(--primary-dark); padding:6px 14px; border-radius:20px; font-size:12px; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:4px; box-shadow:0 2px 6px rgba(0,0,0,0.08);" title="Close Modal">
+              ✕ Close
             </button>
           </div>
         </div>
@@ -4462,46 +4518,152 @@ EDITORIAL REDESIGN — Boutique travel magazine
        ONBOARDING VISUAL GUIDE SCREEN (App Guide Style)
        ============================================= -->
     <!-- WELCOME & ONBOARDING SCREEN -->
+  
+  <!-- =============================================
+       GRAPHIC MULTI-PAGE INTERACTIVE WALKTHROUGH SCREEN
+       ============================================= -->
   <div id="screen-onboarding" class="screen">
-    <div style="max-width:720px; margin:0 auto; padding:20px 16px;">
-      <!-- Top Nav Header -->
-      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px;">
+    <div style="max-width:640px; margin:0 auto; padding:20px 16px;">
+      <!-- Top Walkthrough Header -->
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
         <div>
-          <div style="font-family:var(--font-s); font-size:11px; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:1px;">📖 DK EYEWITNESS DIRECTORY GUIDE</div>
-          <h2 style="font-family:var(--font-s); font-size:26px; font-weight:900; color:var(--text); margin:2px 0 0 0;">Welcome & Explorer Guide</h2>
+          <div style="font-family:var(--font-s); font-size:11px; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:1px;">📖 APP INTERACTIVE WALKTHROUGH</div>
+          <h2 style="font-family:var(--font-s); font-size:24px; font-weight:900; color:var(--text); margin:2px 0 0 0;" id="walkthrough-title">How to Use Local Like a Local</h2>
         </div>
-        <button onclick="finishOnboarding()" style="background:var(--primary-light); border:1px solid var(--primary); color:var(--primary-dark); padding:8px 16px; border-radius:20px; font-size:13px; font-weight:800; cursor:pointer;">Skip to Cities →</button>
+        <button onclick="finishOnboarding()" style="background:var(--primary-light); border:1.5px solid var(--primary); color:var(--primary-dark); padding:6px 14px; border-radius:20px; font-size:12px; font-weight:800; cursor:pointer;">Skip to Cities ➔</button>
       </div>
 
-      <!-- FEATURED DK EYEWITNESS SAMPLE VENUE CARD -->
-      <div class="dk-card">
-        <div class="dk-card-header">
-          <div class="dk-card-title-tag">📖 FEATURED LOCAL INSIDER SPOT</div>
-          <div style="font-size:12px; font-weight:800; color:var(--text2);">🌴 Palm Springs, CA</div>
-        </div>
-
-        <!-- Card Image Header -->
-        <div style="position:relative; height:180px; border-radius:12px; overflow:hidden; margin-bottom:14px; border:1px solid var(--border);">
-          <img src="images/cities/palm_springs_banner.jpg" alt="Sherman's Deli & Bakery" style="width:100%; height:100%; object-fit:cover;">
-          <div style="position:absolute; top:10px; left:10px;">
-            <span style="background:rgba(255,255,255,0.95); backdrop-filter:blur(4px); color:var(--text); padding:4px 12px; border-radius:20px; font-size:11px; font-weight:800; border:1px solid rgba(0,0,0,0.1); display:inline-flex; align-items:center; gap:5px;">
-              <span>🥪</span> <span>FOOD • HISTORIC DELI</span>
-            </span>
+      <!-- MAIN CAROUSEL CARD CONTAINER -->
+      <div style="background:var(--card); border:1px solid var(--border); border-top:5px solid var(--primary); border-radius:20px; padding:24px; box-shadow:var(--shadow); margin-bottom:18px;" id="walkthrough-card-container">
+        
+        <!-- STEP 1: PICK DESTINATION -->
+        <div id="walkthrough-step-1" class="walkthrough-step-content">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+            <div style="background:var(--primary); color:#fff; font-weight:900; font-size:14px; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center;">1</div>
+            <h3 style="font-size:20px; font-weight:900; color:var(--text); margin:0;">Pick Your Destination 🏙️</h3>
           </div>
-          <div style="position:absolute; top:10px; right:10px; display:flex; gap:6px; align-items:center;">
-            <div class="local-seal-badge tier-gold" title="(L) 3-Ring Local Legend (Score 9.4)">
-              <svg class="seal-svg" viewBox="0 0 24 24" width="22" height="22" style="display:block;">
-                <circle cx="12" cy="12" r="11" class="seal-ring" />
-                <circle cx="12" cy="12" r="8.8" class="seal-ring" />
-                <circle cx="12" cy="12" r="6.6" class="seal-ring" />
-                <text x="12" y="16" text-anchor="middle" font-family="DM Sans, sans-serif" font-weight="900" font-size="11" class="seal-letter">L</text>
-              </svg>
-              <span class="seal-text-label">Local Legend</span>
+          <p style="font-size:14px; color:var(--text2); margin-bottom:16px; line-height:1.4;">Select any city from 45 world destinations to load curated local spots!</p>
+          
+          <!-- VISUAL GRAPHIC 1 -->
+          <div style="background:var(--bg); border:1px solid var(--border); border-radius:14px; padding:16px; display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; position:relative;">
+            <div style="background:#fff; border:2px solid var(--primary); border-radius:12px; padding:12px; text-align:center; box-shadow:0 3px 8px rgba(0,0,0,0.06);">
+              <div style="font-size:28px;">🌴</div>
+              <div style="font-weight:900; font-size:14px; color:var(--primary-dark); margin-top:4px;">Palm Springs, CA</div>
+              <div style="font-size:10px; color:var(--primary); font-weight:800; margin-top:2px;">✔ SELECTED</div>
+            </div>
+            <div style="background:#fff; border:1px solid var(--border); border-radius:12px; padding:12px; text-align:center; opacity:0.8;">
+              <div style="font-size:28px;">🗽</div>
+              <div style="font-weight:800; font-size:14px; color:var(--text);">New York, NY</div>
+            </div>
+            <div style="background:#fff; border:1px solid var(--border); border-radius:12px; padding:12px; text-align:center; opacity:0.8;">
+              <div style="font-size:28px;">🗼</div>
+              <div style="font-weight:800; font-size:14px; color:var(--text);">Paris, France</div>
+            </div>
+            <div style="background:#fff; border:1px solid var(--border); border-radius:12px; padding:12px; text-align:center; opacity:0.8;">
+              <div style="font-size:28px;">💃</div>
+              <div style="font-weight:800; font-size:14px; color:var(--text);">Madrid, Spain</div>
             </div>
           </div>
         </div>
 
-        <!-- Title & Location -->
+        <!-- STEP 2: FILTER VIBE & BUDGET -->
+        <div id="walkthrough-step-2" class="walkthrough-step-content" style="display:none;">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+            <div style="background:var(--primary); color:#fff; font-weight:900; font-size:14px; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center;">2</div>
+            <h3 style="font-size:20px; font-weight:900; color:var(--text); margin:0;">Filter Your Vibe & Budget 🎯</h3>
+          </div>
+          <p style="font-size:14px; color:var(--text2); margin-bottom:16px; line-height:1.4;">Filter by Food, Nightlife, Culture, or Secret Hidden Gems!</p>
+          
+          <!-- VISUAL GRAPHIC 2 -->
+          <div style="background:var(--bg); border:1px solid var(--border); border-radius:14px; padding:16px; display:flex; flex-direction:column; gap:10px;">
+            <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center;">
+              <span style="background:var(--primary); color:#fff; padding:6px 12px; border-radius:20px; font-size:12px; font-weight:800;">🥐 Food (81)</span>
+              <span style="background:var(--primary-light); border:1px solid var(--primary); color:var(--primary-dark); padding:6px 12px; border-radius:20px; font-size:12px; font-weight:800;">🍸 Nightlife (35)</span>
+              <span style="background:var(--primary-light); border:1px solid var(--primary); color:var(--primary-dark); padding:6px 12px; border-radius:20px; font-size:12px; font-weight:800;">🎨 Culture (13)</span>
+            </div>
+            <div style="display:flex; gap:8px; justify-content:center; margin-top:4px;">
+              <span style="background:var(--teal); color:#fff; padding:6px 14px; border-radius:12px; font-size:12px; font-weight:800;">💎 Hidden Gems 7.0+</span>
+              <span style="background:var(--teal-light); border:1px solid var(--teal); color:var(--teal-dark); padding:6px 14px; border-radius:12px; font-size:12px; font-weight:800;">💰 Budget: $$</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 3: CUSTOM ITINERARY GENERATOR -->
+        <div id="walkthrough-step-3" class="walkthrough-step-content" style="display:none;">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+            <div style="background:var(--primary); color:#fff; font-weight:900; font-size:14px; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center;">3</div>
+            <h3 style="font-size:20px; font-weight:900; color:var(--text); margin:0;">Get Custom Day-by-Day Plans 🗓️</h3>
+          </div>
+          <p style="font-size:14px; color:var(--text2); margin-bottom:16px; line-height:1.4;">Pick 1 to 7 days. The app instantly builds your custom day schedule!</p>
+          
+          <!-- VISUAL GRAPHIC 3 -->
+          <div style="background:var(--bg); border:1px solid var(--border); border-radius:14px; padding:14px; display:flex; flex-direction:column; gap:6px;">
+            <div style="background:#fff; border:1px solid var(--border); border-radius:8px; padding:8px 12px; font-size:12px; font-weight:800; color:var(--primary-dark); display:flex; justify-content:space-between;">
+              <span>🌅 Morning</span><span style="color:var(--text);">Local Cafe & Breakfast</span>
+            </div>
+            <div style="background:#fff; border:1px solid var(--border); border-radius:8px; padding:8px 12px; font-size:12px; font-weight:800; color:var(--primary-dark); display:flex; justify-content:space-between;">
+              <span>🥪 Lunch</span><span style="color:var(--text);">Historic Marketplace</span>
+            </div>
+            <div style="background:#fff; border:1px solid var(--border); border-radius:8px; padding:8px 12px; font-size:12px; font-weight:800; color:var(--primary-dark); display:flex; justify-content:space-between;">
+              <span>🌆 Afternoon</span><span style="color:var(--text);">Art Museum & Gardens</span>
+            </div>
+            <div style="background:#fff; border:1px solid var(--border); border-radius:8px; padding:8px 12px; font-size:12px; font-weight:800; color:var(--primary-dark); display:flex; justify-content:space-between;">
+              <span>🍽️ Dinner</span><span style="color:var(--text);">Supper Club & Lounge</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 4: MAP ROUTES & SAVE PRIVATE NOTES -->
+        <div id="walkthrough-step-4" class="walkthrough-step-content" style="display:none;">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+            <div style="background:var(--primary); color:#fff; font-weight:900; font-size:14px; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center;">4</div>
+            <h3 style="font-size:20px; font-weight:900; color:var(--text); margin:0;">Map Routes & Save Private Notes 🗺️📝</h3>
+          </div>
+          <p style="font-size:14px; color:var(--text2); margin-bottom:16px; line-height:1.4;">Save your favorite spots, write private notes, & view walking maps!</p>
+          
+          <!-- VISUAL GRAPHIC 4 -->
+          <div style="background:var(--bg); border:1px solid var(--border); border-radius:14px; padding:14px; display:flex; flex-direction:column; gap:8px;">
+            <div style="display:flex; gap:8px;">
+              <button style="flex:1; background:var(--primary-light); border:1px solid var(--primary); color:var(--primary-dark); padding:8px; border-radius:10px; font-size:11px; font-weight:800;">❤️ Saved Spot</button>
+              <button style="flex:1; background:var(--primary); color:#fff; border:none; padding:8px; border-radius:10px; font-size:11px; font-weight:800;">📍 Map Walking Route</button>
+            </div>
+            <div style="background:#fff; border:1px solid var(--border); border-radius:10px; padding:8px; font-size:11px; color:var(--text2);">
+              📝 <b>My Private Note:</b> "Must try the classic cocktails & live jazz show!"
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- CAROUSEL FOOTER CONTROLS -->
+      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+        <button id="btn-walkthrough-prev" onclick="changeWalkthroughStep(-1)" style="background:var(--bg); border:1px solid var(--border); color:var(--text); padding:8px 16px; border-radius:12px; font-size:13px; font-weight:800; cursor:pointer;" disabled>← Previous</button>
+
+        <!-- PROGRESS DOTS -->
+        <div style="display:flex; align-items:center; gap:6px;" id="walkthrough-dots">
+          <span class="walkthrough-dot active" style="width:10px; height:10px; border-radius:50%; background:var(--primary);"></span>
+          <span class="walkthrough-dot" style="width:10px; height:10px; border-radius:50%; background:var(--border);"></span>
+          <span class="walkthrough-dot" style="width:10px; height:10px; border-radius:50%; background:var(--border);"></span>
+          <span class="walkthrough-dot" style="width:10px; height:10px; border-radius:50%; background:var(--border);"></span>
+        </div>
+
+        <button id="btn-walkthrough-next" onclick="changeWalkthroughStep(1)" style="background:var(--primary); color:#fff; border:none; padding:10px 20px; border-radius:12px; font-size:13px; font-weight:800; cursor:pointer;">Next Step ➔</button>
+      </div>
+
+      <!-- DISABLE ON STARTUP CHECKBOX -->
+      <div style="margin-top:20px; text-align:center; padding-top:14px; border-top:1px solid var(--border);">
+        <label style="display:inline-flex; align-items:center; gap:8px; font-size:13px; font-weight:700; color:var(--text); cursor:pointer;">
+          <input type="checkbox" id="chk-disable-walkthrough" onchange="toggleDisableWalkthrough(this.checked)" style="width:18px; height:18px; accent-color:var(--primary); cursor:pointer;" />
+          Don't show this walkthrough automatically on startup
+        </label>
+        <div style="font-size:11px; color:var(--text2); margin-top:4px;">(You can always view this walkthrough again from the Help & Guide screen)</div>
+      </div>
+
+    </div>
+  </div>
+
+
+<!-- Title & Location -->
         <h3 style="font-family:var(--font-s); font-size:22px; font-weight:900; color:var(--text); margin:0 0 4px 0; line-height:1.2;">Sherman's Deli & Bakery</h3>
         <div style="font-size:13px; color:var(--text2); font-weight:600; margin-bottom:10px;">📍 Downtown Palm Springs • 401 E Tahquitz Canyon Way</div>
 
@@ -4725,7 +4887,7 @@ EDITORIAL REDESIGN — Boutique travel magazine
   <!-- IN-APP ROUTE MAP MODAL -->
   <div id="modal-route-map" class="modal">
     <div class="modal-content" style="padding:16px; max-height:92vh; display:flex; flex-direction:column; width:95%; max-width:520px;">
-      <button id="btn-route-map-close" class="btn-close-modal" onclick="closeRouteMapModal()" style="z-index:10; top:12px; right:12px;">✕</button>
+      <button id="btn-route-map-close" class="btn-close-modal" onclick="closeRouteMapModal()" style="background:var(--primary-light); border:1.5px solid var(--primary); color:var(--primary-dark); padding:6px 14px; border-radius:20px; font-size:12px; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:4px; position:absolute; top:12px; right:12px; z-index:10; box-shadow:0 2px 6px rgba(0,0,0,0.08);" title="Close Modal">✕ Close</button>
       <div style="font-size:16px; font-weight:800; color:var(--text); margin-bottom:12px; padding-right:32px;" id="route-map-modal-title">🗺️ Day Route Map</div>
       <div id="inapp-leaflet-map-container" style="width:100%; height:280px; border-radius:12px; overflow:hidden; position:relative; background:var(--bg); border:1px solid var(--border); flex-shrink:0;">
         <div id="inapp-leaflet-map" style="width:100%; height:100%;"></div>
@@ -4753,6 +4915,7 @@ EDITORIAL REDESIGN — Boutique travel magazine
         <h2 style="font-size:26px; font-weight:900; color:var(--text); margin:0;">App Guide & Help Center</h2>
         <p style="font-size:16px; color:var(--text2); margin-top:4px;">Everything you need to know about using Local Like a Local</p>
       </div>
+      <button onclick="closeHelpModal(); startWalkthroughFromPage1();" class="btn-primary" style="width:100%; padding:12px; margin-bottom:18px; font-size:14px; font-weight:800; border-radius:12px; display:flex; align-items:center; justify-content:center; gap:8px;">📖 Open Graphic Interactive Walkthrough</button>
 
       <!-- DK EYEWITNESS VISUAL VENUE CARD ANATOMY BREAKDOWN -->
       <div style="background:var(--card); border:1px solid var(--border); border-top:4px solid var(--primary); border-radius:16px; padding:20px; margin-bottom:20px; box-shadow:var(--shadow);">
