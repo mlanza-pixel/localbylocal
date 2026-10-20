@@ -1,4 +1,4 @@
-const CACHE_NAME = 'local-like-local-v3.1';
+const CACHE_NAME = 'local-like-local-v3.45';
 const ASSETS = [
   './',
   './index.html',
@@ -8,9 +8,7 @@ const ASSETS = [
 self.addEventListener('install', (e) => {
   self.skipWaiting();
   e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS);
-    })
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
   );
 });
 
@@ -29,7 +27,10 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  if (e.request.mode === 'navigate' || e.request.url.includes('index.html') || e.request.url.includes('.json')) {
+  const url = e.request.url;
+
+  // Handle HTML navigation and JSON dataset requests
+  if (e.request.mode === 'navigate' || url.includes('index.html') || url.includes('.json')) {
     e.respondWith(
       fetch(e.request)
         .then((res) => {
@@ -40,8 +41,15 @@ self.addEventListener('fetch', (e) => {
         .catch(() => caches.match(e.request))
     );
   } else {
+    // Handle asset and external requests with safe catch block to eliminate uncaught promise rejections
     e.respondWith(
-      caches.match(e.request).then((res) => res || fetch(e.request))
+      caches.match(e.request).then((cachedRes) => {
+        if (cachedRes) return cachedRes;
+        return fetch(e.request).catch((err) => {
+          console.warn('[ServiceWorker] Graceful offline fallback for URL:', url);
+          return new Response('', { status: 404, statusText: 'Offline / Fetch Failed' });
+        });
+      })
     );
   }
 });
