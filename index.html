@@ -379,30 +379,43 @@
     let leafletBaseLayer = null;
     let leafletTileFallbackUsed = false;
 
-    // Real street-map tiles. If the primary provider fails, try OpenStreetMap once.
+    // Real street-map tiles with three independent providers. A gray Leaflet canvas
+    // usually means the map initialized but its remote tile requests failed.
     function addStreetTiles(map, onFailure) {
       const providers = [
-        { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', options: { subdomains: 'abcd', maxZoom: 19, attribution: '© OpenStreetMap © CARTO' } },
-        { url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', options: { subdomains: 'abc', maxZoom: 19, attribution: '© OpenStreetMap contributors' } }
+        { name: 'Esri', url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', options: { maxZoom: 19, attribution: 'Tiles © Esri; data providers and contributors' } },
+        { name: 'CARTO', url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', options: { subdomains: 'abcd', maxZoom: 19, attribution: '© OpenStreetMap © CARTO' } },
+        { name: 'OpenStreetMap', url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', options: { maxZoom: 19, attribution: '© OpenStreetMap contributors' } }
       ];
       let providerIndex = 0;
       let tileErrors = 0;
+      let tileLoads = 0;
+      let activeLayer = null;
       const attachProvider = () => {
         const provider = providers[providerIndex];
-        const layer = L.tileLayer(provider.url, provider.options);
+        tileErrors = 0;
+        tileLoads = 0;
+        const layer = L.tileLayer(provider.url, { ...provider.options, crossOrigin: true, updateWhenIdle: true });
+        activeLayer = layer;
+        layer.on('tileload', () => { tileLoads++; });
         layer.on('tileerror', () => {
           tileErrors++;
-          // A burst of errors indicates this provider is unavailable; try the alternate once.
-          if (tileErrors >= 3 && providerIndex < providers.length - 1) {
-            map.removeLayer(layer); providerIndex++; tileErrors = 0; attachProvider();
-          } else if (tileErrors >= 3 && onFailure) {
-            onFailure();
+          // Switch when several tiles fail and none have loaded successfully.
+          if (tileErrors >= 3 && tileLoads === 0) {
+            if (providerIndex < providers.length - 1) {
+              try { map.removeLayer(layer); } catch (e) {}
+              providerIndex++;
+              attachProvider();
+            } else if (onFailure) {
+              onFailure('All street-map tile providers failed.');
+            }
           }
         });
         layer.addTo(map);
         return layer;
       };
-      return attachProvider();
+      attachProvider();
+      return { getLayer: () => activeLayer, getProvider: () => providers[providerIndex].name };
     }
 
     
@@ -1060,8 +1073,12 @@ function exportFavoritesPDF() {
       const parsedLat = parseFloat(lat);
       const parsedLng = parseFloat(lng);
       if (isNaN(parsedLat) || isNaN(parsedLng)) return '';
-      const z = zoom || 15;
-      return "https://staticmap.openstreetmap.de/staticmap.php?center=" + parsedLat + "," + parsedLng + "&zoom=" + z + "&size=600x260&markers=" + parsedLat + "," + parsedLng + ",red-pushpin";
+      // Use OpenStreetMap's embedded map instead of the retired/unreliable
+      // staticmap.openstreetmap.de image endpoint. The old endpoint was the
+      // direct cause of the gray preview reported in the browser console.
+      const span = (zoom || 15) >= 15 ? 0.006 : 0.012;
+      const bbox = [parsedLng - span, parsedLat - span, parsedLng + span, parsedLat + span].join('%2C');
+      return "https://www.openstreetmap.org/export/embed.html?bbox=" + bbox + "&layer=mapnik&marker=" + parsedLat + "%2C" + parsedLng;
     }
     window.getStaticMapImageUrl = getStaticMapImageUrl;
 
@@ -1747,8 +1764,15 @@ function exportFavoritesPDF() {
       if (!leafletMap) {
         leafletMap = L.map(mapElement, { zoomControl: true, preferCanvas: true });
         leafletMap.setView(coords[0], 13);
-        leafletBaseLayer = addStreetTiles(leafletMap, () => {
-          showToast('Street-map tiles could not load. Check your connection; business coordinates are still available in the data.');
+        leafletBaseLayer = addStreetTiles(leafletMap, (message) => {
+          showToast(message || 'Street-map tiles could not load. Check your connection.');
+          const host = document.getElementById('browse-map-container');
+          if (host && !host.querySelector('.map-tile-error')) {
+            const note = document.createElement('div'); note.className = 'map-tile-error';
+            note.style.cssText = 'position:absolute;z-index:1000;left:12px;right:12px;bottom:12px;background:#fff;color:#7a271a;padding:10px 12px;border:1px solid #f0b4aa;border-radius:8px;font-size:13px;box-shadow:0 2px 8px #0002;';
+            note.textContent = 'Street map could not load from available map servers. Check the internet connection or browser network restrictions.';
+            host.style.position = 'relative'; host.appendChild(note);
+          }
         });
         leafletMarkersLayer = L.layerGroup().addTo(leafletMap);
       } else {
@@ -2434,7 +2458,7 @@ function setBudgetPref(b) {
 
         ${staticMapUrl ? `
           <div onclick="showInAppSingleStopMap(allLoadedPlacesMap.get('${escapeHTML(place.ID)}') || ${escPlace})" style="position:relative; width:100%; height:140px; border-radius:12px; overflow:hidden; margin:14px 0; border:1px solid var(--border); cursor:pointer; background:var(--bg);" title="Tap to expand interactive map">
-            <img src="${staticMapUrl}" alt="${name} Map" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none';">
+            <iframe src="${staticMapUrl}" title="Map showing ${name}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" style="width:100%; height:100%; border:0; display:block; background:#f3f4f6;" allowfullscreen></iframe>
             <div style="position:absolute; bottom:8px; right:8px; background:rgba(0,0,0,0.75); color:#fff; padding:4px 8px; border-radius:6px; font-size:10px; font-weight:800; display:flex; align-items:center; gap:4px;">
               🔍 Tap to Expand Map
             </div>
