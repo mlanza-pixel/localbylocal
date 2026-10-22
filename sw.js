@@ -6,17 +6,13 @@ const ASSETS = [
     './manifest.json',
     './vendor/leaflet.css',
     './vendor/leaflet.js',
-    './images/icon-192.png',
-    './images/icon-512.png',
     './cities/palm_springs.json'
 ];
 
 self.addEventListener('install', event => {
     self.skipWaiting();
     event.waitUntil(
-        caches.open(CACHE_NAME).then(cache => {
-            return Promise.allSettled(ASSETS.map(url => cache.add(url)));
-        })
+        caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
     );
 });
 
