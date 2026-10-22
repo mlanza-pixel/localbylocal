@@ -1,18 +1,22 @@
 // Local Like a Local - Service Worker (Release v3.48a)
-const CACHE_NAME = 'local-like-a-local-v3.48';
+const CACHE_NAME = 'local-like-a-local-v3.48a';
 const ASSETS = [
     './',
     './index.html',
     './manifest.json',
     './vendor/leaflet.css',
     './vendor/leaflet.js',
+    './images/icon-192.png',
+    './images/icon-512.png',
     './cities/palm_springs.json'
 ];
 
 self.addEventListener('install', event => {
     self.skipWaiting();
     event.waitUntil(
-        caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
+        caches.open(CACHE_NAME).then(cache => {
+            return Promise.allSettled(ASSETS.map(url => cache.add(url)));
+        })
     );
 });
 

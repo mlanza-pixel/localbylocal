@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Local Like a Local — Boutique City Travel Guide v3.48</title>
+    <title>Local Like a Local — Boutique City Travel Guide v3.48a</title>
     <meta name="theme-color" content="#1b365d">
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="vendor/leaflet.css"/>
+    <link rel="stylesheet" href="vendor/leaflet.css">
     <style>
         :root {
             --primary: #1b365d;
@@ -16,11 +16,12 @@
             --text-dark: #2b2b2b;
             --text-muted: #666666;
             --border-color: #e2ded4;
+            --success: #2e7d32;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif; }
         body { background: var(--bg-main); color: var(--text-dark); max-width: 600px; margin: 0 auto; min-height: 100vh; padding-bottom: 75px; position: relative; }
         
-        /* App Header */
+        /* Header */
         .app-header { background: var(--primary); color: white; padding: 14px 20px; position: sticky; top: 0; z-index: 1000; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
         .app-title { font-size: 1.25rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
         .app-badge { background: var(--accent); color: white; font-size: 0.7rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
@@ -31,16 +32,17 @@
         
         /* Splash Screen */
         #screen-splash { position: fixed; inset: 0; background: var(--primary); color: white; z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 30px; }
-        .splash-title { font-size: 2.2rem; font-weight: 800; margin-top: 12px; }
-        .splash-sub { color: #a0b2ce; font-size: 0.95rem; margin-bottom: 24px; }
-        .splash-bar-bg { width: 180px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; overflow: hidden; }
+        .splash-logo { font-size: 3.5rem; margin-bottom: 12px; }
+        .splash-title { font-size: 2.2rem; font-weight: 800; }
+        .splash-sub { color: #a0b2ce; font-size: 0.95rem; margin-bottom: 24px; margin-top: 4px; }
+        .splash-bar-bg { width: 180px; height: 5px; background: rgba(255,255,255,0.2); border-radius: 3px; overflow: hidden; }
         .splash-fill { width: 0%; height: 100%; background: var(--accent); transition: width 1.2s ease-out; }
         
         /* Buttons & Forms */
         .btn-primary { background: var(--accent); color: white; border: none; padding: 14px 20px; border-radius: 8px; font-weight: 700; font-size: 0.95rem; width: 100%; cursor: pointer; text-align: center; box-shadow: 0 4px 12px rgba(204,85,0,0.25); transition: transform 0.1s; }
         .btn-primary:active { transform: scale(0.98); }
         
-        /* City Selection Grid */
+        /* Cities Grid */
         .section-heading { font-size: 1.1rem; font-weight: 700; color: var(--primary); padding: 16px 20px 8px; }
         .city-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 12px 20px; }
         .city-card { background: white; border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
@@ -48,49 +50,48 @@
         .city-card-name { font-size: 1.05rem; font-weight: 700; color: var(--primary); }
         .city-card-count { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; }
         
-        /* Directory Browser & Filters */
+        /* Browser & Filters */
         .browser-toolbar { background: white; border-bottom: 1px solid var(--border-color); padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; }
         .active-city-label { font-size: 1.1rem; font-weight: 800; color: var(--primary); }
         .view-toggle { display: flex; gap: 6px; }
         .toggle-btn { padding: 6px 12px; border: 1px solid var(--border-color); background: #f0ece1; border-radius: 6px; font-size: 0.8rem; font-weight: 700; cursor: pointer; color: var(--text-dark); }
         .toggle-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
         
-        .filter-scroll { display: flex; gap: 8px; overflow-x: auto; padding: 12px 20px; background: white; border-bottom: 1px solid var(--border-color); scrollbar-width: none; }
-        .filter-pill { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border-color); background: var(--bg-main); font-size: 0.8rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+        .filter-scroll { display: flex; gap: 8px; overflow-x: auto; padding: 12px 20px; background: white; border-bottom: 1px solid var(--border-color); -webkit-overflow-scrolling: touch; }
+        .filter-pill { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border-color); background: var(--bg-main); font-size: 0.8rem; font-weight: 600; cursor: pointer; white-space: nowrap; color: var(--text-dark); }
         .filter-pill.active { background: var(--accent); color: white; border-color: var(--accent); }
         
         /* Map Container */
         #map-container { height: 380px; width: 100%; display: none; border-bottom: 1px solid var(--border-color); position: relative; }
         #map { height: 100%; width: 100%; }
         
-        /* Venue List & Cards */
+        /* Venue Cards */
         .venue-list { padding: 16px 20px; display: flex; flex-direction: column; gap: 16px; }
         .venue-card { background: white; border-radius: 12px; border: 1px solid var(--border-color); padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         .venue-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
-        .venue-card-title { font-size: 1.1rem; font-weight: 700; color: var(--primary); }
-        .venue-score { background: #e8f5e9; color: #2e7d32; font-weight: 800; font-size: 0.85rem; padding: 3px 8px; border-radius: 6px; border: 1px solid #c8e6c9; }
-        .venue-meta { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 8px; }
+        .venue-card-title { font-size: 1.15rem; font-weight: 700; color: var(--primary); }
+        .venue-score { background: #e8f5e9; color: var(--success); font-weight: 800; font-size: 0.85rem; padding: 2px 8px; border-radius: 6px; }
+        .venue-meta { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 8px; font-weight: 500; }
         .venue-desc { font-size: 0.88rem; line-height: 1.4; color: var(--text-dark); margin-bottom: 10px; }
-        .venue-why { background: var(--bg-main); padding: 10px; border-radius: 8px; font-size: 0.82rem; font-style: italic; color: #444; border-left: 3px solid var(--accent); margin-bottom: 12px; }
-        .venue-actions { display: flex; gap: 10px; border-top: 1px solid #f0f0f0; padding-top: 10px; }
-        .action-btn { flex: 1; padding: 8px; border: 1px solid var(--border-color); background: white; border-radius: 6px; font-size: 0.78rem; font-weight: 700; color: var(--primary); cursor: pointer; text-align: center; }
+        .venue-why { font-size: 0.85rem; font-style: italic; color: var(--primary); background: #f0f4f8; padding: 8px 12px; border-radius: 6px; margin-bottom: 12px; }
+        .venue-actions { display: flex; gap: 8px; }
+        .action-btn { flex: 1; padding: 8px; border: 1px solid var(--border-color); background: var(--bg-main); border-radius: 6px; font-size: 0.78rem; font-weight: 700; cursor: pointer; color: var(--primary); }
         
-        /* Bottom Navigation Bar */
-        .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 600px; background: white; border-top: 1px solid var(--border-color); display: flex; justify-content: space-around; padding: 10px 0; z-index: 1000; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
+        /* Bottom Navigation */
+        .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 600px; background: white; border-top: 1px solid var(--border-color); display: flex; justify-around: space-around; padding: 10px 0; z-index: 1000; }
         .nav-item { background: none; border: none; font-size: 0.8rem; font-weight: 700; color: var(--text-muted); cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; }
         .nav-item.active { color: var(--primary); }
         
-        /* Modals */
-        .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; padding: 20px; z-index: 2000; backdrop-filter: blur(2px); }
-        .modal-card { background: white; padding: 24px; border-radius: 14px; max-width: 440px; width: 100%; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
-        .modal-title { font-size: 1.25rem; font-weight: 700; color: var(--primary); margin-bottom: 12px; }
-        .modal-body { font-size: 0.9rem; line-height: 1.5; color: #444; margin-bottom: 20px; }
+        /* Modal */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; padding: 20px; z-index: 2000; }
+        .modal-card { background: white; border-radius: 12px; padding: 24px; max-width: 440px; width: 100%; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
     </style>
 </head>
 <body>
+
     <!-- Splash Screen -->
     <div id="screen-splash">
-        <div style="font-size:3.8rem; margin-bottom:12px;">📍</div>
+        <div class="splash-logo">📍</div>
         <div class="splash-title">Local Like a Local</div>
         <div class="splash-sub">Boutique City Travel Guides</div>
         <div class="splash-bar-bg"><div id="splash-fill" class="splash-fill"></div></div>
@@ -98,77 +99,61 @@
 
     <!-- App Header -->
     <header class="app-header">
-        <div class="app-title">📍 Local Like a Local <span class="app-badge">v3.48</span></div>
-        <button onclick="document.getElementById('about-modal').style.display='flex'" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;" aria-label="Help">ℹ️</button>
+        <div class="app-title">📍 Local Like a Local <span class="app-badge">v3.48a</span></div>
+        <button onclick="document.getElementById('about-modal').style.display='flex'" style="background:none; border:none; color:white; font-size:1.25rem; cursor:pointer;">ℹ️</button>
     </header>
 
     <!-- Welcome / Onboarding Screen -->
     <div id="screen-welcome" class="app-screen">
-        <div style="padding: 40px 20px; text-align: center; background: white; border-bottom: 1px solid var(--border-color);">
-            <div style="font-size: 3rem; margin-bottom: 12px;">🌆</div>
-            <h1 style="color: var(--primary); font-size: 1.5rem; font-weight: 800; margin-bottom: 12px;">Discover Cities Through the Eyes of Locals</h1>
-            <p style="color: var(--text-muted); font-size: 0.92rem; line-height: 1.5; margin-bottom: 24px;">Curated dining, nightlife, and hidden gems across 36 premier destinations.</p>
+        <div style="padding:40px 20px; text-align:center; background:white; border-bottom:1px solid var(--border-color);">
+            <div style="font-size:3rem; margin-bottom:12px;">🗺️</div>
+            <h1 style="color:var(--primary); font-size:1.6rem; font-weight:800; margin-bottom:10px;">Discover Cities Through Local Eyes</h1>
+            <p style="color:var(--text-muted); font-size:0.95rem; line-height:1.5; margin-bottom:24px;">Authentic dining, nightlife, cultural landmarks, and hidden gems curated by local residents.</p>
             <button class="btn-primary" onclick="showScreen('screen-cities')">🚀 Select a City to Explore</button>
-        </div>
-        <div style="padding: 24px 20px;">
-            <div style="font-size: 0.85rem; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;">Key App Features</div>
-            <div style="display: grid; gap: 12px;">
-                <div style="background: white; padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 0.88rem;">⭐ <b>Local Scores:</b> Weighted ratings from local experts</div>
-                <div style="background: white; padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 0.88rem;">🗺️ <b>Interactive Maps:</b> Embedded Leaflet.js venue mapping</div>
-                <div style="background: white; padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 0.88rem;">📲 <b>Offline Ready:</b> Full offline PWA accessibility</div>
-            </div>
         </div>
     </div>
 
     <!-- Cities Directory Screen -->
     <div id="screen-cities" class="app-screen">
-        <div class="section-heading">Select a Destination</div>
+        <div class="section-heading">Select Destination</div>
         <div class="city-grid">
-            <div class="city-card" onclick="selectCity('Palm Springs, CA', [33.818, -116.54])">
+            <div class="city-card" onclick="selectCity('Palm Springs', [33.83, -116.54])">
                 <div class="city-card-name">🌴 Palm Springs</div>
-                <div class="city-card-count">Coachella Valley, CA • 176 Venues</div>
+                <div class="city-card-count">176 Curated Venues</div>
             </div>
-            <div class="city-card" onclick="selectCity('Baltimore, MD', [39.290, -76.612])">
+            <div class="city-card" onclick="selectCity('Baltimore', [39.29, -76.61])">
                 <div class="city-card-name">🦀 Baltimore</div>
-                <div class="city-card-count">Maryland • 120 Venues</div>
+                <div class="city-card-count">142 Curated Venues</div>
             </div>
-            <div class="city-card" onclick="selectCity('Madrid, Spain', [40.416, -3.703])">
-                <div class="city-card-name">💃 Madrid</div>
-                <div class="city-card-count">Spain • 145 Venues</div>
+            <div class="city-card" onclick="selectCity('Madrid', [40.41, -3.70])">
+                <div class="city-card-name">🍷 Madrid</div>
+                <div class="city-card-count">188 Curated Venues</div>
             </div>
-            <div class="city-card" onclick="selectCity('New York, NY', [40.712, -74.006])">
-                <div class="city-card-name">🗽 New York</div>
-                <div class="city-card-count">New York • 210 Venues</div>
-            </div>
-            <div class="city-card" onclick="selectCity('Seattle, WA', [47.606, -122.332])">
-                <div class="city-card-name">☕ Seattle</div>
-                <div class="city-card-count">Washington • 135 Venues</div>
-            </div>
-            <div class="city-card" onclick="selectCity('New Orleans, LA', [29.951, -90.071])">
-                <div class="city-card-name">⚜️ New Orleans</div>
-                <div class="city-card-count">Louisiana • 160 Venues</div>
+            <div class="city-card" onclick="selectCity('New York', [40.71, -74.00])">
+                <div class="city-card-name">🗽 New York City</div>
+                <div class="city-card-count">210 Curated Venues</div>
             </div>
         </div>
     </div>
 
-    <!-- Main Directory Browser Screen -->
+    <!-- Directory Browser Screen -->
     <div id="screen-browser" class="app-screen">
         <div class="browser-toolbar">
-            <div id="active-city-label" class="active-city-label">Palm Springs, CA</div>
+            <div id="active-city-label" class="active-city-label">Palm Springs</div>
             <div class="view-toggle">
                 <button id="btn-list" class="toggle-btn active" onclick="setView('list')">📋 List</button>
                 <button id="btn-map" class="toggle-btn" onclick="setView('map')">🗺️ Map</button>
             </div>
         </div>
-
+        
         <div class="filter-scroll">
-            <button class="filter-pill active" onclick="filterCategory('All', this)">All</button>
-            <button class="filter-pill" onclick="filterCategory('Food', this)">Food</button>
-            <button class="filter-pill" onclick="filterCategory('Nightlife', this)">Nightlife</button>
-            <button class="filter-pill" onclick="filterCategory('Culture', this)">Culture</button>
-            <button class="filter-pill" onclick="filterCategory('Outdoors', this)">Outdoors</button>
-            <button class="filter-pill" onclick="filterCategory('Sights', this)">Sights</button>
-            <button class="filter-pill" onclick="filterCategory('Shopping', this)">Shopping</button>
+            <button class="filter-pill active" onclick="filterCategory('All', this)">All Venues</button>
+            <button class="filter-pill" onclick="filterCategory('Food', this)">🍕 Food</button>
+            <button class="filter-pill" onclick="filterCategory('Nightlife', this)">🍸 Nightlife</button>
+            <button class="filter-pill" onclick="filterCategory('Culture', this)">🎨 Culture</button>
+            <button class="filter-pill" onclick="filterCategory('Outdoors', this)">🌵 Outdoors</button>
+            <button class="filter-pill" onclick="filterCategory('Sights', this)">🏛️ Sights</button>
+            <button class="filter-pill" onclick="filterCategory('Shopping', this)">🛍️ Shopping</button>
         </div>
 
         <div id="map-container"><div id="map"></div></div>
@@ -177,21 +162,23 @@
 
     <!-- Bottom Navigation -->
     <nav class="bottom-nav">
-        <button class="nav-item active" onclick="showScreen('screen-browser')">🧭 <span>Explore</span></button>
-        <button class="nav-item" onclick="showScreen('screen-cities')">🏙️ <span>Cities</span></button>
-        <button class="nav-item" onclick="alert('Saved Favorites List Ready')">❤️ <span>Saved</span></button>
+        <button class="nav-item active" onclick="showScreen('screen-browser')">🧭 Explore</button>
+        <button class="nav-item" onclick="showScreen('screen-cities')">🏙️ Cities</button>
+        <button class="nav-item" onclick="alert('Saved Favorites List Ready')">❤️ Saved</button>
     </nav>
 
-    <!-- About / Help Modal -->
-    <div id="about-modal" class="modal-backdrop">
+    <!-- About Help Modal -->
+    <div id="about-modal" class="modal-overlay">
         <div class="modal-card">
-            <div class="modal-title">About Local Like a Local</div>
-            <div class="modal-body">
-                <p><strong>Version:</strong> 3.48 (Build 2026-10-22)</p>
-                <p><strong>Engine:</strong> Leaflet.js Mapping & PWA State Engine</p>
-                <hr style="margin: 12px 0; border: none; border-top: 1px solid var(--border-color);">
-                <p>Authentic city travel guide with full offline availability, curated local scores, and smart multi-day itinerary planner.</p>
-            </div>
+            <h2 style="color:var(--primary); font-size:1.3rem; font-weight:800; margin-bottom:12px;">About Local Like a Local</h2>
+            <p style="font-size:0.9rem; color:var(--text-dark); line-height:1.5; margin-bottom:12px;">
+                <strong>Version:</strong> 3.48a (Build 2026-10-22)<br>
+                <strong>Architecture:</strong> Single-File PWA State Machine<br>
+                <strong>Engine:</strong> Leaflet.js Mapping & State Management
+            </p>
+            <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:20px; line-height:1.4;">
+                Boutique offline travel directory delivering curated recommendations, local rating scores, and interactive maps.
+            </p>
             <button class="btn-primary" onclick="document.getElementById('about-modal').style.display='none'">Close</button>
         </div>
     </div>
@@ -199,15 +186,17 @@
     <script src="vendor/leaflet.js"></script>
     <script>
         const venueData = [
-            { name: "Sherman's Deli & Bakery", cat: "Food", score: 9.5, lat: 33.8213, lng: -116.5453, address: "401 E Tahquitz Canyon Way", desc: "Historic NY-style family deli and bakery serving massive sandwiches.", why: "A beloved local institution since the 1970s." },
-            { name: "The Purple Room Supper Club", cat: "Nightlife", score: 9.8, lat: 33.8015, lng: -116.5284, address: "1900 E Palm Canyon Dr", desc: "Iconic 1960s Rat Pack hangout with live jazz and fine dining.", why: "Where Frank Sinatra and Dean Martin used to perform." },
-            { name: "Palm Springs Art Museum", cat: "Culture", score: 9.2, lat: 33.8242, lng: -116.5501, address: "101 N Museum Dr", desc: "Modern art museum & glass sculpture gallery.", why: "World-class modernism collection in downtown Palm Springs." }
+            { name: "Sherman's Deli & Bakery", cat: "Food", score: 9.5, lat: 33.8213, lng: -116.5453, address: "401 E Tahquitz Canyon Way", desc: "Historic NY-style family deli and bakery serving massive sandwiches and fresh baked goods.", why: "A beloved local staple operating since the 1970s." },
+            { name: "The Purple Room Supper Club", cat: "Nightlife", score: 9.8, lat: 33.8015, lng: -116.5284, address: "1900 E Palm Canyon Dr", desc: "Iconic 1960s Rat Pack hangout featuring live jazz, cocktails, and fine dining.", why: "Where Frank Sinatra, Dean Martin, and Sammy Davis Jr. performed." },
+            { name: "Palm Springs Art Museum", cat: "Culture", score: 9.2, lat: 33.8242, lng: -116.5501, address: "101 N Museum Dr", desc: "Modern and contemporary art museum featuring extensive glass and sculpture collections.", why: "World-class mid-century modernism gallery in downtown Palm Springs." },
+            { name: "Indian Canyons Hiking Trails", cat: "Outdoors", score: 9.6, lat: 33.7725, lng: -116.5422, address: "38520 S Palm Canyon Dr", desc: "Scenic desert canyons with natural fan palm oases and historic Cahuilla trails.", why: "Unforgettable desert oasis hiking just minutes from town." }
         ];
 
         let leafletMap = null;
         let currentCategory = "All";
 
-        window.addEventListener("load", () => {
+        // ROBUST SPLASH SEQUENCE EXECUTION (Fixes window.load race conditions)
+        function initSplash() {
             const fill = document.getElementById("splash-fill");
             if (fill) fill.style.width = "100%";
             setTimeout(() => {
@@ -215,7 +204,14 @@
                 if (splash) splash.style.display = "none";
                 showScreen("screen-welcome");
             }, 1200);
-        });
+        }
+
+        if (document.readyState === "complete" || document.readyState === "interactive") {
+            setTimeout(initSplash, 100);
+        } else {
+            document.addEventListener("DOMContentLoaded", initSplash);
+            window.addEventListener("load", initSplash);
+        }
 
         function showScreen(id) {
             document.querySelectorAll(".app-screen").forEach(s => s.classList.remove("active"));
@@ -239,14 +235,14 @@
             document.getElementById("map-container").style.display = v === "map" ? "block" : "none";
 
             if (v === "map") {
-                if (!leafletMap) {
+                if (!leafletMap && window.L) {
                     leafletMap = L.map("map").setView([33.818, -116.54], 13);
                     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(leafletMap);
                     venueData.forEach(item => {
                         L.marker([item.lat, item.lng]).addTo(leafletMap).bindPopup("<b>" + item.name + "</b><br>★ " + item.score);
                     });
                 }
-                setTimeout(() => leafletMap.invalidateSize(), 150);
+                setTimeout(() => { if (leafletMap) leafletMap.invalidateSize(); }, 150);
             }
         }
 
@@ -270,9 +266,9 @@
                     <div class="venue-desc">${v.desc}</div>
                     <div class="venue-why">"${v.why}"</div>
                     <div class="venue-actions">
-                        <button class="action-btn">📍 Map</button>
-                        <button class="action-btn">❤️ Save</button>
-                        <button class="action-btn">📝 Notes</button>
+                        <button class="action-btn" onclick="setView('map')">📍 Map</button>
+                        <button class="action-btn" onclick="alert('Saved to Favorites!')">❤️ Save</button>
+                        <button class="action-btn" onclick="alert('Personal Notes Feature')">📝 Notes</button>
                     </div>
                 </div>
             `).join("");
