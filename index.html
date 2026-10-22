@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗺️</text></svg>">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Local Like a Local</title>
@@ -20,6 +21,75 @@
   <script src="vendor/js/leaflet.js"></script>
   
   <script>
+
+    // ---- FLOATING TOAST NOTIFICATION ENGINE (v3.48) ----
+    function showToast(message) {
+      if (!message) return;
+      let toastEl = document.getElementById('global-app-toast');
+      if (!toastEl) {
+        toastEl = document.createElement('div');
+        toastEl.id = 'global-app-toast';
+        toastEl.className = 'toast';
+        document.body.appendChild(toastEl);
+      }
+      toastEl.textContent = message;
+      toastEl.classList.add('show');
+      if (window._toastTimer) clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => {
+        toastEl.classList.remove('show');
+      }, 2400);
+    }
+    window.showToast = showToast;
+
+    // ---- BROWSER & HARDWARE BACK BUTTON HISTORY ENGINE (v3.48) ----
+    let isPopStateNavigation = false;
+
+    function pushAppHistoryState(screenId, modalId) {
+      if (isPopStateNavigation) return;
+      try {
+        const state = { screenId: screenId, modalId: modalId || null, timestamp: Date.now() };
+        window.history.pushState(state, '', '#' + (modalId || screenId));
+      } catch (e) {}
+    }
+    window.pushAppHistoryState = pushAppHistoryState;
+
+    window.addEventListener('popstate', function(event) {
+      isPopStateNavigation = true;
+      const openModals = document.querySelectorAll('.modal.open');
+      
+      // If a modal is open, close the top modal first on Back
+      if (openModals.length > 0) {
+        const topModal = openModals[openModals.length - 1];
+        if (topModal.id === 'modal-route-map') {
+          closeRouteMapModal();
+        } else if (topModal.id === 'modal-detail') {
+          document.getElementById('btn-modal-detail-close')?.click();
+        } else if (topModal.id === 'modal-help') {
+          closeHelpModal();
+        } else {
+          topModal.classList.remove('open');
+        }
+        isPopStateNavigation = false;
+        return;
+      }
+
+      // If no modals open, navigate to previous screen or fallback to Cities/Welcome
+      if (event.state && event.state.screenId) {
+        showScreen(event.state.screenId);
+      } else {
+        const activeScreen = document.querySelector('.screen.active')?.id;
+        if (activeScreen === 'screen-browse' || activeScreen === 'screen-prefs') {
+          showScreen('screen-cities');
+        } else if (activeScreen === 'screen-itinerary') {
+          showScreen('screen-prefs');
+        } else if (activeScreen === 'screen-cities' || activeScreen === 'screen-onboarding' || activeScreen === 'screen-legal') {
+          showScreen('screen-welcome');
+        }
+      }
+      isPopStateNavigation = false;
+    });
+
+
 
     function getLocalMapPngUrl(place) {
       if (!place || !place.ID) return null;
@@ -199,10 +269,56 @@
 
     
     // ---- ONBOARDING & HELP MODAL FUNCTIONS ----
+    function updateSystemDiagnostics() {
+      const legalAgreed = localStorage.getItem('locallikealocal_legal_agreed') === 'true';
+      const walkthroughCompleted = localStorage.getItem('locallikealocal_walkthrough_completed') === 'true';
+      const favCount = (typeof favoritesList !== 'undefined' && favoritesList) ? favoritesList.length : 0;
+      
+      const elLegal = document.getElementById('diag-legal-status');
+      if (elLegal) elLegal.innerHTML = legalAgreed ? '<span style="color:var(--teal); font-weight:800;">Agreed ✅</span>' : '<span style="color:var(--primary); font-weight:800;">Pending ⚠️</span>';
+
+      const elWalk = document.getElementById('diag-walkthrough-status');
+      if (elWalk) elWalk.textContent = walkthroughCompleted ? 'Completed' : 'Active';
+
+      const elNet = document.getElementById('diag-network-status');
+      if (elNet) elNet.textContent = window.navigator.onLine ? 'Online 🌐' : 'Offline ✈️';
+
+      const elFav = document.getElementById('diag-fav-count');
+      if (elFav) elFav.textContent = `${favCount} spot${favCount === 1 ? '' : 's'}`;
+
+      const elDev = document.getElementById('diag-device-type');
+      if (elDev && typeof getDeviceType === 'function') elDev.textContent = getDeviceType();
+
+      const elSw = document.getElementById('diag-sw-ver');
+      if (elSw) elSw.textContent = 'local-like-local-v3.47';
+
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        const elSwStat = document.getElementById('help-sw-status');
+        if (elSwStat) elSwStat.textContent = 'SW: Active v3.47';
+      }
+    }
+
+    function resetAppLocalStorage() {
+      if (confirm('Reset local app settings (legal agreement & walkthrough state)?')) {
+        localStorage.removeItem('locallikealocal_legal_agreed');
+        localStorage.removeItem('locallikealocal_walkthrough_completed');
+        localStorage.removeItem('local_app_disable_walkthrough');
+        alert('Local settings reset! The app will now return to the Splash Page.');
+        location.reload();
+      }
+    }
+
     function openHelpModal() {
       const modal = document.getElementById('modal-help');
-      if (modal) modal.classList.add('open');
+      if (modal) {
+        modal.classList.add('open');
+        updateSystemDiagnostics();
+      }
     }
+
+    window.updateSystemDiagnostics = updateSystemDiagnostics;
+    window.resetAppLocalStorage = resetAppLocalStorage;
+    window.openHelpModal = openHelpModal;
 
     function closeHelpModal() {
       const modal = document.getElementById('modal-help');
@@ -210,7 +326,7 @@
     }
 
     
-    // ---- GRAPHIC MULTI-PAGE WALKTHROUGH ENGINE (v3.42) ----
+    // ---- GRAPHIC MULTI-PAGE WALKTHROUGH ENGINE (v3.47) ----
     let currentWalkthroughStep = 1;
 
     function renderWalkthroughStep(step) {
@@ -276,18 +392,68 @@
     }
 
     function finishOnboarding() {
+      const chk = document.getElementById('chk-disable-walkthrough');
+      if (chk && chk.checked) {
+        localStorage.setItem('local_app_disable_walkthrough', 'true');
+      }
+      localStorage.setItem('locallikealocal_walkthrough_completed', 'true');
       localStorage.setItem('hasSeenOnboarding', 'true');
       showScreen('screen-cities');
     }
 
-    function handleStartApp() {
-      const isDisabled = (localStorage.getItem('local_app_disable_walkthrough') === 'true');
-      if (isDisabled) {
-        showScreen('screen-cities');
+    // ---- 4-PAGE APP FLOW & LEGAL HANDLERS (v3.47) ----
+    function handleSplashStart() {
+      const legalAgreed = localStorage.getItem('locallikealocal_legal_agreed') === 'true';
+      const walkthroughCompleted = (localStorage.getItem('locallikealocal_walkthrough_completed') === 'true') ||
+                                   (localStorage.getItem('hasSeenOnboarding') === 'true') ||
+                                   (localStorage.getItem('local_app_disable_walkthrough') === 'true');
+
+      if (!legalAgreed) {
+        showScreen('screen-legal');
+      } else if (!walkthroughCompleted) {
+        showScreen('screen-onboarding');
       } else {
-        startWalkthroughFromPage1();
+        showScreen('screen-cities');
       }
     }
+
+    function acceptLegalTerms() {
+      localStorage.setItem('locallikealocal_legal_agreed', 'true');
+      const walkthroughCompleted = localStorage.getItem('locallikealocal_walkthrough_completed') === 'true';
+      if (!walkthroughCompleted) {
+        showScreen('screen-onboarding');
+      } else {
+        showScreen('screen-cities');
+      }
+    }
+
+    function declineLegalTerms() {
+      localStorage.setItem('locallikealocal_legal_agreed', 'false');
+      showScreen('screen-welcome');
+    }
+
+    function toggleDisableWalkthrough(checked) {
+      localStorage.setItem('locallikealocal_walkthrough_completed', checked ? 'true' : 'false');
+    }
+
+    
+
+    function startWalkthroughFromPage1() {
+      renderWalkthroughStep(1);
+      showScreen('screen-onboarding');
+    }
+
+    function handleStartApp() {
+      handleSplashStart();
+    }
+
+    window.handleSplashStart = handleSplashStart;
+    window.acceptLegalTerms = acceptLegalTerms;
+    window.declineLegalTerms = declineLegalTerms;
+    window.toggleDisableWalkthrough = toggleDisableWalkthrough;
+    window.finishOnboarding = finishOnboarding;
+    window.startWalkthroughFromPage1 = startWalkthroughFromPage1;
+    window.handleStartApp = handleStartApp;
 
     window.renderWalkthroughStep = renderWalkthroughStep;
     window.changeWalkthroughStep = changeWalkthroughStep;
@@ -295,6 +461,27 @@
     window.toggleDisableWalkthrough = toggleDisableWalkthrough;
     window.finishOnboarding = finishOnboarding;
     window.handleStartApp = handleStartApp;
+
+
+    
+    // ---- FLOATING TOAST NOTIFICATION ENGINE (v3.48) ----
+    function showToast(message) {
+      if (!message) return;
+      let toastEl = document.getElementById('global-app-toast');
+      if (!toastEl) {
+        toastEl = document.createElement('div');
+        toastEl.id = 'global-app-toast';
+        toastEl.className = 'toast';
+        document.body.appendChild(toastEl);
+      }
+      toastEl.textContent = message;
+      toastEl.classList.add('show');
+      if (window._toastTimer) clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => {
+        toastEl.classList.remove('show');
+      }, 2400);
+    }
+    window.showToast = showToast;
 
 
     // ---- DATA REGISTRY (36 Cities + Dive Bars) ----
@@ -644,15 +831,22 @@
     }
 
     // ---- FAVORITES & LOCALSTORAGE STATE ----
-    let favoritesList = safeGetStorage('local_like_a_local_favs', []);
+    let favoritesList = safeGetStorage('local_like_a_local_favs', []); window.favoritesList = favoritesList;
     let allLoadedPlacesMap = new Map(); window.allLoadedPlacesMap = allLoadedPlacesMap; // Global registry across loaded cities
 
     function updateFavBadge() {
       const badge = document.getElementById('fav-badge');
       if (badge) {
-        badge.textContent = favoritesList.length;
-        badge.style.display = favoritesList.length > 0 ? 'inline-block' : 'none';
+        const count = (typeof favoritesList !== 'undefined' && favoritesList) ? favoritesList.length : 0;
+        badge.textContent = count;
+        // Only show badge counter when 1 or greater; hidden when 0
+        if (count >= 1) {
+          badge.style.display = 'inline-block';
+        } else {
+          badge.style.display = 'none';
+        }
       }
+      if (typeof updateSystemDiagnostics === 'function') updateSystemDiagnostics();
     }
 
     function isFavorite(id) {
@@ -893,11 +1087,12 @@ function exportFavoritesPDF() {
       document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
       targetScreen.classList.add('active');
       window.scrollTo(0,0);
+      pushAppHistoryState(id);
 
-      // Hide bottom navigation bar on Splash (welcome) and Walkthrough (onboarding) screens
+      // Hide bottom navigation bar on Splash (welcome), Legal (legal), and Walkthrough (onboarding) screens
       const bottomNav = document.querySelector('.bottom-nav');
       if (bottomNav) {
-        if (id === 'screen-welcome' || id === 'screen-onboarding') {
+        if (id === 'screen-welcome' || id === 'screen-legal' || id === 'screen-onboarding') {
           bottomNav.style.display = 'none';
         } else {
           bottomNav.style.display = 'flex';
@@ -1696,7 +1891,9 @@ function exportFavoritesPDF() {
         if (mapContainer) mapContainer.style.display = 'block';
         renderLeafletMap(window.lastFilteredPlaces || allPlaces);
         setTimeout(() => { if (leafletMap) leafletMap.invalidateSize(); }, 150);
+        setTimeout(() => { if (leafletMap) leafletMap.invalidateSize(); }, 150);
         setTimeout(() => { if (leafletMap) leafletMap.invalidateSize(); }, 400);
+        setTimeout(() => { if (leafletMap) leafletMap.invalidateSize(); }, 800);
       } else {
         if (btn) btn.innerHTML = '🗺️ Map View';
         if (resultsGrid) resultsGrid.style.display = 'grid';
@@ -4491,6 +4688,19 @@ EDITORIAL REDESIGN — Boutique travel magazine
       fill: #334155;
     }
 
+  
+    /* iOS WebKit Leaflet & Touch Fixes (v3.47) */
+    .leaflet-pane, .leaflet-tile, .leaflet-marker-icon, .leaflet-tile-container {
+      -webkit-transform: translate3d(0,0,0) !important;
+      transform: translate3d(0,0,0) !important;
+    }
+    #leaflet-map, #inapp-leaflet-map, #inapp-leaflet-map-container, #browse-map-container {
+      touch-action: pan-x pan-y !important;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-overflow-scrolling: touch;
+    }
+
   </style>
 </head>
 <body>
@@ -4502,7 +4712,7 @@ EDITORIAL REDESIGN — Boutique travel magazine
       <div class="welcome-icon">🗺️</div>
       <h1>Local Like a Local</h1>
       <p class="tagline" id="welcome-tagline">Explore <span id="dynamic-city-count">--</span> available destinations through authentic local spots and curated itineraries.</p>
-      <button id="btn-start" class="btn-cta">Choose Your City</button>
+      <button id="btn-start" onclick="handleSplashStart()" class="btn-cta">Choose Your City ➔</button>
 
       <!-- Diagnostic Load Log (visible if errors occur) -->
       <div id="load-log"></div>
@@ -4510,6 +4720,33 @@ EDITORIAL REDESIGN — Boutique travel magazine
       <p class="legal-note">Best efforts for informational purposes only. Local Like a Local is a travel discovery tool.</p>
     </div>
   </div>
+
+  <!-- 1B. LEGAL DISCLAIMER SCREEN (PAGE 2) -->
+  <div id="screen-legal" class="screen">
+    <div style="max-width:620px; margin:40px auto; padding:28px 24px; background:var(--card); border:1px solid var(--border); border-top:6px solid var(--primary); border-radius:22px; box-shadow:var(--shadow);">
+      <div style="text-align:center; margin-bottom:20px;">
+        <div style="font-size:48px; margin-bottom:8px;">⚖️</div>
+        <h2 style="font-family:var(--font-s); font-size:26px; font-weight:900; color:var(--text); margin:0;">Terms of Use & Legal Disclaimer</h2>
+        <p style="font-size:12px; color:var(--text2); margin-top:4px; font-weight:800; letter-spacing:0.8px; text-transform:uppercase;">Local Like a Local Travel Discovery Platform</p>
+      </div>
+
+      <div style="background:var(--bg); border:1px solid var(--border); border-radius:16px; padding:20px; margin-bottom:22px; font-size:13px; color:var(--text); line-height:1.6;">
+        <p style="margin-top:0; font-weight:800; color:var(--primary-dark); font-size:14px;">📍 Best Efforts Information Notice</p>
+        <p style="margin-bottom:14px;">Local Like a Local provides curated venue listings, operational schedules, street addresses, and geographic recommendations gathered on a <strong>best-efforts basis</strong> for informational and travel planning convenience.</p>
+        
+        <p style="font-weight:800; color:var(--primary-dark); font-size:14px;">⚠️ Disclaimer & Limitation of Liability</p>
+        <p style="margin-bottom:14px;">Establishment hours, pricing tiers, menu items, and location data are subject to change without prior notice. The developers, contributors, and publishers accept no liability or responsibility for venue closures, inaccurate details, injuries, or third-party policies incurred during travel.</p>
+
+        <p style="margin-bottom:0; font-weight:800; color:var(--text); font-size:13px; background:var(--primary-light); padding:10px 12px; border-radius:10px; border-left:3px solid var(--primary);">By clicking <strong>"I Agree & Accept"</strong> below, you confirm that you have read and agree to these terms of use.</p>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <button onclick="acceptLegalTerms()" class="btn-primary" style="width:100%; padding:16px; font-size:16px; font-weight:900; border-radius:14px; background:var(--primary); color:#fff; border:none; cursor:pointer; box-shadow:0 4px 14px rgba(212,85,10,0.3);">✅ I Agree & Accept</button>
+        <button onclick="declineLegalTerms()" style="width:100%; padding:12px; font-size:14px; font-weight:800; border-radius:12px; background:var(--bg); color:var(--text2); border:1px solid var(--border); cursor:pointer;">❌ Decline (Return to Home)</button>
+      </div>
+    </div>
+  </div>
+
 
   <!-- 2. CITIES SELECT SCREEN -->
   
@@ -4613,6 +4850,7 @@ EDITORIAL REDESIGN — Boutique travel magazine
         </div>
 
         <!-- STEP 4: MAP ROUTES & SAVE PRIVATE NOTES -->
+        <!-- STEP 4: MAP ROUTES & PRIVATE NOTES -->
         <div id="walkthrough-step-4" class="walkthrough-step-content" style="display:none;">
           <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
             <div style="background:var(--primary); color:#fff; font-weight:900; font-size:14px; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center;">4</div>
@@ -4620,21 +4858,39 @@ EDITORIAL REDESIGN — Boutique travel magazine
           </div>
           <p style="font-size:14px; color:var(--text2); margin-bottom:16px; line-height:1.4;">Save your favorite spots, write private notes, & view walking maps!</p>
           
-          <!-- VISUAL GRAPHIC 4 -->
-          <div style="background:var(--bg); border:1px solid var(--border); border-radius:14px; padding:14px; display:flex; flex-direction:column; gap:8px;">
-            <div style="display:flex; gap:8px;">
-              <button style="flex:1; background:var(--primary-light); border:1px solid var(--primary); color:var(--primary-dark); padding:8px; border-radius:10px; font-size:11px; font-weight:800;">❤️ Saved Spot</button>
-              <button style="flex:1; background:var(--primary); color:#fff; border:none; padding:8px; border-radius:10px; font-size:11px; font-weight:800;">📍 Map Walking Route</button>
+          <!-- VISUAL SAMPLE VENUE CARD: THE PURPLE ROOM -->
+          <div style="background:var(--card); border:1px solid var(--border); border-top:4px solid var(--primary); border-radius:16px; padding:18px; margin-bottom:16px; box-shadow:var(--shadow); text-align:left;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+              <span style="background:var(--teal-light); border:1px solid var(--teal); color:var(--teal-dark); padding:4px 10px; border-radius:12px; font-size:11px; font-weight:800;">Food & Nightlife • Iconic Supper Club</span>
+              <span style="background:var(--primary); color:#fff; padding:4px 10px; border-radius:12px; font-size:12px; font-weight:900;">★ 9.5</span>
             </div>
-            <div style="background:#fff; border:1px solid var(--border); border-radius:10px; padding:8px; font-size:11px; color:var(--text2);">
-              📝 <b>My Private Note:</b> "Must try the classic cocktails & live jazz show!"
+            
+            <h3 style="font-family:var(--font-s); font-size:20px; font-weight:900; color:var(--text); margin:0 0 4px 0; line-height:1.2;">The Purple Room</h3>
+            <div style="font-size:12px; color:var(--text2); font-weight:600; margin-bottom:8px;">📍 South Palm Springs • 1900 E Palm Canyon Dr</div>
+
+            <p style="border-left:3px solid var(--primary); padding:8px 10px; margin:8px 0; font-style:italic; font-size:12px; color:var(--text); line-height:1.4; background:var(--primary-light); border-radius:0 8px 8px 0;">
+              “An iconic 1960s Frank Sinatra & Rat Pack lounge featuring live jazz performances, retro cocktails, and modern American dining.”
+            </p>
+
+            <div style="background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:8px 12px; margin:10px 0; display:flex; justify-content:space-between; align-items:center; font-size:11px; font-weight:700; color:var(--text); flex-wrap:wrap; gap:6px;">
+              <div><span>💰 Price:</span> <strong>$$$</strong></div>
+              <div><span>⏰ Hours:</span> <strong>Tue–Sun 17:00–22:00</strong></div>
+              <div><span>🅿️ Parking:</span> <strong>Free Lot</strong></div>
             </div>
+
+            <div style="display:flex; gap:6px; margin-top:10px; flex-wrap:wrap;">
+              <button onclick="finishOnboarding()" style="flex:1; background:var(--teal-light); color:var(--teal-dark); border:1px solid var(--teal); padding:8px; border-radius:8px; font-size:11px; font-weight:800; cursor:pointer;">📍 Map Location</button>
+              <button onclick="finishOnboarding()" style="flex:1; background:var(--primary-light); color:var(--primary-dark); border:1px solid var(--primary); padding:8px; border-radius:8px; font-size:11px; font-weight:800; cursor:pointer;">❤️ Saved Spot</button>
+              <button onclick="finishOnboarding()" style="flex:1; background:var(--primary); color:#fff; border:none; padding:8px; border-radius:8px; font-size:11px; font-weight:800; cursor:pointer;">View Details →</button>
+            </div>
+          </div>
+
+          <div style="background:var(--bg); border:1px solid var(--border); border-radius:12px; padding:10px 14px; font-size:12px; color:var(--text2);">
+            📝 <b>My Private Note:</b> "Must reserve dinner table for Friday night Sinatra live tribute show!"
           </div>
         </div>
 
-      </div>
-
-      <!-- CAROUSEL FOOTER CONTROLS -->
+<!-- CAROUSEL FOOTER CONTROLS -->
       <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
         <button id="btn-walkthrough-prev" onclick="changeWalkthroughStep(-1)" style="background:var(--bg); border:1px solid var(--border); color:var(--text); padding:8px 16px; border-radius:12px; font-size:13px; font-weight:800; cursor:pointer;" disabled>← Previous</button>
 
@@ -4662,33 +4918,7 @@ EDITORIAL REDESIGN — Boutique travel magazine
   </div>
 
 
-<!-- Title & Location -->
-        <h3 style="font-family:var(--font-s); font-size:22px; font-weight:900; color:var(--text); margin:0 0 4px 0; line-height:1.2;">Sherman's Deli & Bakery</h3>
-        <div style="font-size:13px; color:var(--text2); font-weight:600; margin-bottom:10px;">📍 Downtown Palm Springs • 401 E Tahquitz Canyon Way</div>
-
-        <!-- Why Go Quote -->
-        <p style="border-left:3px solid var(--primary); padding-left:10px; margin:10px 0; font-style:italic; font-size:13px; color:var(--text); line-height:1.5; background:var(--primary-light); padding:10px 12px; border-radius:0 10px 10px 0;">
-          “A beloved, no-frills local institution where generations of Coachella Valley residents gather for hearty, authentic deli fare and house-made pastries.”
-        </p>
-
-        <!-- Unified Metadata Bar -->
-        <div style="background:var(--bg); border:1px solid var(--border); border-radius:12px; padding:10px 14px; margin:12px 0; display:flex; justify-content:space-between; align-items:center; font-size:12px; font-weight:700; color:var(--text); flex-wrap:wrap; gap:8px;">
-          <div><span>💰 Price:</span> <strong>$$ ($12–$20)</strong></div>
-          <div style="width:1px; height:16px; background:var(--border);"></div>
-          <div><span>⏰ Hours:</span> <strong>Daily 08:00–21:00</strong></div>
-          <div style="width:1px; height:16px; background:var(--border);"></div>
-          <div><span>🅿️ Parking:</span> <strong>Free Lot</strong></div>
-        </div>
-
-        <!-- Action Buttons -->
-        <div style="display:flex; gap:8px; margin-top:14px; flex-wrap:wrap;">
-          <button onclick="finishOnboarding()" style="flex:1; background:var(--teal-light); color:var(--teal-dark); border:1px solid var(--teal); padding:9px; border-radius:10px; font-size:12px; font-weight:800; cursor:pointer;">📍 Map Location</button>
-          <button onclick="finishOnboarding()" style="flex:1; background:var(--primary-light); color:var(--primary-dark); border:1px solid var(--primary); padding:9px; border-radius:10px; font-size:12px; font-weight:800; cursor:pointer;">❤️ Saved Spot</button>
-          <button onclick="finishOnboarding()" style="flex:1; background:var(--primary); color:#fff; border:none; padding:9px; border-radius:10px; font-size:12px; font-weight:800; cursor:pointer;">View Details →</button>
-        </div>
-      </div>
-
-      <!-- 3-STEP DK EYEWITNESS EXPLORER GRID -->
+<!-- 3-STEP DK EYEWITNESS EXPLORER GRID -->
       <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px; margin-bottom:20px;">
         <div style="background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px;">
           <div style="font-size:24px; margin-bottom:6px;">🏙️</div>
@@ -5034,7 +5264,32 @@ EDITORIAL REDESIGN — Boutique travel magazine
       <div style="position:sticky; bottom:-20px; background:var(--card); padding:16px 0 0 0; border-top:1px solid var(--border); margin-top:24px; text-align:center;">
         <button class="btn-primary" onclick="closeHelpModal()" style="width:100%; padding:14px; font-size:16px; font-weight:800;">Close Help Center ✕</button>
       </div>
-    </div>
+    
+      <!-- ABOUT & SYSTEM DIAGNOSTICS CARD (v3.47) -->
+      <div style="background:var(--card); border:1px solid var(--border); border-left:4px solid var(--teal); border-radius:16px; padding:20px; margin-top:20px; box-shadow:var(--shadow);">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:8px; margin-bottom:12px;">
+          <div style="font-family:var(--font-s); font-size:11px; font-weight:900; color:var(--teal-dark); text-transform:uppercase; letter-spacing:1px;">ℹ️ ABOUT & SYSTEM DIAGNOSTICS</div>
+          <div style="font-size:11px; font-weight:800; background:var(--teal-light); color:var(--teal-dark); padding:2px 8px; border-radius:10px;" id="help-sw-status">SW: Active</div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px; font-size:12px; color:var(--text);">
+          <div><b>App Version:</b> <span id="diag-app-ver">Version 3.47</span></div>
+          <div><b>Service Worker Rev:</b> <code style="background:var(--bg); padding:2px 6px; border-radius:4px; font-size:11px;" id="diag-sw-ver">local-like-local-v3.47</code></div>
+          <div><b>Database Capacity:</b> <span>45 Global Cities (2,895 Spots)</span></div>
+          <div><b>Legal Disclaimer:</b> <span id="diag-legal-status" style="color:var(--teal); font-weight:800;">Agreed ✅</span></div>
+          <div><b>Walkthrough State:</b> <span id="diag-walkthrough-status">Pending</span></div>
+          <div><b>Network Status:</b> <span id="diag-network-status">Online 🌐</span></div>
+          <div><b>Saved Favorites:</b> <span id="diag-fav-count">0 spots</span></div>
+          <div><b>Device Engine:</b> <span id="diag-device-type">Web Browser</span></div>
+        </div>
+
+        <div style="margin-top:14px; padding-top:10px; border-top:1px solid var(--border); display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;">
+          <button onclick="updateSystemDiagnostics()" style="background:var(--bg); border:1px solid var(--border); color:var(--text); padding:6px 12px; border-radius:8px; font-size:11px; font-weight:800; cursor:pointer;">🔄 Refresh Diagnostics</button>
+          <button onclick="resetAppLocalStorage()" style="background:var(--primary-light); border:1px solid var(--primary); color:var(--primary-dark); padding:6px 12px; border-radius:8px; font-size:11px; font-weight:800; cursor:pointer;">⚠️ Reset Local Settings</button>
+        </div>
+      </div>
+
+</div>
   </div>
 
   <!-- TOAST NOTIFICATION -->
