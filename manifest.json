@@ -1,9 +1,9 @@
 {
   "name": "Local Like a Local",
-  "short_name": "LocalLocal",
-  "description": "See the city beyond the tourist trail.",
+  "short_name": "LocalLikeALocal",
+  "version": "4.0",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#F8F6F0",
-  "theme_color": "#263D36"
+  "background_color": "#f8f6f0",
+  "theme_color": "#1b365d"
 }
