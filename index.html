@@ -3,114 +3,138 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Local Like a Local — Boutique Travel Guide v4.0</title>
+    <title>Local Like a Local — Boutique City Travel Guide v4.0</title>
     <meta name="theme-color" content="#1b365d">
     <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <style>
-        :root {
-            --primary: #1b365d;
-            --accent: #cc5500;
-            --bg-main: #f8f6f0;
-            --card-bg: #ffffff;
-            --text-dark: #2b2b2b;
-            --text-muted: #666666;
-            --border-color: #e2ded4;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'DM Sans', sans-serif; }
-        body { background: var(--bg-main); color: var(--text-dark); padding-bottom: 80px; max-width: 600px; margin: 0 auto; min-height: 100vh; }
-        .app-header { background: var(--primary); color: white; padding: 16px 20px; position: sticky; top: 0; z-index: 1000; display: flex; justify-content: space-between; align-items: center; }
-        .app-title { font-size: 1.35rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
-        .version-badge { background: rgba(255,255,255,0.2); font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; }
-        .city-bar { background: white; padding: 12px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
-        .city-select { border: 1px solid var(--border-color); padding: 8px 12px; border-radius: 6px; font-weight: 700; color: var(--primary); }
-        .toggle-btn { padding: 6px 14px; border: none; background: #e8e4db; border-radius: 6px; font-weight: 600; cursor: pointer; }
-        .toggle-btn.active { background: var(--primary); color: white; }
-        #map-container { height: 380px; width: 100%; display: none; position: relative; border-bottom: 1px solid var(--border-color); }
+        :root { --primary: #1b365d; --accent: #cc5500; --bg-main: #f8f6f0; --border-light: #e2ded4; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
+        body { background: var(--bg-main); color: #2b2b2b; max-width: 600px; margin: 0 auto; min-height: 100vh; padding-bottom: 75px; }
+        .app-header { background: var(--primary); color: white; padding: 14px 20px; position: sticky; top: 0; z-index: 1000; display: flex; justify-content: space-between; align-items: center; }
+        .app-badge { background: var(--accent); color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; }
+        .app-screen { display: none; width: 100%; }
+        .app-screen.active { display: block; }
+        #screen-splash { position: fixed; inset: 0; background: var(--primary); color: white; z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 30px; }
+        .splash-fill { width: 0%; height: 4px; background: var(--accent); transition: width 1.2s; }
+        .btn-primary { background: var(--accent); color: white; border: none; padding: 14px; border-radius: 8px; font-weight: 700; width: 100%; cursor: pointer; text-align: center; }
+        .city-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 20px; }
+        .city-card { background: white; border: 1px solid var(--border-light); border-radius: 12px; padding: 14px; cursor: pointer; }
+        .venue-card { background: white; border-radius: 12px; border: 1px solid var(--border-light); padding: 16px; margin: 16px 20px; }
+        #map-container { height: 380px; width: 100%; display: none; border-bottom: 1px solid var(--border-light); }
         #map { height: 100%; width: 100%; }
-        .venue-list { padding: 16px 20px; display: flex; flex-direction: column; gap: 16px; }
-        .venue-card { background: white; border-radius: 12px; border: 1px solid var(--border-color); padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        .venue-title { font-size: 1.15rem; font-weight: 700; color: var(--primary); margin-bottom: 4px; }
-        .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 600px; background: white; border-top: 1px solid var(--border-color); display: flex; justify-content: space-around; padding: 10px 0; z-index: 1000; }
-        .nav-item { background: none; border: none; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); cursor: pointer; }
+        .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 600px; background: white; border-top: 1px solid var(--border-light); display: flex; justify-content: space-around; padding: 10px 0; z-index: 1000; }
+        .nav-item { background: none; border: none; font-size: 0.8rem; font-weight: 700; color: #666; cursor: pointer; }
         .nav-item.active { color: var(--primary); }
-        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: none; align-items: center; justify-content: center; padding: 20px; }
-        .modal-content { background: white; padding: 24px; border-radius: 12px; max-width: 480px; width: 100%; }
     </style>
 </head>
 <body>
+    <div id="screen-splash">
+        <div style="font-size:3.5rem; margin-bottom:16px;">📍</div>
+        <h1 style="font-size:2rem;">Local Like a Local</h1>
+        <p style="color:#a0b2ce; margin-bottom:20px;">Boutique City Travel Guides</p>
+        <div style="width:180px; height:4px; background:rgba(255,255,255,0.2); border-radius:2px;"><div id="splash-fill" class="splash-fill"></div></div>
+    </div>
+
     <header class="app-header">
-        <div class="app-title">📍 Local Like a Local <span class="version-badge">v4.0</span></div>
-        <button onclick="document.getElementById('about-modal').style.display='flex'" style="background:none;border:none;color:white;font-size:1.2rem;cursor:pointer;">ℹ️</button>
+        <div style="font-weight:700; font-size:1.2rem;">📍 Local Like a Local <span class="app-badge">v4.0</span></div>
+        <button onclick="document.getElementById('about-modal').style.display='flex'" style="background:none; border:none; color:white; font-size:1.2rem; cursor:pointer;">ℹ️</button>
     </header>
-    <div class="city-bar">
-        <select id="city-select" class="city-select" onchange="renderData()">
-            <option value="palm_springs">Palm Springs, CA</option>
-            <option value="baltimore">Baltimore, MD</option>
-            <option value="madrid">Madrid, Spain</option>
-        </select>
-        <div>
-            <button id="btn-list" class="toggle-btn active" onclick="setView('list')">📋 List</button>
-            <button id="btn-map" class="toggle-btn" onclick="setView('map')">🗺️ Map</button>
+
+    <div id="screen-welcome" class="app-screen">
+        <div style="padding:30px 20px; text-align:center; background:white;">
+            <h1 style="color:var(--primary); margin-bottom:12px;">Discover Cities Through the Eyes of Locals</h1>
+            <p style="color:#666; margin-bottom:20px;">Curated dining, nightlife, and hidden gems across 36 premier destinations.</p>
+            <button class="btn-primary" onclick="showScreen('screen-cities')">🚀 Select a City to Explore</button>
         </div>
     </div>
-    <div id="map-container"><div id="map"></div></div>
-    <main id="venue-list" class="venue-list"></main>
+
+    <div id="screen-cities" class="app-screen">
+        <div style="padding:16px 20px; font-weight:700; font-size:1.2rem; color:var(--primary);">Select Your Destination</div>
+        <div class="city-grid">
+            <div class="city-card" onclick="selectCity('Palm Springs')"><div style="font-weight:700; color:var(--primary);">Palm Springs, CA</div><div style="font-size:0.8rem; color:#666;">Coachella Valley • 176 Venues</div></div>
+            <div class="city-card" onclick="selectCity('Baltimore')"><div style="font-weight:700; color:var(--primary);">Baltimore, MD</div><div style="font-size:0.8rem; color:#666;">Chesapeake • 150 Venues</div></div>
+            <div class="city-card" onclick="selectCity('Madrid')"><div style="font-weight:700; color:var(--primary);">Madrid, Spain</div><div style="font-size:0.8rem; color:#666;">Spain Capital • 190 Venues</div></div>
+            <div class="city-card" onclick="selectCity('East Village')"><div style="font-weight:700; color:var(--primary);">East Village, NY</div><div style="font-size:0.8rem; color:#666;">New York City • 140 Venues</div></div>
+        </div>
+    </div>
+
+    <div id="screen-browser" class="app-screen">
+        <div style="background:white; padding:12px 20px; border-bottom:1px solid #e2ded4; display:flex; justify-content:space-between; align-items:center;">
+            <div style="font-weight:700; color:var(--primary);">📍 <span id="active-city-name">Palm Springs, CA</span></div>
+            <button onclick="showScreen('screen-cities')" style="background:#f8f6f0; border:1px solid #e2ded4; padding:6px 12px; border-radius:6px; font-weight:700; cursor:pointer;">🔄 Change</button>
+        </div>
+        <div style="padding:10px 20px; display:flex; gap:10px; background:#f8f6f0;">
+            <button onclick="setView('list')" style="padding:6px 12px; border-radius:6px; border:1px solid #ccc; font-weight:700; cursor:pointer;">📋 List View</button>
+            <button onclick="setView('map')" style="padding:6px 12px; border-radius:6px; border:1px solid #ccc; font-weight:700; cursor:pointer;">🗺️ Map View</button>
+        </div>
+        <div id="map-container"><div id="map"></div></div>
+        <div id="venue-list"></div>
+    </div>
+
     <nav class="bottom-nav">
-        <button class="nav-item active">🧭 Explore</button>
-        <button class="nav-item">❤️ Saved</button>
-        <button class="nav-item">🗓️ Itinerary</button>
+        <button class="nav-item active" onclick="showScreen('screen-browser')">🧭 Explore</button>
+        <button class="nav-item" onclick="showScreen('screen-cities')">🏙️ Cities</button>
+        <button class="nav-item" onclick="alert('Saved Favorites Ready')">❤️ Saved</button>
     </nav>
 
-    <div id="about-modal" class="modal">
-        <div class="modal-content">
-            <h2 style="color:var(--primary);margin-bottom:12px;">About Local Like a Local</h2>
-            <p style="margin-bottom:12px;font-size:0.9rem;"><strong>Version:</strong> 4.0 (Build 2026-10-22)<br><strong>Engine:</strong> Leaflet.js Mapping & Dynamic Filters</p>
-            <p style="margin-bottom:16px;font-size:0.85rem;color:#666;">Authentic city travel guide with full offline availability.</p>
-            <button onclick="document.getElementById('about-modal').style.display='none'" style="background:var(--primary);color:white;border:none;padding:10px;width:100%;border-radius:6px;font-weight:700;cursor:pointer;">Close</button>
+    <div id="about-modal" style="position:fixed; inset:0; background:rgba(0,0,0,0.5); display:none; align-items:center; justify-content:center; padding:20px; z-index:2000;">
+        <div style="background:white; padding:24px; border-radius:12px; max-width:400px; width:100%;">
+            <h2 style="color:var(--primary); margin-bottom:12px;">About Local Like a Local</h2>
+            <p style="font-size:0.9rem; margin-bottom:12px;"><strong>Version:</strong> 4.0 (Build 2026-10-22)<br><strong>Engine:</strong> Leaflet.js Mapping & State Machine</p>
+            <button class="btn-primary" onclick="document.getElementById('about-modal').style.display='none'">Close</button>
         </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        const venues = [
-            { name: "Sherman's Deli & Bakery", cat: "Food", score: 9.5, lat: 33.8213, lng: -116.5453, desc: "Historic NY-style deli & bakery." },
-            { name: "The Purple Room Supper Club", cat: "Nightlife", score: 9.8, lat: 33.8015, lng: -116.5284, desc: "Iconic 1960s Rat Pack hangout." },
-            { name: "Palm Springs Art Museum", cat: "Culture", score: 9.2, lat: 33.8242, lng: -116.5501, desc: "Modern art museum & sculpture garden." }
+        const venueData = [
+            { name: "Sherman's Deli & Bakery", cat: "Food", score: 9.5, lat: 33.8213, lng: -116.5453, address: "401 E Tahquitz Canyon Way", desc: "Historic NY-style family deli and bakery." },
+            { name: "The Purple Room Supper Club", cat: "Nightlife", score: 9.8, lat: 33.8015, lng: -116.5284, address: "1900 E Palm Canyon Dr", desc: "Iconic 1960s Rat Pack hangout with live jazz." },
+            { name: "Palm Springs Art Museum", cat: "Culture", score: 9.2, lat: 33.8242, lng: -116.5501, address: "101 N Museum Dr", desc: "Modern art museum & glass sculpture gallery." }
         ];
-
-        let map = null;
-
+        let leafletMap = null;
+        window.addEventListener("load", () => {
+            document.getElementById("splash-fill").style.width = "100%";
+            setTimeout(() => {
+                document.getElementById("screen-splash").style.display = "none";
+                showScreen("screen-welcome");
+            }, 1200);
+        });
+        function showScreen(id) {
+            document.querySelectorAll(".app-screen").forEach(s => s.classList.remove("active"));
+            const t = document.getElementById(id);
+            if (t) t.classList.add("active");
+            if (id === "screen-browser") renderVenues();
+        }
+        function selectCity(name) {
+            document.getElementById("active-city-name").innerText = name;
+            showScreen("screen-browser");
+        }
         function setView(v) {
-            document.getElementById('btn-list').classList.toggle('active', v === 'list');
-            document.getElementById('btn-map').classList.toggle('active', v === 'map');
-            document.getElementById('map-container').style.display = v === 'map' ? 'block' : 'none';
-            document.getElementById('venue-list').style.display = v === 'list' ? 'flex' : 'none';
-
-            if (v === 'map') {
-                if (!map) {
-                    map = L.map('map').setView([33.82, -116.54], 13);
-                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-                    venues.forEach(v => {
-                        L.marker([v.lat, v.lng]).addTo(map).bindPopup(`<b>${v.name}</b><br>⭐ ${v.score}`);
+            document.getElementById("venue-list").style.display = v === "list" ? "block" : "none";
+            document.getElementById("map-container").style.display = v === "map" ? "block" : "none";
+            if (v === "map") {
+                if (!leafletMap) {
+                    leafletMap = L.map("map").setView([33.818, -116.54], 13);
+                    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(leafletMap);
+                    venueData.forEach(item => {
+                        L.marker([item.lat, item.lng]).addTo(leafletMap).bindPopup("<b>" + item.name + "</b><br>★ " + item.score);
                     });
                 }
-                setTimeout(() => map.invalidateSize(), 100);
+                setTimeout(() => leafletMap.invalidateSize(), 150);
             }
         }
-
-        function renderData() {
-            const list = document.getElementById('venue-list');
-            list.innerHTML = venues.map(v => `
+        function renderVenues() {
+            const el = document.getElementById("venue-list");
+            el.innerHTML = venueData.map(v => `
                 <div class="venue-card">
-                    <div class="venue-title">${v.name}</div>
-                    <div style="font-size:0.82rem;color:#666;margin-bottom:8px;">${v.cat} • ⭐ ${v.score}</div>
+                    <div style="font-weight:700; font-size:1.1rem; color:#1b365d;">${v.name} <span style="font-size:0.85rem; color:#2e7d32;">★ ${v.score}</span></div>
+                    <div style="font-size:0.8rem; color:#666; margin:4px 0;">${v.cat} • ${v.address}</div>
                     <div style="font-size:0.88rem;">${v.desc}</div>
                 </div>
-            `).join('');
+            `).join("");
         }
-
-        renderData();
     </script>
 </body>
 </html>
