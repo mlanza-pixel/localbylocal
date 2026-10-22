@@ -1,20 +1,9 @@
 {
-  "name": "Local Like a Local — Boutique City Guides",
-  "short_name": "LocalLikeALocal",
+  "name": "Local Like a Local",
+  "short_name": "LocalLocal",
+  "description": "See the city beyond the tourist trail.",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#1b365d",
-  "theme_color": "#1b365d",
-  "icons": [
-    {
-      "src": "images/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "images/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    }
-  ]
+  "background_color": "#F8F6F0",
+  "theme_color": "#263D36"
 }
