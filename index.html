@@ -1,0 +1,1474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Local Like a Local — Boutique Travel Guides</title>
+  
+  <!-- PWA Manifest & App Icons -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1B365D">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="images/icon-192.png">
+
+  <!-- Typography: Google Fonts (Fraunces & DM Sans) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fraunces:wght@600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Leaflet.js Mapping Engine (Local Vendor with CDN Fallback) -->
+  <link rel="stylesheet" href="vendor/leaflet.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="vendor/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    /* =============================================
+       BOUTIQUE EDITORIAL DESIGN SYSTEM & CSS VARIABLES
+       ============================================= */
+    :root {
+      --primary: #1B365D;      /* Deep Navy */
+      --primary-light: #2A4D80;
+      --accent: #CC5500;       /* Accent Orange */
+      --accent-light: #FF7722;
+      --teal: #128C7E;         /* Secondary Accent */
+      --teal-light: #E6F4F1;
+      --teal-dark: #0A5C52;
+      --bg-main: #F8F9FA;      /* Clean Off-White */
+      --card: #FFFFFF;
+      --border: #E2E8F0;
+      --text-dark: #1A202C;
+      --text2: #4A5568;
+      --text-muted: #718096;
+      --red: #D9534F;
+      --green: #1E7E34;
+      --radius: 12px;
+      --shadow-sm: 0 2px 4px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+      --shadow-lg: 0 10px 25px rgba(0,0,0,0.15);
+      --font-m: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-d: 'Fraunces', Georgia, serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { background: var(--bg-main); color: var(--text-dark); font-family: var(--font-m); max-width: 600px; margin: 0 auto; min-height: 100vh; padding-bottom: 75px; position: relative; line-height: 1.5; }
+
+    /* App Header */
+    .app-header { background: var(--primary); color: white; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow-md); }
+    .app-title { font-family: var(--font-d); font-size: 1.25rem; font-weight: 700; display: flex; align-items: center; gap: 8px; cursor: pointer; }
+    .app-badge { background: var(--accent); color: white; font-family: var(--font-m); font-size: 14px; font-weight: 700; padding: 2px 6px; border-radius: 10px; text-transform: uppercase; }
+    .header-icons { display: flex; gap: 12px; align-items: center; }
+    .icon-btn { background: rgba(255,255,255,0.15); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; font-size: 16px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s; }
+    .icon-btn:hover { background: rgba(255,255,255,0.3); }
+
+    /* PWA Banner & Offline Status */
+    .offline-status-bar { background: #FEFCBF; color: #744210; font-size: 15px; font-weight: 700; padding: 6px 14px; text-align: center; border-bottom: 1px solid #F6E05E; display: none; }
+    .pwa-banner { background: var(--teal-dark); color: white; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; font-size: 15px; }
+    .pwa-banner-text { display: flex; flex-direction: column; }
+    .pwa-install-btn { background: var(--accent); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: 700; font-size: 15px; cursor: pointer; }
+    .pwa-dismiss-btn { background: none; border: none; color: rgba(255,255,255,0.7); font-size: 16px; padding: 4px; cursor: pointer; }
+
+    /* Toast Notification */
+    #app-toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--primary); color: #fff; padding: 10px 18px; border-radius: 20px; font-size: 15px; font-weight: 700; box-shadow: var(--shadow-md); z-index: 9999; transition: opacity 0.3s; pointer-events: none; opacity: 0; }
+
+    /* Screens & Navigation */
+    .screen { display: none; padding: 16px; animation: fadeIn 0.25s ease-out; }
+    .screen.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0.6; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Splash Overlay */
+    #screen-splash { position: fixed; inset: 0; background: var(--primary); color: white; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px; }
+    .splash-icon { font-size: 4rem; margin-bottom: 12px; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+    .splash-title { font-family: var(--font-d); font-size: 2.5rem; font-weight: 800; margin-bottom: 6px; }
+    .splash-sub { font-size: 16px; opacity: 0.85; margin-bottom: 24px; }
+    .splash-bar { width: 180px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; overflow: hidden; position: relative; }
+    .splash-fill { width: 0%; height: 100%; background: var(--accent); transition: width 1.8s cubic-bezier(0.1, 0.5, 0.1, 1); }
+    .splash-tap-hint { margin-top: 30px; font-size: 15px; opacity: 0.7; letter-spacing: 1px; text-transform: uppercase; }
+
+    /* Hero & Card Elements */
+    .welcome-hero { background: linear-gradient(135deg, var(--primary) 0%, #0F2342 100%); color: white; border-radius: var(--radius); padding: 28px 20px; margin-bottom: 20px; position: relative; overflow: hidden; box-shadow: var(--shadow-md); }
+    .welcome-hero-bg { position: absolute; right: -20px; bottom: -20px; font-size: 8rem; opacity: 0.08; pointer-events: none; }
+    .welcome-content { position: relative; z-index: 1; }
+    .welcome-tag { background: var(--accent); color: white; font-size: 15px; font-weight: 700; padding: 3px 8px; border-radius: 12px; text-transform: uppercase; letter-spacing: 1px; display: inline-block; margin-bottom: 10px; }
+    .welcome-title { font-family: var(--font-d); font-size: 2.2rem; font-weight: 800; line-height: 1.2; margin-bottom: 8px; }
+    .welcome-desc { font-size: 15px; opacity: 0.9; margin-bottom: 18px; line-height: 1.5; }
+
+    .btn-cta { background: var(--accent); color: white; border: none; width: 100%; padding: 14px; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; box-shadow: var(--shadow-sm); transition: transform 0.1s, background 0.2s; text-align: center; }
+    .btn-cta:active { transform: scale(0.98); background: var(--accent-light); }
+
+    .screen-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .screen-heading { font-family: var(--font-d); font-size: 1.8rem; color: var(--primary); font-weight: 700; display: flex; align-items: center; gap: 8px; }
+    .count-badge { background: var(--teal-light); color: var(--teal-dark); font-family: var(--font-m); font-size: 15px; font-weight: 700; padding: 2px 8px; border-radius: 12px; }
+    .btn-header-action { background: var(--card); border: 1px solid var(--border); color: var(--text2); padding: 6px 12px; border-radius: 6px; font-size: 15px; font-weight: 700; cursor: pointer; }
+
+    /* Cities Grid */
+    .cities-sort-row { display: flex; gap: 8px; margin-bottom: 12px; }
+    .sort-pill { background: var(--card); border: 1px solid var(--border); color: var(--text2); padding: 10px 16px; border-radius: 20px; font-size: 15px; font-weight: 700; cursor: pointer; min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; }
+    .sort-pill.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+    .region-divider { font-size: 15px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin: 14px 0 8px 2px; display: block; }
+    .cities-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .city-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; position: relative; overflow: hidden; }
+    .city-card:active { transform: scale(0.97); }
+    .city-card-name { font-family: var(--font-d); font-size: 1.1rem; font-weight: 700; color: var(--primary); margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+    .city-card-count { font-size: 15px; color: var(--text2); font-weight: 500; }
+    .city-status-pill { position: absolute; top: 10px; right: 10px; font-size: 15px; font-weight: 700; padding: 2px 6px; border-radius: 8px; text-transform: uppercase; }
+    .city-status-pill.online { background: #DEF7EC; color: #03543F; }
+
+    /* Search & Filters */
+    .search-input-box { width: 100%; position: relative; margin-bottom: 10px; }
+    .search-input-box input { width: 100%; padding: 12px 14px 12px 38px; border: 1px solid var(--border); border-radius: 8px; font-size: 15px; font-family: var(--font-m); outline: none; background: var(--card); }
+    .search-input-box input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(27,54,93,0.1); }
+    .search-icon-pos { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 16px; color: var(--text-muted); }
+
+    .category-tabs-row { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 12px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .category-tabs-row::-webkit-scrollbar { display: none; }
+    .cat-pill { background: var(--card); border: 1px solid var(--border); color: var(--text2); padding: 6px 14px; border-radius: 20px; font-size: 15px; font-weight: 700; whitespace: nowrap; cursor: pointer; flex-shrink: 0; }
+    .cat-pill.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+    .smart-filters-row { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; }
+    .toggle-filter-btn { background: var(--card); border: 1px solid var(--border); color: var(--text2); padding: 10px 14px; border-radius: 6px; font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px; min-height: 44px; }
+    .toggle-filter-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+    /* Map Container */
+    #browse-map-container { display: none; height: 60vh; min-height: 300px; max-height: 600px; width: 100%; border-radius: 12px; overflow: hidden; margin-top: 10px; margin-bottom: 14px; border: 1px solid var(--border); position: relative; box-shadow: var(--shadow-sm); }
+    #leaflet-map { height: 100%; width: 100%; z-index: 1; }
+
+    /* Venue Cards */
+    .venue-list { display: flex; flex-direction: column; gap: 12px; }
+    .venue-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; position: relative; box-shadow: var(--shadow-sm); transition: transform 0.15s; }
+    .venue-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+    .venue-title-box { padding-right: 32px; }
+    .venue-title { font-family: var(--font-d); font-size: 1.3rem; font-weight: 700; color: var(--primary); line-height: 1.3; }
+    .venue-sub { font-size: 15px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; margin-top: 2px; }
+    .venue-fav-btn { position: absolute; top: 12px; right: 12px; background: none; border: none; font-size: 20px; cursor: pointer; }
+    
+    .venue-meta-bar { display: flex; align-items: center; gap: 10px; font-size: 15px; margin-bottom: 8px; color: var(--text2); }
+    .venue-score { background: #FFF5F0; color: var(--accent); font-weight: 700; padding: 2px 6px; border-radius: 4px; font-size: 15px; }
+    .venue-price { font-weight: 700; color: var(--teal-dark); }
+    
+    .venue-whygo { font-size: 12.5px; color: var(--text2); line-height: 1.45; margin-bottom: 10px; background: var(--bg-main); padding: 8px 10px; border-radius: 6px; border-left: 3px solid var(--accent); }
+    .venue-actions { display: flex; gap: 8px; }
+    .btn-card-action { flex: 1; background: var(--bg-main); border: 1px solid var(--border); color: var(--primary); padding: 12px; border-radius: 6px; font-size: 15px; font-weight: 700; cursor: pointer; text-align: center; min-height: 44px; display: flex; align-items: center; justify-content: center; }
+    .btn-card-action.primary { background: var(--primary); color: white; border-color: var(--primary); }
+
+    /* Modals */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.6); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(3px); }
+    .modal-overlay.active { display: flex; }
+    .modal-dialog { background: var(--card); border-radius: var(--radius); width: 100%; max-width: 520px; max-height: 85vh; overflow-y: auto; padding: 22px; position: relative; box-shadow: var(--shadow-lg); }
+    .modal-close-btn { position: absolute; top: 14px; right: 14px; background: var(--bg-main); border: none; width: 44px; height: 44px; border-radius: 50%; font-size: 20px; font-weight: 700; cursor: pointer; color: var(--text2); display: flex; align-items: center; justify-content: center; }
+
+    /* Bottom Nav Bar */
+    .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 600px; background: var(--card); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 8px 0; z-index: 100; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
+    .nav-btn { background: none; border: none; display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--text2); font-size: 15px; font-weight: 700; cursor: pointer; position: relative; padding: 10px 14px; min-height: 44px; min-width: 44px; }
+    .nav-btn.active { color: var(--primary); }
+    .nav-icon { font-size: 18px; }
+    .fav-nav-badge { position: absolute; top: 2px; right: 12px; background: var(--accent); color: white; font-size: 15px; font-weight: 700; width: 15px; height: 15px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+
+    /* Onboarding Carousel */
+    .carousel-container { background: var(--card); border-radius: var(--radius); padding: 24px 18px; border: 1px solid var(--border); text-align: center; }
+    .step-indicator { display: flex; justify-content: center; gap: 6px; margin-bottom: 18px; }
+    .step-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); transition: background 0.2s, width 0.2s; }
+    .step-dot.active { background: var(--accent); width: 20px; border-radius: 4px; }
+    .walkthrough-img { font-size: 3.5rem; margin-bottom: 12px; }
+    .walkthrough-h3 { font-family: var(--font-d); font-size: 1.3rem; color: var(--primary); margin-bottom: 6px; }
+    .walkthrough-p { font-size: 15px; color: var(--text2); line-height: 1.5; margin-bottom: 20px; }
+    .walkthrough-controls { display: flex; justify-content: space-between; gap: 10px; }
+    .btn-step-nav { flex: 1; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-main); font-weight: 700; font-size: 15px; cursor: pointer; }
+
+    /* Custom Itinerary Engine */
+    .style-select { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 15px; font-family: var(--font-m); background: var(--card); }
+    .itinerary-days-tabs { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 14px; }
+    .itin-stop-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; margin-bottom: 10px; position: relative; border-left: 4px solid var(--primary); }
+    .itin-stop-time { font-size: 15px; font-weight: 700; color: var(--accent); text-transform: uppercase; margin-bottom: 2px; }
+
+    /* Diagnostics Box */
+    .diag-box { background: var(--bg-main); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-size: 15px; color: var(--text2); line-height: 1.6; text-align: left; margin-top: 14px; }
+    .legal-note { font-size: 15px; color: var(--text-muted); text-align: center; margin-top: 12px; line-height: 1.4; }
+  </style>
+</head>
+<body>
+
+  <!-- Toast Notification Container -->
+  <div id="app-toast"></div>
+
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="app-title" onclick="showScreen('screen-cities')">
+      <span>📍 Local Like a Local</span>
+      <span class="app-badge">v3.56</span>
+    </div>
+    <div class="header-icons">
+      <button class="icon-btn" onclick="openHelpModal()" title="Help & System Info">ℹ️</button>
+    </div>
+  </header>
+
+  <!-- Offline Bar & PWA Banner -->
+  <div id="offline-status-bar" class="offline-status-bar">⚡ Offline Mode — Serving cached city guides & saved places</div>
+  <div id="pwa-install-banner" class="pwa-banner" style="display:none;">
+    <div class="pwa-banner-text">
+      <strong>Install Local Like a Local</strong>
+      <span>Save offline to your home screen</span>
+    </div>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <button id="btn-pwa-install" class="pwa-install-btn">Install</button>
+      <button onclick="document.getElementById('pwa-install-banner').style.display='none'" class="pwa-dismiss-btn">✕</button>
+    </div>
+  </div>
+
+  <!-- Screen 1: Splash Screen Overlay -->
+  <div id="screen-splash" onclick="dismissSplash()">
+    <div class="splash-icon">📍</div>
+    <div class="splash-title">Local Like a Local</div>
+    <div class="splash-sub">Boutique City Travel Guides</div>
+    <div class="splash-bar">
+      <div id="splash-fill" class="splash-fill"></div>
+    </div>
+    <div class="splash-tap-hint">Tap anywhere to continue ➔</div>
+  </div>
+
+  <!-- Screen 1b: Welcome Hero Screen -->
+  <section id="screen-welcome" class="screen">
+    <div class="welcome-hero">
+      <div class="welcome-hero-bg">📍</div>
+      <div class="welcome-content">
+        <span class="welcome-tag">A Field Guide to the Good Stuff</span>
+        <h1 class="welcome-title">Local Like a Local</h1>
+        <p class="welcome-desc">Explore <span id="dynamic-city-count">49</span> available destinations through authentic local spots, neighborhood gems, and curated itineraries.</p>
+        <button id="btn-start" class="btn-cta" onclick="handleStartApp()">🚀 Choose Your City ➔</button>
+      </div>
+    </div>
+    <p class="legal-note">Best efforts for informational purposes only. Local Like a Local is an offline-first boutique travel guide.</p>
+  </section>
+
+  <!-- Screen 2: Legal Disclaimer Screen -->
+  <section id="screen-legal" class="screen">
+    <div class="welcome-hero" style="background:var(--card);color:var(--text-dark);border:1px solid var(--border);">
+      <h2 style="font-family:var(--font-d);font-size:1.4rem;color:var(--primary);margin-bottom:6px;">⚖️ Legal & Informational Disclaimer</h2>
+      <p style="font-size:15px;color:var(--text2);margin-bottom:14px;">Please review and accept our terms to proceed.</p>
+      <div style="font-size:15px;color:var(--text2);line-height:1.6;margin-bottom:18px;text-align:left;">
+        <p style="margin-bottom:8px;"><strong>1. Informational Purpose:</strong> Local Like a Local is an independent travel guide provided for informational purposes only. Recommendations, local scores, and venue details are curated from local public databases and community sources.</p>
+        <p style="margin-bottom:8px;"><strong>2. Accuracy & Verification:</strong> Business operations, prices, operating hours, and entry policies are subject to change without notice. Always verify directly with venues for reservations and current schedules. The creators assume no liability for travel decisions.</p>
+        <p><strong>3. Private Data:</strong> Personal notes and saved favorites are stored locally on your device in your browser's private storage.</p>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-cta" style="flex:2;" onclick="agreeLegal()">✅ I Agree & Accept</button>
+        <button class="btn-cta" style="flex:1;background:var(--bg-main);color:var(--text2);border:1px solid var(--border);" onclick="showScreen('screen-welcome')">Decline</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Screen 3: Visual Walkthrough Carousel -->
+  <section id="screen-onboarding" class="screen">
+    <div class="carousel-container">
+      <div class="step-indicator">
+        <div id="step-dot-1" class="step-dot active"></div>
+        <div id="step-dot-2" class="step-dot"></div>
+        <div id="step-dot-3" class="step-dot"></div>
+        <div id="step-dot-4" class="step-dot"></div>
+      </div>
+
+      <div id="step-content">
+        <div class="walkthrough-img">🏙️</div>
+        <h3 class="walkthrough-h3">Select Your Destination</h3>
+        <p class="walkthrough-p">Explore 49 global destinations with verified local scores, custom filters, and neighborhood guides.</p>
+      </div>
+
+      <div style="margin-bottom:14px;font-size:15px;color:var(--text-muted);">
+        <label><input type="checkbox" id="chk-disable-walkthrough"> Don't show this walkthrough again</label>
+      </div>
+
+      <div class="walkthrough-controls">
+        <button id="btn-step-prev" class="btn-step-nav" onclick="prevStep()">← Previous</button>
+        <button id="btn-step-next" class="btn-step-nav" style="background:var(--primary);color:white;" onclick="nextStep()">Next ➔</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Screen 4: Cities Selection Screen -->
+  <section id="screen-cities" class="screen">
+    <div class="screen-header-row">
+      <h2 class="screen-heading">Select Destination <span id="cities-header-count" class="count-badge">49 Available</span></h2>
+      <button class="btn-header-action" onclick="showScreen('screen-welcome')">← Home</button>
+    </div>
+
+    <!-- Search Input for Cities -->
+    <div class="search-input-box">
+      <span class="search-icon-pos">🔍</span>
+      <input type="text" id="cities-search-input" oninput="filterCities(this.value)" placeholder="Search destinations by name, region, state...">
+    </div>
+
+    <div class="cities-sort-row">
+      <button id="city-sort-rating" class="sort-pill active" onclick="sortCities('rating')">★ Top Places</button>
+      <button id="city-sort-alpha" class="sort-pill" onclick="sortCities('alpha')">🔤 A-Z Name</button>
+    </div>
+
+    <div id="cities-container"></div>
+  </section>
+
+  <!-- Screen 5: Directory Browse Screen -->
+  <section id="screen-browser" class="screen">
+    <div class="browse-header">
+      <div class="screen-header-row" style="margin-bottom:8px;">
+        <h2 id="browse-title" class="screen-heading">Palm Springs</h2>
+        <div style="display:flex;gap:6px;">
+          <button id="btn-browse-nearme" class="btn-header-action" onclick="toggleNearMe()">📍 Near Me</button>
+          <button class="btn-header-action" onclick="showScreen('screen-prefs')">⚙️ Custom Trip</button>
+          <button class="btn-header-action" onclick="showScreen('screen-cities')">← Cities</button>
+        </div>
+      </div>
+
+      <div class="search-input-box">
+        <span class="search-icon-pos">🔍</span>
+        <input type="text" id="search-input" oninput="handleSearch(this.value)" placeholder="Search spots, food, streets, vibes...">
+      </div>
+
+      <div class="category-tabs-row" id="browse-category-tabs">
+        <button class="cat-pill active" onclick="filterCategory('All', this)">All</button>
+        <button class="cat-pill" onclick="filterCategory('Food', this)">Food</button>
+        <button class="cat-pill" onclick="filterCategory('Nightlife', this)">Nightlife</button>
+        <button class="cat-pill" onclick="filterCategory('Culture', this)">Culture</button>
+        <button class="cat-pill" onclick="filterCategory('Experience', this)">Outdoors & Sights</button>
+      </div>
+    </div>
+
+    <div class="smart-filters-row">
+      <button id="btn-filter-opennow" class="toggle-filter-btn" onclick="toggleOpenNow()">🟢 Open Now</button>
+      <button id="btn-filter-hiddengems" class="toggle-filter-btn" onclick="toggleHiddenGems()">💎 Hidden Gems (7.0+)</button>
+      <button id="btn-view-toggle" class="toggle-filter-btn" style="margin-left:auto;background:var(--teal-light);color:var(--teal-dark);" onclick="toggleViewMode()">🗺️ Map View</button>
+    </div>
+
+    <!-- Corrected Map Container ID -->
+    <div id="browse-map-container">
+      <div id="leaflet-map"></div>
+    </div>
+
+    <div id="venue-list" class="venue-list"></div>
+  </section>
+
+  <!-- Screen 6: Customize Trip Screen -->
+  <section id="screen-prefs" class="screen">
+    <div class="screen-header-row">
+      <h2 class="screen-heading">Customize Trip</h2>
+      <button class="btn-header-action" onclick="showScreen('screen-browser')">← Directory</button>
+    </div>
+
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;">
+      <div style="display:flex;gap:12px;margin-bottom:14px;">
+        <div style="flex:1;">
+          <span class="pref-label" style="font-size:15px;font-weight:700;color:var(--text2);display:block;margin-bottom:4px;">
+            Days: <span id="days-val" style="color:var(--accent);">2 Days</span>
+          </span>
+          <select id="pref-days" class="style-select" onchange="updateDays(this.value)">
+            <option value="1">1 Day</option>
+            <option value="2" selected>2 Days</option>
+            <option value="3">3 Days</option>
+            <option value="4">4 Days</option>
+            <option value="5">5 Days</option>
+          </select>
+        </div>
+        <div style="flex:1;">
+          <span class="pref-label" style="font-size:15px;font-weight:700;color:var(--text2);display:block;margin-bottom:4px;">Style</span>
+          <select id="pref-style" class="style-select">
+            <option>Local & authentic</option>
+            <option>Off-the-beaten-path</option>
+            <option>Food-focused</option>
+            <option>Culture & history</option>
+            <option>Nightlife & social</option>
+            <option>Relaxed & scenic</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <span class="pref-label" style="font-size:15px;font-weight:700;color:var(--text2);margin-bottom:4px;display:block;">Neighborhood</span>
+        <select id="pref-neighborhood" class="style-select">
+          <option value="All">All Neighborhoods</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom:18px;">
+        <span class="pref-label" style="font-size:15px;font-weight:700;color:var(--text2);margin-bottom:6px;display:block;">Curated Interests</span>
+        <div id="pref-interests-chips" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+      </div>
+
+      <button class="btn-cta" onclick="buildItinerary()">📅 Generate Smart Itinerary ➔</button>
+      <p class="legal-note">Itineraries generated automatically using local ratings, opening schedules, and proximity routing.</p>
+    </div>
+  </section>
+
+  <!-- Screen 6b: Generated Itinerary Screen -->
+  <section id="screen-itinerary" class="screen">
+    <div class="screen-header-row">
+      <h2 class="screen-heading">Your Custom Plan</h2>
+      <div style="display:flex;gap:6px;">
+        <button class="btn-header-action" onclick="shareItinerary()">📤 Share</button>
+        <button class="btn-header-action" onclick="exportICal()">📅 iCal</button>
+        <button class="btn-header-action" onclick="showScreen('screen-prefs')">← Back</button>
+      </div>
+    </div>
+
+    <div class="itinerary-days-tabs" id="itinerary-days-tabs"></div>
+    <div id="itinerary-stops-container"></div>
+  </section>
+
+  <!-- Screen 7: Favorites Screen -->
+  <section id="screen-favorites" class="screen">
+    <div class="screen-header-row">
+      <h2 class="screen-heading">❤️ Saved Favorites</h2>
+      <div style="display:flex;gap:6px;">
+        <button class="btn-header-action" onclick="shareFavorites()">📤 Share</button>
+        <button class="btn-header-action" onclick="window.print()">📄 PDF</button>
+        <button class="btn-header-action" onclick="showScreen('screen-browser')">← Directory</button>
+      </div>
+    </div>
+    <div id="favs-list-container"></div>
+  </section>
+
+  <!-- Screen 8: Help & Diagnostics Modal -->
+  <div id="modal-help" class="modal-overlay">
+    <div class="modal-dialog">
+      <button class="modal-close-btn" onclick="closeHelpModal()">✕</button>
+      <h3 style="font-family:var(--font-d);font-size:1.3rem;color:var(--primary);margin-bottom:6px;">App Guide & System Info</h3>
+      <p style="font-size:15px;color:var(--text2);margin-bottom:14px;">Learn how to navigate offline city guides, custom multi-day plans, and saved favorites.</p>
+      
+      <button onclick="reopenWalkthrough()" class="btn-cta" style="padding:10px;font-size:15px;margin-bottom:14px;">📖 Open Graphic Interactive Walkthrough</button>
+
+      <div class="diag-box">
+        <strong>⚙️ System Diagnostics & Revision Status</strong><br>
+        • App Version: <span id="diag-version">Loading...</span><br>
+        • Total Destinations: 49 Destinations Available<br>
+        • Service Worker: local-like-a-local-v3.56<br>
+        • Parser: 40-Column Schema Compliant<br>
+        <script>document.getElementById("diag-version").textContent = document.querySelector(".app-badge")?.textContent || "unknown";</script>
+        • Legal Disclaimer: <span id="diag-legal-status">Agreed ✅</span>
+      </div>
+
+      <div style="margin-top:16px;text-align:center;">
+        <button onclick="resetApp()" style="background:none;border:none;color:var(--red);font-size:15px;font-weight:700;cursor:pointer;text-decoration:underline;">⚠️ Reset Local Settings & Restart Flow</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Venue Detail Modal Popup -->
+  <div id="modal-detail" class="modal-overlay">
+    <div class="modal-dialog">
+      <button class="modal-close-btn" onclick="closeDetailModal()">✕</button>
+      <div id="detail-modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Bottom Navigation Bar -->
+  <nav class="bottom-nav">
+    <button id="nav-cities" class="nav-btn" onclick="showScreen('screen-cities')">
+      <span class="nav-icon">🏙️</span>
+      <span>Cities</span>
+    </button>
+    <button id="nav-browse" class="nav-btn active" onclick="showScreen('screen-browser')">
+      <span class="nav-icon">🔍</span>
+      <span>Browse</span>
+    </button>
+    <button id="nav-favs" class="nav-btn" onclick="showScreen('screen-favorites')">
+      <span class="nav-icon">❤️</span>
+      <span>Favorites</span>
+      <span id="fav-badge" class="fav-nav-badge" style="display:none;">0</span>
+    </button>
+    <button id="nav-itin" class="nav-btn" onclick="showScreen('screen-prefs')">
+      <span class="nav-icon">📅</span>
+      <span>Itinerary</span>
+    </button>
+  </nav>
+
+  <!-- =============================================
+       CORE JAVASCRIPT ENGINE (VERSION 3.51)
+       ============================================= -->
+  <script>
+    // -------------------------------------------------------------
+    // 1. MASTER 49-DESTINATION REGISTRY
+    // -------------------------------------------------------------
+    const CITIES_REGISTRY = [
+      { name: "Palm Springs, CA", file: "palm_springs", region: "US", count: 500, flag: "🌴", coords: [33.8225, -116.5410], sub: "Coachella Valley, CA" },
+      { name: "Baltimore, MD", file: "baltimore", region: "US", count: 500, flag: "🦀", coords: [39.2904, -76.6122], sub: "Maryland" },
+      { name: "Chicago, IL", file: "chicago", region: "US", count: 500, flag: "🏙️", coords: [41.8781, -87.6298], sub: "Illinois" },
+      { name: "New York City, NY", file: "new_york", region: "US", count: 120, flag: "🗽", coords: [40.7128, -74.0060], sub: "New York" },
+      { name: "East Village, NYC", file: "east_village", region: "US", count: 85, flag: "🍕", coords: [40.7264, -73.9818], sub: "Manhattan, NYC" },
+      { name: "Los Angeles, CA", file: "los_angeles", region: "US", count: 150, flag: "🎬", coords: [34.0522, -118.2437], sub: "California" },
+      { name: "San Francisco, CA", file: "san_francisco", region: "US", count: 140, flag: "🌉", coords: [37.7749, -122.4194], sub: "California" },
+      { name: "Miami, FL", file: "miami", region: "US", count: 110, flag: "🏖️", coords: [25.7617, -80.1918], sub: "Florida" },
+      { name: "Boston, MA", file: "boston", region: "US", count: 95, flag: "🏛️", coords: [42.3601, -71.0589], sub: "Massachusetts" },
+      { name: "Washington DC", file: "washington_dc", region: "US", count: 105, flag: "🏛️", coords: [38.9072, -77.0369], sub: "District of Columbia" },
+      { name: "Seattle, WA", file: "seattle", region: "US", count: 90, flag: "☕", coords: [47.6062, -122.3321], sub: "Washington" },
+      { name: "Las Vegas, NV", file: "las_vegas", region: "US", count: 115, flag: "🎰", coords: [36.1699, -115.1398], sub: "Nevada" },
+      { name: "New Orleans, LA", file: "new_orleans", region: "US", count: 95, flag: "🎷", coords: [29.9511, -90.0715], sub: "Louisiana" },
+      { name: "Austin, TX", file: "austin", region: "US", count: 85, flag: "🎸", coords: [30.2672, -97.7431], sub: "Texas" },
+      { name: "Dallas, TX", file: "dallas", region: "US", count: 80, flag: "🤠", coords: [32.7767, -96.7970], sub: "Texas" },
+      { name: "Denver, CO", file: "denver", region: "US", count: 85, flag: "🏔️", coords: [39.7392, -104.9903], sub: "Colorado" },
+      { name: "Nashville, TN", file: "nashville", region: "US", count: 90, flag: "🤠", coords: [36.1627, -86.7816], sub: "Tennessee" },
+      { name: "Charleston, SC", file: "charleston", region: "US", count: 75, flag: "🌴", coords: [32.7765, -79.9311], sub: "South Carolina" },
+      { name: "Philadelphia, PA", file: "philadelphia", region: "US", count: 90, flag: "🔔", coords: [39.9526, -75.1652], sub: "Pennsylvania" },
+      { name: "Portland, ME", file: "portland_me", region: "US", count: 65, flag: "🦞", coords: [43.6591, -70.2568], sub: "Maine" },
+      { name: "Portland, OR", file: "portland_or", region: "US", count: 85, flag: "🌲", coords: [45.5152, -122.6784], sub: "Oregon" },
+      { name: "San Diego, CA", file: "san_diego", region: "US", count: 105, flag: "🌮", coords: [32.7157, -117.1611], sub: "California" },
+      { name: "Montreal, Canada", file: "montreal", region: "CA", count: 90, flag: "🍁", coords: [45.5017, -73.5673], sub: "Quebec, Canada" },
+      { name: "Toronto, Canada", file: "toronto", region: "CA", count: 100, flag: "🍁", coords: [43.6532, -79.3832], sub: "Ontario, Canada" },
+      { name: "Vancouver, Canada", file: "vancouver", region: "CA", count: 95, flag: "🍁", coords: [49.2827, -123.1207], sub: "British Columbia, Canada" },
+      { name: "Quebec City, Canada", file: "quebec", region: "CA", count: 70, flag: "🍁", coords: [46.8139, -71.2080], sub: "Quebec, Canada" },
+      { name: "Madrid, Spain", file: "madrid", region: "EU", count: 500, flag: "💃", coords: [40.4168, -3.7038], sub: "Spain" },
+      { name: "Paris, France", file: "paris", region: "EU", count: 500, flag: "🥐", coords: [48.8566, 2.3522], sub: "France" },
+      { name: "London, UK", file: "london", region: "EU", count: 180, flag: "🇬🇧", coords: [51.5074, -0.1278], sub: "United Kingdom" },
+      { name: "Rome, Italy", file: "rome", region: "EU", count: 160, flag: "🇮🇹", coords: [41.9028, 12.4964], sub: "Italy" },
+      { name: "Berlin, Germany", file: "berlin", region: "EU", count: 140, flag: "🇩🇪", coords: [52.5200, 13.4050], sub: "Germany" },
+      { name: "Barcelona, Spain", file: "barcelona", region: "EU", count: 150, flag: "🇪🇸", coords: [41.3851, 2.1734], sub: "Spain" },
+      { name: "Amsterdam, Netherlands", file: "amsterdam", region: "EU", count: 120, flag: "🇳🇱", coords: [52.3676, 4.9041], sub: "Netherlands" },
+      { name: "Florence, Italy", file: "florence", region: "EU", count: 110, flag: "🇮🇹", coords: [43.7696, 11.2558], sub: "Italy" },
+      { name: "Venice, Italy", file: "venice", region: "EU", count: 95, flag: "🇮🇹", coords: [45.4408, 12.3155], sub: "Italy" },
+      { name: "Naples, Italy", file: "naples", region: "EU", count: 90, flag: "🍕", coords: [40.8518, 14.2681], sub: "Italy" },
+      { name: "Vienna, Austria", file: "vienna", region: "EU", count: 100, flag: "🇦🇹", coords: [48.2082, 16.3738], sub: "Austria" },
+      { name: "Prague, Czechia", file: "prague", region: "EU", count: 105, flag: "🇨🇿", coords: [50.0755, 14.4378], sub: "Czech Republic" },
+      { name: "Budapest, Hungary", file: "budapest", region: "EU", count: 95, flag: "🇭🇺", coords: [47.4979, 19.0402], sub: "Hungary" },
+      { name: "Dublin, Ireland", file: "dublin", region: "EU", count: 85, flag: "🇮🇪", coords: [53.3498, -6.2603], sub: "Ireland" },
+      { name: "Edinburgh, Scotland", file: "edinburgh", region: "EU", count: 80, flag: "🏴󠁧󠁢󠁳󠁣󠁴󠁿", coords: [55.9533, -3.1883], sub: "Scotland, UK" },
+      { name: "Lisbon, Portugal", file: "lisbon", region: "EU", count: 110, flag: "🇵🇹", coords: [38.7223, -9.1393], sub: "Portugal" },
+      { name: "Munich, Germany", file: "munich", region: "EU", count: 95, flag: "🍺", coords: [48.1351, 11.5820], sub: "Germany" },
+      { name: "Valencia, Spain", file: "valencia", region: "EU", count: 85, flag: "🥘", coords: [39.4699, -0.3763], sub: "Spain" },
+      { name: "Athens, Greece", file: "athens", region: "EU", count: 100, flag: "🏛️", coords: [37.9838, 23.7275], sub: "Greece" },
+      { name: "Kyoto, Japan", file: "kyoto", region: "EU", count: 110, flag: "🇯🇵", coords: [35.0116, 135.7681], sub: "Japan" },
+      { name: "Tokyo, Japan", file: "tokyo", region: "EU", count: 170, flag: "🗼", coords: [35.6762, 139.6503], sub: "Japan" },
+      { name: "Sydney, Australia", file: "sydney", region: "EU", count: 115, flag: "🇦🇺", coords: [-33.8688, 151.2093], sub: "Australia" },
+      { name: "Oldest & Best Dive Bars", file: "oldest_and_best_dive_bars", region: "US", count: 60, flag: "🍺", coords: [40.7128, -74.0060], sub: "Curated Thematic Guide" }
+    ];
+
+    // -------------------------------------------------------------
+    // 2. STATE MANAGEMENT & STORAGE HELPERS
+    // -------------------------------------------------------------
+    let currentScreenId = 'screen-welcome';
+    let currentCity = CITIES_REGISTRY[0];
+    let allPlaces = [];
+    let favoritesList = [];
+    let currentCategory = 'All';
+    let searchQuery = '';
+    let isOpenNowOnly = false;
+    let isHiddenGemsOnly = false;
+    let isMapMode = false;
+    let mapInstance = null;
+    let mapMarkers = [];
+    let citiesSearchQuery = '';
+    let citiesSortMode = 'rating';
+    let currentStep = 1;
+    let userGeoLoc = null;
+
+    function getStorage(key) {
+      try { return localStorage.getItem(key); }
+      catch(e) { return null; }
+    }
+
+    function setStorage(key, val) {
+      try { localStorage.setItem(key, val); }
+      catch(e) {}
+    }
+
+    // Load favorites safely
+    try {
+      favoritesList = JSON.parse(getStorage('favPlaces') || '[]');
+    } catch(e) { favoritesList = []; }
+
+    // -------------------------------------------------------------
+    // 3. ROUTING & BACK/FORWARD HISTORY ENGINE
+    // -------------------------------------------------------------
+    function showScreen(id, pushHash = true) {
+      const screens = document.querySelectorAll('.screen');
+      screens.forEach(s => s.classList.remove('active'));
+
+      const target = document.getElementById(id);
+      if (target) {
+        target.classList.add('active');
+        currentScreenId = id;
+        window.scrollTo(0, 0);
+      }
+
+      // Nav bar active highlights
+      document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+      if (id === 'screen-cities') document.getElementById('nav-cities')?.classList.add('active');
+      if (id === 'screen-browser') document.getElementById('nav-browse')?.classList.add('active');
+      if (id === 'screen-favorites') {
+        document.getElementById('nav-favs')?.classList.add('active');
+        renderFavorites();
+      }
+      if (id === 'screen-itinerary' || id === 'screen-prefs') document.getElementById('nav-itin')?.classList.add('active');
+
+      if (pushHash) {
+        try {
+          history.pushState({ screen: id, city: currentCity?.file }, '', '#' + id);
+        } catch(e) {}
+      }
+    }
+
+    window.addEventListener('popstate', function(e) {
+      const detailModal = document.getElementById('modal-detail');
+      if (detailModal && detailModal.classList.contains('active')) {
+        closeDetailModal();
+        return;
+      }
+      const helpModal = document.getElementById('modal-help');
+      if (helpModal && helpModal.classList.contains('active')) {
+        closeHelpModal();
+        return;
+      }
+
+      const hash = window.location.hash.replace('#', '');
+      if (hash && document.getElementById(hash)) {
+        showScreen(hash, false);
+      } else if (e.state && e.state.screen && document.getElementById(e.state.screen)) {
+        showScreen(e.state.screen, false);
+      } else {
+        showScreen('screen-cities', false);
+      }
+    });
+
+    // -------------------------------------------------------------
+    // 4. SPLASH & LEGAL LIFECYCLE
+    // -------------------------------------------------------------
+    function dismissSplash() {
+      const fill = document.getElementById('splash-fill');
+      if (fill) fill.style.width = '100%';
+      setTimeout(() => {
+        const splash = document.getElementById('screen-splash');
+        if (splash) splash.style.display = 'none';
+        
+        const agreed = getStorage('hasAgreedLegal') === 'true';
+        if (!agreed) showScreen('screen-legal');
+        else showScreen('screen-welcome');
+      }, 400);
+    }
+
+    function handleStartApp() {
+      const agreed = getStorage('hasAgreedLegal') === 'true';
+      if (!agreed) showScreen('screen-legal');
+      else {
+        const seenOnboarding = getStorage('hasSeenOnboarding') === 'true';
+        if (!seenOnboarding) showScreen('screen-onboarding');
+        else showScreen('screen-cities');
+      }
+    }
+
+    function agreeLegal() {
+      setStorage('hasAgreedLegal', 'true');
+      const seen = getStorage('hasSeenOnboarding') === 'true';
+      if (!seen) showScreen('screen-onboarding');
+      else showScreen('screen-cities');
+    }
+
+    // Carousel Walkthrough
+    function showStep(step) {
+      currentStep = step;
+      for (let i = 1; i <= 4; i++) {
+        const dot = document.getElementById(`step-dot-${i}`);
+        if (dot) {
+          if (i === step) dot.classList.add('active');
+          else dot.classList.remove('active');
+        }
+      }
+
+      const content = document.getElementById('step-content');
+      const prevBtn = document.getElementById('btn-step-prev');
+      const nextBtn = document.getElementById('btn-step-next');
+
+      if (prevBtn) prevBtn.style.visibility = step === 1 ? 'hidden' : 'visible';
+
+      if (step === 1) {
+        content.innerHTML = `
+          <div class="walkthrough-img">🏙️</div>
+          <h3 class="walkthrough-h3">Select Your Destination</h3>
+          <p class="walkthrough-p">Explore 49 global destinations with verified local scores, custom filters, and neighborhood guides.</p>`;
+      } else if (step === 2) {
+        content.innerHTML = `
+          <div class="walkthrough-img">🔍</div>
+          <h3 class="walkthrough-h3">Filter Spots Like a Local</h3>
+          <p class="walkthrough-p">Filter by food, nightlife, culture, open hours, and hidden gems rated 7.0+ by residents.</p>`;
+      } else if (step === 3) {
+        content.innerHTML = `
+          <div class="walkthrough-img">🗺️</div>
+          <h3 class="walkthrough-h3">Interactive Leaflet Maps</h3>
+          <p class="walkthrough-p">Toggle seamless map view to pinpoint spots, get quick directions, and explore spatial routes.</p>`;
+      } else if (step === 4) {
+        content.innerHTML = `
+          <div class="walkthrough-img">📅</div>
+          <h3 class="walkthrough-h3">Smart Itinerary Generator</h3>
+          <p class="walkthrough-p">Generate custom 1–5 day trip plans with automatically calculated time slots and export to calendar!</p>`;
+      }
+
+      if (nextBtn) nextBtn.textContent = step === 4 ? 'Finish ➔' : 'Next ➔';
+    }
+
+    function nextStep() {
+      if (currentStep < 4) showStep(currentStep + 1);
+      else {
+        if (document.getElementById('chk-disable-walkthrough')?.checked) {
+          setStorage('hasSeenOnboarding', 'true');
+        }
+        showScreen('screen-cities');
+      }
+    }
+
+    function prevStep() {
+      if (currentStep > 1) showStep(currentStep - 1);
+    }
+
+    function reopenWalkthrough() {
+      closeHelpModal();
+      showStep(1);
+      showScreen('screen-onboarding');
+    }
+
+    // -------------------------------------------------------------
+    // 5. CITY INGESTION & DATA NORMALIZATION
+    // -------------------------------------------------------------
+    async function loadCityData(city) {
+      currentCity = city;
+      const titleEl = document.getElementById('browse-title');
+      if (titleEl) titleEl.textContent = city.name.split(',')[0];
+
+      showScreen('screen-browser');
+
+      const listEl = document.getElementById('venue-list');
+      if (listEl) {
+        listEl.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);font-weight:700;">Loading local spots...</div>';
+      }
+
+      try {
+        const res = await fetch(`cities/${city.file}.json`);
+        if (!res.ok) throw new Error('Network error loading city JSON');
+        const raw = await res.json();
+        allPlaces = normalizeCityData(raw);
+      } catch(e) {
+        console.warn('Fetch failed, loading fallback data:', e);
+        showToast(`⚡ Serving backup offline guide for ${city.name.split(',')[0]}`);
+        allPlaces = normalizeCityData([
+          { ID: `${city.file.substring(0,3).toUpperCase()}-0001`, Name: `${city.name.split(',')[0]} Historic Center Plaza`, Category: "Culture", Subcategory: "Historic Landmark", Local_Score: 9.5, Hidden_Gem_Score: 8.8, Address_Street: "Main Central Square", Address_City: city.name.split(',')[0], Price: "$$", Why_Go: `Central landmark and authentic meeting point in ${city.name}.`, Morning: true, Afternoon: true, Latitude: city.coords[0], Longitude: city.coords[1], Google_Maps_Link: `https://www.google.com/maps/search/?api=1&query=${city.coords[0]},${city.coords[1]}` },
+          { ID: `${city.file.substring(0,3).toUpperCase()}-0002`, Name: "Popular Local Bistro & Cafe", Category: "Food", Subcategory: "Bistro", Local_Score: 9.2, Hidden_Gem_Score: 9.0, Address_Street: "12 Main Boulevard", Address_City: city.name.split(',')[0], Price: "$$", Why_Go: "Beloved community eatery serving fresh seasonal specialties.", Morning: true, Lunch: true, Dinner: true, Latitude: city.coords[0] + 0.005, Longitude: city.coords[1] + 0.005 },
+          { ID: `${city.file.substring(0,3).toUpperCase()}-0003`, Name: "Hidden Gem Jazz & Cocktail Lounge", Category: "Nightlife", Subcategory: "Lounge", Local_Score: 9.6, Hidden_Gem_Score: 9.5, Address_Street: "8 Side Street Lane", Address_City: city.name.split(',')[0], Price: "$$$", Why_Go: "Atmospheric local speakeasy featuring live music and artisan cocktails.", Dinner: true, Nightlife: true, Latitude: city.coords[0] - 0.005, Longitude: city.coords[1] - 0.005 }
+        ]);
+      }
+
+      // Populate Neighborhood dropdown
+      const nHoods = [...new Set(allPlaces.map(p => p.Neighborhood).filter(Boolean))].sort();
+      const nSel = document.getElementById('pref-neighborhood');
+      if (nSel) {
+        nSel.innerHTML = '<option value="All">All Neighborhoods</option>' + nHoods.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+      }
+
+      // Populate Interests chips
+      const interests = [...new Set(allPlaces.flatMap(p => p.interestsArray))].slice(0, 16);
+      const intBox = document.getElementById('pref-interests-chips');
+      if (intBox) {
+        intBox.innerHTML = interests.map(i => `<button class="cat-pill" onclick="this.classList.toggle('active')">${escapeHtml(i)}</button>`).join('');
+      }
+
+      renderVenues();
+      if (isMapMode) initOrUpdateMap();
+    }
+
+    function normalizeCityData(rawList) {
+      if (!Array.isArray(rawList)) return [];
+      return rawList.map((p, idx) => {
+        const interestsRaw = p.Interests || p.interests || '';
+        const arr = typeof interestsRaw === 'string' ? interestsRaw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean) : [];
+        
+        return {
+          ID: p.ID || `SPOT-${idx+1}`,
+          City: p.City || (currentCity ? currentCity.name : 'Local'),
+          Name: p.Name || 'Local Destination',
+          Category: p.Category || 'Culture',
+          Subcategory: p.Subcategory || '',
+          Description: p.Description || '',
+          Why_Go: p.Why_Go || p.Why_Go_Context || p.WhyGo || 'Highly rated local spot.',
+          Address_Street: p.Address_Street || p.Street || 'Central Address',
+          Address_City: p.Address_City || (currentCity ? currentCity.name.split(',')[0] : ''),
+          Address_State: p.Address_State || '',
+          Address_Zip: p.Address_Zip || '',
+          Neighborhood: p.Neighborhood || 'Central District',
+          Latitude: parseFloat(p.Latitude) || (currentCity ? currentCity.coords[0] : 0),
+          Longitude: parseFloat(p.Longitude) || (currentCity ? currentCity.coords[1] : 0),
+          Price: p.Price || '$$',
+          Local_Score: parseFloat(p.Local_Score) || 8.8,
+          Hidden_Gem_Score: parseFloat(p.Hidden_Gem_Score) || 8.5,
+          Morning: Boolean(p.Morning === true || p.Morning === 'TRUE' || p.Morning === 'true' || p.Morning === 1),
+          Lunch: Boolean(p.Lunch === true || p.Lunch === 'TRUE' || p.Lunch === 'true' || p.Lunch === 1),
+          Afternoon: Boolean(p.Afternoon === true || p.Afternoon === 'TRUE' || p.Afternoon === 'true' || p.Afternoon === 1),
+          Drinks: Boolean(p.Drinks === true || p.Drinks === 'TRUE' || p.Drinks === 'true' || p.Drinks === 1),
+          Dinner: Boolean(p.Dinner === true || p.Dinner === 'TRUE' || p.Dinner === 'true' || p.Dinner === 1),
+          Nightlife: Boolean(p.Nightlife === true || p.Nightlife === 'TRUE' || p.Nightlife === 'true' || p.Nightlife === 1),
+          Opening_Hours: p.Opening_Hours || 'Daily 09:00-22:00',
+          Website: p.Website || '',
+          Phone: p.Phone || '',
+          Google_Maps_Link: p.Google_Maps_Link || '',
+          interestsArray: arr
+        };
+      });
+    }
+
+    // -------------------------------------------------------------
+    // 6. CITIES GRID & DIRECTORY RENDERING
+    // -------------------------------------------------------------
+    function filterCities(query) {
+      citiesSearchQuery = (query || '').toLowerCase().trim();
+      renderCityGrid();
+    }
+
+    function sortCities(mode) {
+      citiesSortMode = mode;
+      document.querySelectorAll('.sort-pill').forEach(b => b.classList.remove('active'));
+      if (mode === 'rating') document.getElementById('city-sort-rating')?.classList.add('active');
+      if (mode === 'alpha') document.getElementById('city-sort-alpha')?.classList.add('active');
+      renderCityGrid();
+    }
+
+    function renderCityGrid() {
+      const container = document.getElementById('cities-container');
+      if (!container) return;
+
+      let list = [...CITIES_REGISTRY];
+
+      if (citiesSearchQuery) {
+        list = list.filter(c => 
+          c.name.toLowerCase().includes(citiesSearchQuery) ||
+          c.region.toLowerCase().includes(citiesSearchQuery) ||
+          c.sub.toLowerCase().includes(citiesSearchQuery)
+        );
+      }
+
+      if (citiesSortMode === 'alpha') {
+        list.sort((a, b) => a.name.localeCompare(b.name));
+      } else {
+        list.sort((a, b) => b.count - a.count);
+      }
+
+      const usCities = list.filter(c => c.region === 'US' || c.region === 'CA');
+      const intlCities = list.filter(c => c.region !== 'US' && c.region !== 'CA');
+
+      let html = '';
+
+      if (usCities.length > 0) {
+        html += `<span class="region-divider">🇺🇸 United States & North America (${usCities.length})</span><div class="cities-grid">`;
+        usCities.forEach(c => {
+          const idx = CITIES_REGISTRY.findIndex(x => x.file === c.file);
+          html += `
+            <div class="city-card verified" onclick="loadCityData(CITIES_REGISTRY[${idx}])">
+              <div class="city-status-pill online">Online</div>
+              <div class="city-card-name">${c.flag} ${escapeHtml(c.name.split(',')[0])}</div>
+              <div class="city-card-count">${escapeHtml(c.sub)} • ${c.count} Venues</div>
+            </div>`;
+        });
+        html += `</div>`;
+      }
+
+      if (intlCities.length > 0) {
+        html += `<span class="region-divider" style="margin-top:18px;">🇪🇺 Europe & International (${intlCities.length})</span><div class="cities-grid">`;
+        intlCities.forEach(c => {
+          const idx = CITIES_REGISTRY.findIndex(x => x.file === c.file);
+          html += `
+            <div class="city-card verified" onclick="loadCityData(CITIES_REGISTRY[${idx}])">
+              <div class="city-status-pill online">Online</div>
+              <div class="city-card-name">${c.flag} ${escapeHtml(c.name.split(',')[0])}</div>
+              <div class="city-card-count">${escapeHtml(c.sub)} • ${c.count} Venues</div>
+            </div>`;
+        });
+        html += `</div>`;
+      }
+
+      if (list.length === 0) {
+        html = `
+          <div style="text-align:center;padding:40px 20px;background:var(--card);border-radius:12px;margin-top:14px;border:1px solid var(--border);">
+            <div style="font-size:2rem;margin-bottom:8px;">🔍</div>
+            <strong style="color:var(--primary);display:block;margin-bottom:4px;">No matching destinations found</strong>
+            <span style="font-size:15px;color:var(--text2);">Try searching for another city, state, or country.</span><br>
+            <button class="btn-cta" style="margin-top:14px;padding:8px 16px;font-size:15px;width:auto;" onclick="resetCitiesSearch()">Show All Destinations</button>
+          </div>`;
+      }
+
+      container.innerHTML = html;
+
+      const headerCount = document.getElementById('cities-header-count');
+      if (headerCount) headerCount.textContent = `${list.length} Available`;
+      const welcomeCount = document.getElementById('dynamic-city-count');
+      if (welcomeCount) welcomeCount.textContent = CITIES_REGISTRY.length;
+    }
+
+    function resetCitiesSearch() {
+      citiesSearchQuery = '';
+      const input = document.getElementById('cities-search-input');
+      if (input) input.value = '';
+      renderCityGrid();
+    }
+
+    // -------------------------------------------------------------
+    // 7. VENUE DIRECTORY RENDERING & FILTERS
+    // -------------------------------------------------------------
+    function filterCategory(cat, el) {
+      currentCategory = cat;
+      document.querySelectorAll('#browse-category-tabs .cat-pill').forEach(b => b.classList.remove('active'));
+      if (el) el.classList.add('active');
+      renderVenues();
+    }
+
+    function handleSearch(q) {
+      searchQuery = (q || '').toLowerCase().trim();
+      renderVenues();
+    }
+
+    function toggleOpenNow() {
+      isOpenNowOnly = !isOpenNowOnly;
+      const btn = document.getElementById('btn-filter-opennow');
+      if (btn) btn.classList.toggle('active', isOpenNowOnly);
+      renderVenues();
+    }
+
+    function toggleHiddenGems() {
+      isHiddenGemsOnly = !isHiddenGemsOnly;
+      const btn = document.getElementById('btn-filter-hiddengems');
+      if (btn) btn.classList.toggle('active', isHiddenGemsOnly);
+      renderVenues();
+    }
+
+    function toggleNearMe() {
+      const btn = document.getElementById('btn-browse-nearme');
+      if (!navigator.geolocation) {
+        showToast('Geolocation is not supported by your browser.');
+        return;
+      }
+
+      if (userGeoLoc) {
+        userGeoLoc = null;
+        if (btn) btn.classList.remove('active');
+        renderVenues();
+        showToast('Reset to standard venue ordering.');
+        return;
+      }
+
+      showToast('Locating your position...');
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          userGeoLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          if (btn) btn.classList.add('active');
+          renderVenues();
+          showToast('Sorted by nearest distance to you! 📍');
+        },
+        (err) => {
+          console.warn('Geo error:', err);
+          showToast('Location access denied or unavailable.');
+        },
+        { timeout: 6000 }
+      );
+    }
+
+    function renderVenues() {
+      const listEl = document.getElementById('venue-list');
+      if (!listEl) return;
+
+      let filtered = [...allPlaces];
+
+      if (currentCategory !== 'All') {
+        filtered = filtered.filter(p => p.Category.toLowerCase().includes(currentCategory.toLowerCase()));
+      }
+
+      if (searchQuery) {
+        filtered = filtered.filter(p => 
+          p.Name.toLowerCase().includes(searchQuery) ||
+          p.Category.toLowerCase().includes(searchQuery) ||
+          p.Subcategory.toLowerCase().includes(searchQuery) ||
+          p.Neighborhood.toLowerCase().includes(searchQuery) ||
+          p.Address_Street.toLowerCase().includes(searchQuery) ||
+          p.Why_Go.toLowerCase().includes(searchQuery)
+        );
+      }
+
+      if (isHiddenGemsOnly) {
+        filtered = filtered.filter(p => p.Hidden_Gem_Score >= 7.0 || p.Local_Score >= 9.0);
+      }
+
+      if (userGeoLoc) {
+        filtered.sort((a, b) => {
+          const dA = haversineDistance(userGeoLoc.lat, userGeoLoc.lng, a.Latitude, a.Longitude);
+          const dB = haversineDistance(userGeoLoc.lat, userGeoLoc.lng, b.Latitude, b.Longitude);
+          return dA - dB;
+        });
+      } else {
+        filtered.sort((a, b) => b.Local_Score - a.Local_Score);
+      }
+
+      if (filtered.length === 0) {
+        listEl.innerHTML = `
+          <div style="text-align:center;padding:40px 20px;background:var(--card);border-radius:var(--radius);border:1px solid var(--border);">
+            <div style="font-size:2rem;margin-bottom:8px;">🔍</div>
+            <strong style="color:var(--primary);display:block;margin-bottom:4px;">No spots match your current filters</strong>
+            <span style="font-size:15px;color:var(--text2);">Try clearing your search or switching categories.</span><br>
+            <button class="btn-cta" style="margin-top:14px;padding:8px 16px;font-size:15px;width:auto;" onclick="resetAllFilters()">Reset All Filters</button>
+          </div>`;
+        return;
+      }
+
+      listEl.innerHTML = filtered.map(p => {
+        const isFav = favoritesList.some(f => f.ID === p.ID);
+        const catBadge = p.Subcategory ? `${p.Category} • ${p.Subcategory}` : p.Category;
+
+        return `
+          <div class="venue-card">
+            <button class="venue-fav-btn" onclick="toggleFav('${p.ID}')">${isFav ? '❤️' : '🤍'}</button>
+            <div class="venue-card-header">
+              <div class="venue-title-box">
+                <div class="venue-title">${escapeHtml(p.Name)}</div>
+                <div class="venue-sub">${escapeHtml(catBadge)}</div>
+              </div>
+            </div>
+
+            <div class="venue-meta-bar">
+              <span class="venue-score">★ ${p.Local_Score} Local Score</span>
+              <span class="venue-price">${p.Price}</span>
+              <span>📍 ${escapeHtml(p.Neighborhood)}</span>
+            </div>
+
+            <div class="venue-whygo">“${escapeHtml(p.Why_Go)}”</div>
+
+            <div class="venue-actions">
+              <button class="btn-card-action primary" onclick="openDetailModal('${p.ID}')">Details & Map ➔</button>
+              <button class="btn-card-action" onclick="openMapPin('${p.ID}')">📍 Directions</button>
+            </div>
+          </div>`;
+      }).join('');
+
+      if (isMapMode) initOrUpdateMap();
+    }
+
+    function resetAllFilters() {
+      currentCategory = 'All';
+      searchQuery = '';
+      isOpenNowOnly = false;
+      isHiddenGemsOnly = false;
+      userGeoLoc = null;
+
+      const sInput = document.getElementById('search-input');
+      if (sInput) sInput.value = '';
+      document.getElementById('btn-filter-opennow')?.classList.remove('active');
+      document.getElementById('btn-filter-hiddengems')?.classList.remove('active');
+      document.getElementById('btn-browse-nearme')?.classList.remove('active');
+
+      document.querySelectorAll('#browse-category-tabs .cat-pill').forEach(b => {
+        if (b.textContent.trim() === 'All') b.classList.add('active');
+        else b.classList.remove('active');
+      });
+
+      renderVenues();
+    }
+
+    function haversineDistance(lat1, lon1, lat2, lon2) {
+      if (!lat1 || !lon1 || !lat2 || !lon2) return 9999;
+      const R = 6371; // km
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+
+    // -------------------------------------------------------------
+    // 8. LEAFLET MAP ENGINE (CORRECTED CONTAINER ID & INVALIDATESIZE)
+    // -------------------------------------------------------------
+    function toggleViewMode() {
+      isMapMode = !isMapMode;
+      const listEl = document.getElementById('venue-list');
+      const mapContainer = document.getElementById('browse-map-container');
+      const btn = document.getElementById('btn-view-toggle');
+
+      if (isMapMode) {
+        if (listEl) listEl.style.display = 'none';
+        if (mapContainer) mapContainer.style.display = 'block';
+        if (btn) btn.textContent = '📋 List View';
+        initOrUpdateMap();
+      } else {
+        if (listEl) listEl.style.display = 'block';
+        if (mapContainer) mapContainer.style.display = 'none';
+        if (btn) btn.textContent = '🗺️ Map View';
+      }
+    }
+
+    function initOrUpdateMap() {
+      const mapContainer = document.getElementById('browse-map-container');
+      const mapDiv = document.getElementById('leaflet-map');
+      if (!mapContainer || !mapDiv || !isMapMode) return;
+
+      if (typeof L === 'undefined') {
+        mapDiv.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text2);font-weight:700;">Leaflet map library loading or offline. Switch to List View.</div>';
+        return;
+      }
+
+      try {
+        const defaultCoords = (currentCity && currentCity.coords) ? currentCity.coords : [33.8225, -116.5410];
+
+        if (!mapInstance) {
+          mapInstance = L.map('leaflet-map', { zoomControl: true }).setView(defaultCoords, 13);
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 18
+          }).addTo(mapInstance);
+        } else {
+          mapInstance.setView(defaultCoords, 13);
+        }
+
+        // Clear markers
+        mapMarkers.forEach(m => {
+          try { mapInstance.removeLayer(m); } catch(e) {}
+        });
+        mapMarkers = [];
+
+        const validSpots = allPlaces.filter(p => p.Latitude && p.Longitude && !isNaN(p.Latitude) && !isNaN(p.Longitude) && p.Latitude !== 0);
+
+        validSpots.forEach(p => {
+          const marker = L.marker([p.Latitude, p.Longitude]).addTo(mapInstance);
+          const catBadge = p.Subcategory ? `${p.Category} • ${p.Subcategory}` : p.Category;
+          
+          marker.bindPopup(`
+            <div style="font-family:sans-serif;padding:4px;max-width:210px;">
+              <strong style="font-size:15px;color:#1B365D;display:block;margin-bottom:2px;">${escapeHtml(p.Name)}</strong>
+              <span style="font-size:15px;color:#666;display:block;margin-bottom:4px;">${escapeHtml(catBadge)}</span>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <span style="font-size:15px;color:#CC5500;font-weight:700;">★ ${p.Local_Score || '8.8'}</span>
+                <span style="font-size:15px;color:#128C7E;font-weight:700;">${p.Price || '$$'}</span>
+              </div>
+              <button style="width:100%;background:#1B365D;color:#fff;border:none;padding:5px 8px;border-radius:4px;font-size:15px;font-weight:700;cursor:pointer;" onclick="openDetailModalByObj('${p.ID}')">View Spot Details ➔</button>
+            </div>
+          `);
+          mapMarkers.push(marker);
+        });
+
+        setTimeout(() => {
+          if (mapInstance) mapInstance.invalidateSize();
+        }, 250);
+
+      } catch(e) {
+        console.error('Map init error:', e);
+        mapDiv.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text2);">Map temporarily unavailable. Switch to List View.</div>';
+      }
+    }
+
+    function openMapPin(id) {
+      const p = allPlaces.find(x => x.ID === id);
+      if (!p) return;
+      if (p.Google_Maps_Link && p.Google_Maps_Link.startsWith('http')) {
+        window.open(p.Google_Maps_Link, '_blank');
+      } else if (p.Latitude && p.Longitude) {
+        window.open(`https://www.google.com/maps/search/?api=1&query=${p.Latitude},${p.Longitude}`, '_blank');
+      } else {
+        window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.Name + ' ' + (p.Address_City || ''))}`, '_blank');
+      }
+    }
+
+    // -------------------------------------------------------------
+    // 9. FAVORITES & NOTES ENGINE
+    // -------------------------------------------------------------
+    function toggleFav(id) {
+      const idx = favoritesList.findIndex(f => f.ID === id);
+      if (idx !== -1) {
+        favoritesList.splice(idx, 1);
+        showToast('Removed from Favorites');
+      } else {
+        const item = allPlaces.find(p => p.ID === id);
+        if (item) {
+          favoritesList.push(item);
+          showToast('Added to Saved Favorites ❤️');
+        }
+      }
+      setStorage('favPlaces', JSON.stringify(favoritesList));
+      updateFavBadge();
+      renderVenues();
+      if (currentScreenId === 'screen-favorites') renderFavorites();
+    }
+
+    function updateFavBadge() {
+      const badge = document.getElementById('fav-badge');
+      if (!badge) return;
+      if (favoritesList.length > 0) {
+        badge.style.display = 'flex';
+        badge.textContent = favoritesList.length;
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+
+    function renderFavorites() {
+      const container = document.getElementById('favs-list-container');
+      if (!container) return;
+
+      if (favoritesList.length === 0) {
+        container.innerHTML = `
+          <div style="text-align:center;padding:40px 20px;background:var(--card);border-radius:var(--radius);border:1px solid var(--border);">
+            <div style="font-size:2.5rem;margin-bottom:8px;">🤍</div>
+            <strong style="color:var(--primary);display:block;margin-bottom:4px;">No Saved Favorite Spots Yet</strong>
+            <span style="font-size:15px;color:var(--text2);">Tap the heart icon on any venue card while browsing to save local spots.</span><br>
+            <button class="btn-cta" style="margin-top:14px;padding:10px 18px;font-size:15px;width:auto;" onclick="showScreen('screen-browser')">Explore Local Spots ➔</button>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = favoritesList.map(p => `
+        <div class="venue-card">
+          <button class="venue-fav-btn" onclick="toggleFav('${p.ID}')">❤️</button>
+          <div class="venue-card-header">
+            <div class="venue-title-box">
+              <div class="venue-title">${escapeHtml(p.Name)}</div>
+              <div class="venue-sub">${escapeHtml(p.Category)} • ${escapeHtml(p.City)}</div>
+            </div>
+          </div>
+          <div class="venue-meta-bar">
+            <span class="venue-score">★ ${p.Local_Score} Local Score</span>
+            <span class="venue-price">${p.Price}</span>
+            <span>📍 ${escapeHtml(p.Neighborhood || 'Central')}</span>
+          </div>
+          <div class="venue-whygo">“${escapeHtml(p.Why_Go)}”</div>
+          <div class="venue-actions">
+            <button class="btn-card-action primary" onclick="openDetailModal('${p.ID}')">Details ➔</button>
+            <button class="btn-card-action" onclick="openMapPin('${p.ID}')">📍 Directions</button>
+          </div>
+        </div>`).join('');
+    }
+
+    // -------------------------------------------------------------
+    // 10. ITINERARY BUILDER
+    // -------------------------------------------------------------
+    function updateDays(val) {
+      const label = document.getElementById('days-val');
+      if (label) label.textContent = `${val} Day${val > 1 ? 's' : ''}`;
+    }
+
+    function buildItinerary() {
+      const days = parseInt(document.getElementById('pref-days')?.value || 2);
+      const style = document.getElementById('pref-style')?.value || 'Local & authentic';
+
+      if (allPlaces.length === 0) {
+        showToast('Please select a destination first.');
+        showScreen('screen-cities');
+        return;
+      }
+
+      showScreen('screen-itinerary');
+
+      const tabsEl = document.getElementById('itinerary-days-tabs');
+      let tabsHtml = '';
+      for (let i = 1; i <= days; i++) {
+        tabsHtml += `<button class="cat-pill ${i === 1 ? 'active' : ''}" onclick="switchItinDay(${i}, this)">Day ${i}</button>`;
+      }
+      if (tabsEl) tabsEl.innerHTML = tabsHtml;
+
+      renderItineraryDay(1, days, style);
+    }
+
+    function switchItinDay(dayNum, btn) {
+      document.querySelectorAll('#itinerary-days-tabs .cat-pill').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      const style = document.getElementById('pref-style')?.value || 'Local & authentic';
+      const days = parseInt(document.getElementById('pref-days')?.value || 2);
+      renderItineraryDay(dayNum, days, style);
+    }
+
+    function renderItineraryDay(dayNum, totalDays, style) {
+      const container = document.getElementById('itinerary-stops-container');
+      if (!container) return;
+
+      const perDay = Math.min(4, Math.ceil(allPlaces.length / totalDays));
+      const startIdx = (dayNum - 1) * perDay;
+      const daySpots = allPlaces.slice(startIdx, startIdx + perDay);
+
+      if (daySpots.length === 0) {
+        container.innerHTML = '<div style="padding:30px;text-align:center;color:var(--text2);">No stops available for this day.</div>';
+        return;
+      }
+
+      const times = ['🌅 Morning (9:00 AM)', '☀️ Midday / Lunch (12:30 PM)', '<ctrl42> Afternoon (3:00 PM)', '🌙 Evening & Dinner (7:00 PM)'];
+
+      container.innerHTML = daySpots.map((p, idx) => `
+        <div class="itin-stop-card">
+          <div class="itin-stop-time">${times[idx % times.length]}</div>
+          <strong style="font-family:var(--font-d);font-size:1.1rem;color:var(--primary);display:block;margin-bottom:2px;">${escapeHtml(p.Name)}</strong>
+          <span style="font-size:15px;color:var(--text-muted);display:block;margin-bottom:6px;">${escapeHtml(p.Category)} • ${escapeHtml(p.Neighborhood)}</span>
+          <p style="font-size:15px;color:var(--text2);margin-bottom:8px;">${escapeHtml(p.Why_Go)}</p>
+          <div style="display:flex;gap:6px;">
+            <button class="btn-card-action primary" style="padding:4px 8px;font-size:15px;" onclick="openDetailModal('${p.ID}')">Details ➔</button>
+            <button class="btn-card-action" style="padding:4px 8px;font-size:15px;" onclick="openMapPin('${p.ID}')">📍 Map Directions</button>
+          </div>
+        </div>`).join('');
+    }
+
+    // -------------------------------------------------------------
+    // 11. DETAIL MODAL & HELP MODAL
+    // -------------------------------------------------------------
+    function openDetailModal(id) {
+      openDetailModalByObj(id);
+    }
+
+    function openDetailModalByObj(id) {
+      const p = allPlaces.find(x => x.ID === id);
+      if (!p) return;
+
+      const modal = document.getElementById('modal-detail');
+      const body = document.getElementById('detail-modal-body');
+      if (!modal || !body) return;
+
+      const isFav = favoritesList.some(f => f.ID === p.ID);
+
+      body.innerHTML = `
+        <div style="font-family:var(--font-d);font-size:1.4rem;font-weight:700;color:var(--primary);margin-bottom:4px;padding-right:24px;">${escapeHtml(p.Name)}</div>
+        <div style="font-size:15px;color:var(--text-muted);font-weight:700;text-transform:uppercase;margin-bottom:10px;">${escapeHtml(p.Category)} • ${escapeHtml(p.Subcategory || 'Local Spot')}</div>
+
+        <div class="venue-meta-bar" style="margin-bottom:12px;">
+          <span class="venue-score">★ ${p.Local_Score} Local Score</span>
+          <span class="venue-price">${p.Price}</span>
+          <span>📍 ${escapeHtml(p.Neighborhood)}</span>
+        </div>
+
+        <div class="venue-whygo" style="margin-bottom:14px;">“${escapeHtml(p.Why_Go)}”</div>
+
+        <div style="font-size:15px;color:var(--text2);line-height:1.6;margin-bottom:14px;">
+          <strong style="color:var(--primary);">Overview & Highlights:</strong><br>
+          ${escapeHtml(p.Description || p.Why_Go)}
+        </div>
+
+        <div style="font-size:15px;color:var(--text2);line-height:1.6;margin-bottom:16px;background:var(--bg-main);padding:10px;border-radius:8px;border:1px solid var(--border);">
+          <strong>📍 Address:</strong> ${escapeHtml(p.Address_Street)}, ${escapeHtml(p.Address_City)} ${p.Address_State || ''} ${p.Address_Zip || ''}<br>
+          <strong>🕒 Hours:</strong> ${escapeHtml(p.Opening_Hours)}<br>
+          ${p.Phone ? `<strong>📞 Phone:</strong> ${escapeHtml(p.Phone)}<br>` : ''}
+          ${p.Website ? `<strong>🌐 Website:</strong> <a href="${p.Website}" target="_blank" style="color:var(--accent);">${escapeHtml(p.Website)}</a>` : ''}
+        </div>
+
+        <div style="display:flex;gap:8px;">
+          <button class="btn-cta" style="flex:2;" onclick="openMapPin('${p.ID}')">📍 Open Navigation Directions ➔</button>
+          <button class="btn-cta" style="flex:1;background:var(--card);color:var(--primary);border:1px solid var(--border);" onclick="toggleFav('${p.ID}');closeDetailModal();">${isFav ? '❤️ Saved' : '🤍 Save'}</button>
+        </div>`;
+
+      modal.classList.add('active');
+      try {
+        history.pushState({ modal: 'detail', id: id }, '', '#detail-' + id);
+      } catch(e) {}
+    }
+
+    function closeDetailModal() {
+      document.getElementById('modal-detail')?.classList.remove('active');
+    }
+
+    function openHelpModal() {
+      const modal = document.getElementById('modal-help');
+      if (modal) modal.classList.add('active');
+    }
+
+    function closeHelpModal() {
+      document.getElementById('modal-help')?.classList.remove('active');
+    }
+
+    // -------------------------------------------------------------
+    // 12. EXPORT & SHARE HELPERS
+    // -------------------------------------------------------------
+    function shareItinerary() {
+      const text = `Check out my custom ${currentCity ? currentCity.name : 'trip'} itinerary on Local Like a Local!`;
+      if (navigator.share) {
+        navigator.share({ title: 'My Custom Trip Plan', text: text, url: window.location.href }).catch(() => {});
+      } else {
+        navigator.clipboard.writeText(text + ' ' + window.location.href);
+        showToast('Itinerary summary copied to clipboard! 📋');
+      }
+    }
+
+    function shareFavorites() {
+      const text = `My Saved Favorite Spots in ${currentCity ? currentCity.name : 'Local Like a Local'}: ${favoritesList.map(f => f.Name).join(', ')}`;
+      if (navigator.share) {
+        navigator.share({ title: 'My Saved Places', text: text, url: window.location.href }).catch(() => {});
+      } else {
+        navigator.clipboard.writeText(text);
+        showToast('Favorites list copied to clipboard! 📋');
+      }
+    }
+
+    function exportICal() {
+      const calText = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//Local Like a Local//Trip Plan//EN',
+        'BEGIN:VEVENT',
+        `SUMMARY:Trip to ${currentCity ? currentCity.name : 'Destination'}`,
+        `DESCRIPTION:Curated itinerary with ${allPlaces.length} local spots.`,
+        'DTSTART:' + new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z',
+        'END:VEVENT',
+        'END:VCALENDAR'
+      ].join('\r\n');
+
+      const blob = new Blob([calText], { type: 'text/calendar;charset=utf-8' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `${currentCity ? currentCity.file : 'trip'}_itinerary.ics`;
+      link.click();
+      showToast('Calendar file downloaded! 📅');
+    }
+
+    function resetApp() {
+      if (confirm('Are you sure you want to reset local app settings and restart?')) {
+        try { localStorage.clear(); } catch(e) {}
+        location.reload();
+      }
+    }
+
+    function showToast(msg) {
+      let toast = document.getElementById('app-toast');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'app-toast';
+        toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1B365D;color:#fff;padding:10px 18px;border-radius:20px;font-size:15px;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,0.25);z-index:9999;transition:opacity 0.3s;pointer-events:none;';
+        document.body.appendChild(toast);
+      }
+      toast.textContent = msg;
+      toast.style.opacity = '1';
+      setTimeout(() => { toast.style.opacity = '0'; }, 3000);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // -------------------------------------------------------------
+    // 13. INITIALIZATION LIFECYCLE
+    // -------------------------------------------------------------
+    window.addEventListener('DOMContentLoaded', () => {
+      // Initialize splash bar progress
+      const fill = document.getElementById('splash-fill');
+      if (fill) fill.style.width = '80%';
+
+      // Update badge count
+      updateFavBadge();
+
+      // Render 49 cities grid
+      renderCityGrid();
+
+      // Load Palm Springs by default
+      loadCityData(CITIES_REGISTRY[0]);
+
+      // Handle offline bar
+      if (!navigator.onLine) {
+        const offBar = document.getElementById('offline-status-bar');
+        if (offBar) offBar.style.display = 'block';
+      }
+      window.addEventListener('offline', () => {
+        const offBar = document.getElementById('offline-status-bar');
+        if (offBar) offBar.style.display = 'block';
+      });
+      window.addEventListener('online', () => {
+        const offBar = document.getElementById('offline-status-bar');
+        if (offBar) offBar.style.display = 'none';
+      });
+    });
+  </script>
+<script src="lbl-v3.56-fixes.js"></script>
+<script src="lbl-self-diagnostics.js"></script>
+<script src="lbl-responsive-fixes.js"></script>
+<script src="lbl-v3.56-fixes.js"></script>
+</body>
+</html>
