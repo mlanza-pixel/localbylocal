@@ -65,9 +65,9 @@
         .cities-grid { grid-template-columns: 1fr !important; }
         .venue-card { margin-bottom: 12px !important; }
         .nav-btn { padding: 10px 4px !important; }
-        .nav-btn span:not(.nav-icon) { font-size: 11px !important; }
+        .nav-btn span:not(.nav-icon) { font-size: 15px !important; }
         .category-tabs-row { gap: 4px !important; }
-        .toggle-filter-btn { padding: 8px 12px !important; font-size: 12px !important; white-space: nowrap !important; }
+        .toggle-filter-btn { padding: 8px 12px !important; font-size: 15px !important; white-space: nowrap !important; }
         .splash-title { font-size: 1.8rem !important; }
         .modal-dialog { width: 100% !important; max-width: 100% !important; min-height: 100% !important; border-radius: 0 !important; margin: 0 !important; }
         .modal-overlay { padding: 0 !important; }

@@ -183,7 +183,7 @@
         // Apple HIG: minimum 11pt for body, 10pt for captions
         // Material Design: minimum 12sp for body
         // Flag anything under 12px
-        if (fontSize < 12) {
+        if (fontSize < 14) {
           smallFonts.push({
             tag: el.tagName,
             id: el.id || '(none)',
@@ -196,11 +196,11 @@
     });
 
     if (smallFonts.length === 0) {
-      return { pass: true, detail: `${checked} elements checked, all ≥12px` };
+      return { pass: true, detail: `${checked} elements checked, all ≥14px (Apple HIG)` };
     }
     return {
       pass: false,
-      detail: `${smallFonts.length} elements below 12px (Apple HIG min: 11pt, Material min: 12sp). Examples: ${smallFonts.slice(0, 5).map(f => `${f.tag}#${f.id} ${f.size}`).join(', ')}`,
+      detail: `${smallFonts.length} elements below 12px (Apple HIG min: 11pt = 14.7px, Material min: 12sp). Examples: ${smallFonts.slice(0, 5).map(f => `${f.tag}#${f.id} ${f.size}`).join(', ')}`,
       details: smallFonts,
     };
   });

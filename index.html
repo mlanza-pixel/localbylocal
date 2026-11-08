@@ -57,20 +57,20 @@
     /* App Header */
     .app-header { background: var(--primary); color: white; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow-md); }
     .app-title { font-family: var(--font-d); font-size: 1.25rem; font-weight: 700; display: flex; align-items: center; gap: 8px; cursor: pointer; }
-    .app-badge { background: var(--accent); color: white; font-family: var(--font-m); font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 10px; text-transform: uppercase; }
+    .app-badge { background: var(--accent); color: white; font-family: var(--font-m); font-size: 14px; font-weight: 700; padding: 2px 6px; border-radius: 10px; text-transform: uppercase; }
     .header-icons { display: flex; gap: 12px; align-items: center; }
-    .icon-btn { background: rgba(255,255,255,0.15); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; font-size: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s; }
+    .icon-btn { background: rgba(255,255,255,0.15); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; font-size: 16px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s; }
     .icon-btn:hover { background: rgba(255,255,255,0.3); }
 
     /* PWA Banner & Offline Status */
-    .offline-status-bar { background: #FEFCBF; color: #744210; font-size: 11px; font-weight: 700; padding: 6px 14px; text-align: center; border-bottom: 1px solid #F6E05E; display: none; }
-    .pwa-banner { background: var(--teal-dark); color: white; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; font-size: 12px; }
+    .offline-status-bar { background: #FEFCBF; color: #744210; font-size: 15px; font-weight: 700; padding: 6px 14px; text-align: center; border-bottom: 1px solid #F6E05E; display: none; }
+    .pwa-banner { background: var(--teal-dark); color: white; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; font-size: 15px; }
     .pwa-banner-text { display: flex; flex-direction: column; }
-    .pwa-install-btn { background: var(--accent); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: 700; font-size: 11px; cursor: pointer; }
-    .pwa-dismiss-btn { background: none; border: none; color: rgba(255,255,255,0.7); font-size: 14px; padding: 4px; cursor: pointer; }
+    .pwa-install-btn { background: var(--accent); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: 700; font-size: 15px; cursor: pointer; }
+    .pwa-dismiss-btn { background: none; border: none; color: rgba(255,255,255,0.7); font-size: 16px; padding: 4px; cursor: pointer; }
 
     /* Toast Notification */
-    #app-toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--primary); color: #fff; padding: 10px 18px; border-radius: 20px; font-size: 12px; font-weight: 700; box-shadow: var(--shadow-md); z-index: 9999; transition: opacity 0.3s; pointer-events: none; opacity: 0; }
+    #app-toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--primary); color: #fff; padding: 10px 18px; border-radius: 20px; font-size: 15px; font-weight: 700; box-shadow: var(--shadow-md); z-index: 9999; transition: opacity 0.3s; pointer-events: none; opacity: 0; }
 
     /* Screens & Navigation */
     .screen { display: none; padding: 16px; animation: fadeIn 0.25s ease-out; }
@@ -81,59 +81,59 @@
     #screen-splash { position: fixed; inset: 0; background: var(--primary); color: white; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px; }
     .splash-icon { font-size: 4rem; margin-bottom: 12px; animation: pulse 2s infinite; }
     @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
-    .splash-title { font-family: var(--font-d); font-size: 2.2rem; font-weight: 800; margin-bottom: 6px; }
-    .splash-sub { font-size: 14px; opacity: 0.85; margin-bottom: 24px; }
+    .splash-title { font-family: var(--font-d); font-size: 2.5rem; font-weight: 800; margin-bottom: 6px; }
+    .splash-sub { font-size: 16px; opacity: 0.85; margin-bottom: 24px; }
     .splash-bar { width: 180px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; overflow: hidden; position: relative; }
     .splash-fill { width: 0%; height: 100%; background: var(--accent); transition: width 1.8s cubic-bezier(0.1, 0.5, 0.1, 1); }
-    .splash-tap-hint { margin-top: 30px; font-size: 12px; opacity: 0.7; letter-spacing: 1px; text-transform: uppercase; }
+    .splash-tap-hint { margin-top: 30px; font-size: 15px; opacity: 0.7; letter-spacing: 1px; text-transform: uppercase; }
 
     /* Hero & Card Elements */
     .welcome-hero { background: linear-gradient(135deg, var(--primary) 0%, #0F2342 100%); color: white; border-radius: var(--radius); padding: 28px 20px; margin-bottom: 20px; position: relative; overflow: hidden; box-shadow: var(--shadow-md); }
     .welcome-hero-bg { position: absolute; right: -20px; bottom: -20px; font-size: 8rem; opacity: 0.08; pointer-events: none; }
     .welcome-content { position: relative; z-index: 1; }
-    .welcome-tag { background: var(--accent); color: white; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 12px; text-transform: uppercase; letter-spacing: 1px; display: inline-block; margin-bottom: 10px; }
-    .welcome-title { font-family: var(--font-d); font-size: 1.8rem; font-weight: 800; line-height: 1.2; margin-bottom: 8px; }
-    .welcome-desc { font-size: 13px; opacity: 0.9; margin-bottom: 18px; line-height: 1.5; }
+    .welcome-tag { background: var(--accent); color: white; font-size: 15px; font-weight: 700; padding: 3px 8px; border-radius: 12px; text-transform: uppercase; letter-spacing: 1px; display: inline-block; margin-bottom: 10px; }
+    .welcome-title { font-family: var(--font-d); font-size: 2.2rem; font-weight: 800; line-height: 1.2; margin-bottom: 8px; }
+    .welcome-desc { font-size: 15px; opacity: 0.9; margin-bottom: 18px; line-height: 1.5; }
 
     .btn-cta { background: var(--accent); color: white; border: none; width: 100%; padding: 14px; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; box-shadow: var(--shadow-sm); transition: transform 0.1s, background 0.2s; text-align: center; }
     .btn-cta:active { transform: scale(0.98); background: var(--accent-light); }
 
     .screen-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-    .screen-heading { font-family: var(--font-d); font-size: 1.4rem; color: var(--primary); font-weight: 700; display: flex; align-items: center; gap: 8px; }
-    .count-badge { background: var(--teal-light); color: var(--teal-dark); font-family: var(--font-m); font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 12px; }
-    .btn-header-action { background: var(--card); border: 1px solid var(--border); color: var(--text2); padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; }
+    .screen-heading { font-family: var(--font-d); font-size: 1.8rem; color: var(--primary); font-weight: 700; display: flex; align-items: center; gap: 8px; }
+    .count-badge { background: var(--teal-light); color: var(--teal-dark); font-family: var(--font-m); font-size: 15px; font-weight: 700; padding: 2px 8px; border-radius: 12px; }
+    .btn-header-action { background: var(--card); border: 1px solid var(--border); color: var(--text2); padding: 6px 12px; border-radius: 6px; font-size: 15px; font-weight: 700; cursor: pointer; }
 
     /* Cities Grid */
     .cities-sort-row { display: flex; gap: 8px; margin-bottom: 12px; }
-    .sort-pill { background: var(--card); border: 1px solid var(--border); color: var(--text2); padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; cursor: pointer; }
+    .sort-pill { background: var(--card); border: 1px solid var(--border); color: var(--text2); padding: 10px 16px; border-radius: 20px; font-size: 15px; font-weight: 700; cursor: pointer; min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; }
     .sort-pill.active { background: var(--primary); color: white; border-color: var(--primary); }
 
-    .region-divider { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin: 14px 0 8px 2px; display: block; }
+    .region-divider { font-size: 15px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin: 14px 0 8px 2px; display: block; }
     .cities-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .city-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; position: relative; overflow: hidden; }
     .city-card:active { transform: scale(0.97); }
     .city-card-name { font-family: var(--font-d); font-size: 1.1rem; font-weight: 700; color: var(--primary); margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
-    .city-card-count { font-size: 11px; color: var(--text2); font-weight: 500; }
-    .city-status-pill { position: absolute; top: 10px; right: 10px; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 8px; text-transform: uppercase; }
+    .city-card-count { font-size: 15px; color: var(--text2); font-weight: 500; }
+    .city-status-pill { position: absolute; top: 10px; right: 10px; font-size: 15px; font-weight: 700; padding: 2px 6px; border-radius: 8px; text-transform: uppercase; }
     .city-status-pill.online { background: #DEF7EC; color: #03543F; }
 
     /* Search & Filters */
     .search-input-box { width: 100%; position: relative; margin-bottom: 10px; }
-    .search-input-box input { width: 100%; padding: 12px 14px 12px 38px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; font-family: var(--font-m); outline: none; background: var(--card); }
+    .search-input-box input { width: 100%; padding: 12px 14px 12px 38px; border: 1px solid var(--border); border-radius: 8px; font-size: 15px; font-family: var(--font-m); outline: none; background: var(--card); }
     .search-input-box input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(27,54,93,0.1); }
-    .search-icon-pos { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 14px; color: var(--text-muted); }
+    .search-icon-pos { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 16px; color: var(--text-muted); }
 
     .category-tabs-row { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 12px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
     .category-tabs-row::-webkit-scrollbar { display: none; }
-    .cat-pill { background: var(--card); border: 1px solid var(--border); color: var(--text2); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; whitespace: nowrap; cursor: pointer; flex-shrink: 0; }
+    .cat-pill { background: var(--card); border: 1px solid var(--border); color: var(--text2); padding: 6px 14px; border-radius: 20px; font-size: 15px; font-weight: 700; whitespace: nowrap; cursor: pointer; flex-shrink: 0; }
     .cat-pill.active { background: var(--accent); color: white; border-color: var(--accent); }
 
     .smart-filters-row { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; }
-    .toggle-filter-btn { background: var(--card); border: 1px solid var(--border); color: var(--text2); padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+    .toggle-filter-btn { background: var(--card); border: 1px solid var(--border); color: var(--text2); padding: 6px 12px; border-radius: 6px; font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px; }
     .toggle-filter-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
 
     /* Map Container */
-    #browse-map-container { display: none; height: 380px; width: 100%; border-radius: 12px; overflow: hidden; margin-top: 10px; margin-bottom: 14px; border: 1px solid var(--border); position: relative; box-shadow: var(--shadow-sm); }
+    #browse-map-container { display: none; height: 60vh; min-height: 300px; max-height: 600px; width: 100%; border-radius: 12px; overflow: hidden; margin-top: 10px; margin-bottom: 14px; border: 1px solid var(--border); position: relative; box-shadow: var(--shadow-sm); }
     #leaflet-map { height: 100%; width: 100%; z-index: 1; }
 
     /* Venue Cards */
@@ -141,31 +141,31 @@
     .venue-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; position: relative; box-shadow: var(--shadow-sm); transition: transform 0.15s; }
     .venue-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
     .venue-title-box { padding-right: 32px; }
-    .venue-title { font-family: var(--font-d); font-size: 1.15rem; font-weight: 700; color: var(--primary); line-height: 1.3; }
-    .venue-sub { font-size: 11px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; margin-top: 2px; }
+    .venue-title { font-family: var(--font-d); font-size: 1.3rem; font-weight: 700; color: var(--primary); line-height: 1.3; }
+    .venue-sub { font-size: 15px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; margin-top: 2px; }
     .venue-fav-btn { position: absolute; top: 12px; right: 12px; background: none; border: none; font-size: 20px; cursor: pointer; }
     
-    .venue-meta-bar { display: flex; align-items: center; gap: 10px; font-size: 12px; margin-bottom: 8px; color: var(--text2); }
-    .venue-score { background: #FFF5F0; color: var(--accent); font-weight: 700; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
+    .venue-meta-bar { display: flex; align-items: center; gap: 10px; font-size: 15px; margin-bottom: 8px; color: var(--text2); }
+    .venue-score { background: #FFF5F0; color: var(--accent); font-weight: 700; padding: 2px 6px; border-radius: 4px; font-size: 15px; }
     .venue-price { font-weight: 700; color: var(--teal-dark); }
     
     .venue-whygo { font-size: 12.5px; color: var(--text2); line-height: 1.45; margin-bottom: 10px; background: var(--bg-main); padding: 8px 10px; border-radius: 6px; border-left: 3px solid var(--accent); }
     .venue-actions { display: flex; gap: 8px; }
-    .btn-card-action { flex: 1; background: var(--bg-main); border: 1px solid var(--border); color: var(--primary); padding: 8px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; text-align: center; }
+    .btn-card-action { flex: 1; background: var(--bg-main); border: 1px solid var(--border); color: var(--primary); padding: 12px; border-radius: 6px; font-size: 15px; font-weight: 700; cursor: pointer; text-align: center; min-height: 44px; display: flex; align-items: center; justify-content: center; }
     .btn-card-action.primary { background: var(--primary); color: white; border-color: var(--primary); }
 
     /* Modals */
     .modal-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.6); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(3px); }
     .modal-overlay.active { display: flex; }
     .modal-dialog { background: var(--card); border-radius: var(--radius); width: 100%; max-width: 520px; max-height: 85vh; overflow-y: auto; padding: 22px; position: relative; box-shadow: var(--shadow-lg); }
-    .modal-close-btn { position: absolute; top: 14px; right: 14px; background: var(--bg-main); border: none; width: 30px; height: 30px; border-radius: 50%; font-size: 14px; font-weight: 700; cursor: pointer; color: var(--text2); }
+    .modal-close-btn { position: absolute; top: 14px; right: 14px; background: var(--bg-main); border: none; width: 30px; height: 30px; border-radius: 50%; font-size: 16px; font-weight: 700; cursor: pointer; color: var(--text2); }
 
     /* Bottom Nav Bar */
     .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 600px; background: var(--card); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 8px 0; z-index: 100; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
-    .nav-btn { background: none; border: none; display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--text2); font-size: 11px; font-weight: 700; cursor: pointer; position: relative; padding: 4px 10px; }
+    .nav-btn { background: none; border: none; display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--text2); font-size: 15px; font-weight: 700; cursor: pointer; position: relative; padding: 10px 14px; min-height: 44px; min-width: 44px; }
     .nav-btn.active { color: var(--primary); }
     .nav-icon { font-size: 18px; }
-    .fav-nav-badge { position: absolute; top: 2px; right: 12px; background: var(--accent); color: white; font-size: 9px; font-weight: 700; width: 15px; height: 15px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+    .fav-nav-badge { position: absolute; top: 2px; right: 12px; background: var(--accent); color: white; font-size: 15px; font-weight: 700; width: 15px; height: 15px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
 
     /* Onboarding Carousel */
     .carousel-container { background: var(--card); border-radius: var(--radius); padding: 24px 18px; border: 1px solid var(--border); text-align: center; }
@@ -174,19 +174,19 @@
     .step-dot.active { background: var(--accent); width: 20px; border-radius: 4px; }
     .walkthrough-img { font-size: 3.5rem; margin-bottom: 12px; }
     .walkthrough-h3 { font-family: var(--font-d); font-size: 1.3rem; color: var(--primary); margin-bottom: 6px; }
-    .walkthrough-p { font-size: 13px; color: var(--text2); line-height: 1.5; margin-bottom: 20px; }
+    .walkthrough-p { font-size: 15px; color: var(--text2); line-height: 1.5; margin-bottom: 20px; }
     .walkthrough-controls { display: flex; justify-content: space-between; gap: 10px; }
-    .btn-step-nav { flex: 1; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-main); font-weight: 700; font-size: 12px; cursor: pointer; }
+    .btn-step-nav { flex: 1; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-main); font-weight: 700; font-size: 15px; cursor: pointer; }
 
     /* Custom Itinerary Engine */
-    .style-select { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; font-family: var(--font-m); background: var(--card); }
+    .style-select { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 15px; font-family: var(--font-m); background: var(--card); }
     .itinerary-days-tabs { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 14px; }
     .itin-stop-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; margin-bottom: 10px; position: relative; border-left: 4px solid var(--primary); }
-    .itin-stop-time { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; margin-bottom: 2px; }
+    .itin-stop-time { font-size: 15px; font-weight: 700; color: var(--accent); text-transform: uppercase; margin-bottom: 2px; }
 
     /* Diagnostics Box */
-    .diag-box { background: var(--bg-main); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-size: 11px; color: var(--text2); line-height: 1.6; text-align: left; margin-top: 14px; }
-    .legal-note { font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 12px; line-height: 1.4; }
+    .diag-box { background: var(--bg-main); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-size: 15px; color: var(--text2); line-height: 1.6; text-align: left; margin-top: 14px; }
+    .legal-note { font-size: 15px; color: var(--text-muted); text-align: center; margin-top: 12px; line-height: 1.4; }
   </style>
 </head>
 <body>
@@ -198,7 +198,7 @@
   <header class="app-header">
     <div class="app-title" onclick="showScreen('screen-cities')">
       <span>📍 Local Like a Local</span>
-      <span class="app-badge">v3.53</span>
+      <span class="app-badge">v3.54</span>
     </div>
     <div class="header-icons">
       <button class="icon-btn" onclick="openHelpModal()" title="Help & System Info">ℹ️</button>
@@ -247,8 +247,8 @@
   <section id="screen-legal" class="screen">
     <div class="welcome-hero" style="background:var(--card);color:var(--text-dark);border:1px solid var(--border);">
       <h2 style="font-family:var(--font-d);font-size:1.4rem;color:var(--primary);margin-bottom:6px;">⚖️ Legal & Informational Disclaimer</h2>
-      <p style="font-size:13px;color:var(--text2);margin-bottom:14px;">Please review and accept our terms to proceed.</p>
-      <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:18px;text-align:left;">
+      <p style="font-size:15px;color:var(--text2);margin-bottom:14px;">Please review and accept our terms to proceed.</p>
+      <div style="font-size:15px;color:var(--text2);line-height:1.6;margin-bottom:18px;text-align:left;">
         <p style="margin-bottom:8px;"><strong>1. Informational Purpose:</strong> Local Like a Local is an independent travel guide provided for informational purposes only. Recommendations, local scores, and venue details are curated from local public databases and community sources.</p>
         <p style="margin-bottom:8px;"><strong>2. Accuracy & Verification:</strong> Business operations, prices, operating hours, and entry policies are subject to change without notice. Always verify directly with venues for reservations and current schedules. The creators assume no liability for travel decisions.</p>
         <p><strong>3. Private Data:</strong> Personal notes and saved favorites are stored locally on your device in your browser's private storage.</p>
@@ -276,7 +276,7 @@
         <p class="walkthrough-p">Explore 49 global destinations with verified local scores, custom filters, and neighborhood guides.</p>
       </div>
 
-      <div style="margin-bottom:14px;font-size:11px;color:var(--text-muted);">
+      <div style="margin-bottom:14px;font-size:15px;color:var(--text-muted);">
         <label><input type="checkbox" id="chk-disable-walkthrough"> Don't show this walkthrough again</label>
       </div>
 
@@ -358,7 +358,7 @@
     <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;">
       <div style="display:flex;gap:12px;margin-bottom:14px;">
         <div style="flex:1;">
-          <span class="pref-label" style="font-size:11px;font-weight:700;color:var(--text2);display:block;margin-bottom:4px;">
+          <span class="pref-label" style="font-size:15px;font-weight:700;color:var(--text2);display:block;margin-bottom:4px;">
             Days: <span id="days-val" style="color:var(--accent);">2 Days</span>
           </span>
           <select id="pref-days" class="style-select" onchange="updateDays(this.value)">
@@ -370,7 +370,7 @@
           </select>
         </div>
         <div style="flex:1;">
-          <span class="pref-label" style="font-size:11px;font-weight:700;color:var(--text2);display:block;margin-bottom:4px;">Style</span>
+          <span class="pref-label" style="font-size:15px;font-weight:700;color:var(--text2);display:block;margin-bottom:4px;">Style</span>
           <select id="pref-style" class="style-select">
             <option>Local & authentic</option>
             <option>Off-the-beaten-path</option>
@@ -383,14 +383,14 @@
       </div>
 
       <div style="margin-bottom:14px;">
-        <span class="pref-label" style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:4px;display:block;">Neighborhood</span>
+        <span class="pref-label" style="font-size:15px;font-weight:700;color:var(--text2);margin-bottom:4px;display:block;">Neighborhood</span>
         <select id="pref-neighborhood" class="style-select">
           <option value="All">All Neighborhoods</option>
         </select>
       </div>
 
       <div style="margin-bottom:18px;">
-        <span class="pref-label" style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px;display:block;">Curated Interests</span>
+        <span class="pref-label" style="font-size:15px;font-weight:700;color:var(--text2);margin-bottom:6px;display:block;">Curated Interests</span>
         <div id="pref-interests-chips" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
       </div>
 
@@ -432,21 +432,21 @@
     <div class="modal-dialog">
       <button class="modal-close-btn" onclick="closeHelpModal()">✕</button>
       <h3 style="font-family:var(--font-d);font-size:1.3rem;color:var(--primary);margin-bottom:6px;">App Guide & System Info</h3>
-      <p style="font-size:13px;color:var(--text2);margin-bottom:14px;">Learn how to navigate offline city guides, custom multi-day plans, and saved favorites.</p>
+      <p style="font-size:15px;color:var(--text2);margin-bottom:14px;">Learn how to navigate offline city guides, custom multi-day plans, and saved favorites.</p>
       
-      <button onclick="reopenWalkthrough()" class="btn-cta" style="padding:10px;font-size:13px;margin-bottom:14px;">📖 Open Graphic Interactive Walkthrough</button>
+      <button onclick="reopenWalkthrough()" class="btn-cta" style="padding:10px;font-size:15px;margin-bottom:14px;">📖 Open Graphic Interactive Walkthrough</button>
 
       <div class="diag-box">
         <strong>⚙️ System Diagnostics & Revision Status</strong><br>
-        • App Version: Version 3.53 (Build 2026-11-01)<br>
+        • App Version: Version 3.54 (Build 2026-11-01)<br>
         • Total Destinations: 49 Destinations Available<br>
-        • Service Worker: local-like-a-local-v3.53<br>
+        • Service Worker: local-like-a-local-v3.54<br>
         • Parser: 40-Column Schema Compliant<br>
         • Legal Disclaimer: <span id="diag-legal-status">Agreed ✅</span>
       </div>
 
       <div style="margin-top:16px;text-align:center;">
-        <button onclick="resetApp()" style="background:none;border:none;color:var(--red);font-size:11px;font-weight:700;cursor:pointer;text-decoration:underline;">⚠️ Reset Local Settings & Restart Flow</button>
+        <button onclick="resetApp()" style="background:none;border:none;color:var(--red);font-size:15px;font-weight:700;cursor:pointer;text-decoration:underline;">⚠️ Reset Local Settings & Restart Flow</button>
       </div>
     </div>
   </div>
@@ -882,8 +882,8 @@
           <div style="text-align:center;padding:40px 20px;background:var(--card);border-radius:12px;margin-top:14px;border:1px solid var(--border);">
             <div style="font-size:2rem;margin-bottom:8px;">🔍</div>
             <strong style="color:var(--primary);display:block;margin-bottom:4px;">No matching destinations found</strong>
-            <span style="font-size:12px;color:var(--text2);">Try searching for another city, state, or country.</span><br>
-            <button class="btn-cta" style="margin-top:14px;padding:8px 16px;font-size:12px;width:auto;" onclick="resetCitiesSearch()">Show All Destinations</button>
+            <span style="font-size:15px;color:var(--text2);">Try searching for another city, state, or country.</span><br>
+            <button class="btn-cta" style="margin-top:14px;padding:8px 16px;font-size:15px;width:auto;" onclick="resetCitiesSearch()">Show All Destinations</button>
           </div>`;
       }
 
@@ -1002,8 +1002,8 @@
           <div style="text-align:center;padding:40px 20px;background:var(--card);border-radius:var(--radius);border:1px solid var(--border);">
             <div style="font-size:2rem;margin-bottom:8px;">🔍</div>
             <strong style="color:var(--primary);display:block;margin-bottom:4px;">No spots match your current filters</strong>
-            <span style="font-size:12px;color:var(--text2);">Try clearing your search or switching categories.</span><br>
-            <button class="btn-cta" style="margin-top:14px;padding:8px 16px;font-size:12px;width:auto;" onclick="resetAllFilters()">Reset All Filters</button>
+            <span style="font-size:15px;color:var(--text2);">Try clearing your search or switching categories.</span><br>
+            <button class="btn-cta" style="margin-top:14px;padding:8px 16px;font-size:15px;width:auto;" onclick="resetAllFilters()">Reset All Filters</button>
           </div>`;
         return;
       }
@@ -1130,13 +1130,13 @@
           
           marker.bindPopup(`
             <div style="font-family:sans-serif;padding:4px;max-width:210px;">
-              <strong style="font-size:13px;color:#1B365D;display:block;margin-bottom:2px;">${escapeHtml(p.Name)}</strong>
-              <span style="font-size:11px;color:#666;display:block;margin-bottom:4px;">${escapeHtml(catBadge)}</span>
+              <strong style="font-size:15px;color:#1B365D;display:block;margin-bottom:2px;">${escapeHtml(p.Name)}</strong>
+              <span style="font-size:15px;color:#666;display:block;margin-bottom:4px;">${escapeHtml(catBadge)}</span>
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                <span style="font-size:11px;color:#CC5500;font-weight:700;">★ ${p.Local_Score || '8.8'}</span>
-                <span style="font-size:11px;color:#128C7E;font-weight:700;">${p.Price || '$$'}</span>
+                <span style="font-size:15px;color:#CC5500;font-weight:700;">★ ${p.Local_Score || '8.8'}</span>
+                <span style="font-size:15px;color:#128C7E;font-weight:700;">${p.Price || '$$'}</span>
               </div>
-              <button style="width:100%;background:#1B365D;color:#fff;border:none;padding:5px 8px;border-radius:4px;font-size:11px;font-weight:700;cursor:pointer;" onclick="openDetailModalByObj('${p.ID}')">View Spot Details ➔</button>
+              <button style="width:100%;background:#1B365D;color:#fff;border:none;padding:5px 8px;border-radius:4px;font-size:15px;font-weight:700;cursor:pointer;" onclick="openDetailModalByObj('${p.ID}')">View Spot Details ➔</button>
             </div>
           `);
           mapMarkers.push(marker);
@@ -1205,8 +1205,8 @@
           <div style="text-align:center;padding:40px 20px;background:var(--card);border-radius:var(--radius);border:1px solid var(--border);">
             <div style="font-size:2.5rem;margin-bottom:8px;">🤍</div>
             <strong style="color:var(--primary);display:block;margin-bottom:4px;">No Saved Favorite Spots Yet</strong>
-            <span style="font-size:12px;color:var(--text2);">Tap the heart icon on any venue card while browsing to save local spots.</span><br>
-            <button class="btn-cta" style="margin-top:14px;padding:10px 18px;font-size:12px;width:auto;" onclick="showScreen('screen-browser')">Explore Local Spots ➔</button>
+            <span style="font-size:15px;color:var(--text2);">Tap the heart icon on any venue card while browsing to save local spots.</span><br>
+            <button class="btn-cta" style="margin-top:14px;padding:10px 18px;font-size:15px;width:auto;" onclick="showScreen('screen-browser')">Explore Local Spots ➔</button>
           </div>`;
         return;
       }
@@ -1290,11 +1290,11 @@
         <div class="itin-stop-card">
           <div class="itin-stop-time">${times[idx % times.length]}</div>
           <strong style="font-family:var(--font-d);font-size:1.1rem;color:var(--primary);display:block;margin-bottom:2px;">${escapeHtml(p.Name)}</strong>
-          <span style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:6px;">${escapeHtml(p.Category)} • ${escapeHtml(p.Neighborhood)}</span>
-          <p style="font-size:12px;color:var(--text2);margin-bottom:8px;">${escapeHtml(p.Why_Go)}</p>
+          <span style="font-size:15px;color:var(--text-muted);display:block;margin-bottom:6px;">${escapeHtml(p.Category)} • ${escapeHtml(p.Neighborhood)}</span>
+          <p style="font-size:15px;color:var(--text2);margin-bottom:8px;">${escapeHtml(p.Why_Go)}</p>
           <div style="display:flex;gap:6px;">
-            <button class="btn-card-action primary" style="padding:4px 8px;font-size:10px;" onclick="openDetailModal('${p.ID}')">Details ➔</button>
-            <button class="btn-card-action" style="padding:4px 8px;font-size:10px;" onclick="openMapPin('${p.ID}')">📍 Map Directions</button>
+            <button class="btn-card-action primary" style="padding:4px 8px;font-size:15px;" onclick="openDetailModal('${p.ID}')">Details ➔</button>
+            <button class="btn-card-action" style="padding:4px 8px;font-size:15px;" onclick="openMapPin('${p.ID}')">📍 Map Directions</button>
           </div>
         </div>`).join('');
     }
@@ -1318,7 +1318,7 @@
 
       body.innerHTML = `
         <div style="font-family:var(--font-d);font-size:1.4rem;font-weight:700;color:var(--primary);margin-bottom:4px;padding-right:24px;">${escapeHtml(p.Name)}</div>
-        <div style="font-size:12px;color:var(--text-muted);font-weight:700;text-transform:uppercase;margin-bottom:10px;">${escapeHtml(p.Category)} • ${escapeHtml(p.Subcategory || 'Local Spot')}</div>
+        <div style="font-size:15px;color:var(--text-muted);font-weight:700;text-transform:uppercase;margin-bottom:10px;">${escapeHtml(p.Category)} • ${escapeHtml(p.Subcategory || 'Local Spot')}</div>
 
         <div class="venue-meta-bar" style="margin-bottom:12px;">
           <span class="venue-score">★ ${p.Local_Score} Local Score</span>
@@ -1328,12 +1328,12 @@
 
         <div class="venue-whygo" style="margin-bottom:14px;">“${escapeHtml(p.Why_Go)}”</div>
 
-        <div style="font-size:12.5px;color:var(--text2);line-height:1.6;margin-bottom:14px;">
+        <div style="font-size:15px;color:var(--text2);line-height:1.6;margin-bottom:14px;">
           <strong style="color:var(--primary);">Overview & Highlights:</strong><br>
           ${escapeHtml(p.Description || p.Why_Go)}
         </div>
 
-        <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:16px;background:var(--bg-main);padding:10px;border-radius:8px;border:1px solid var(--border);">
+        <div style="font-size:15px;color:var(--text2);line-height:1.6;margin-bottom:16px;background:var(--bg-main);padding:10px;border-radius:8px;border:1px solid var(--border);">
           <strong>📍 Address:</strong> ${escapeHtml(p.Address_Street)}, ${escapeHtml(p.Address_City)} ${p.Address_State || ''} ${p.Address_Zip || ''}<br>
           <strong>🕒 Hours:</strong> ${escapeHtml(p.Opening_Hours)}<br>
           ${p.Phone ? `<strong>📞 Phone:</strong> ${escapeHtml(p.Phone)}<br>` : ''}
@@ -1420,7 +1420,7 @@
       if (!toast) {
         toast = document.createElement('div');
         toast.id = 'app-toast';
-        toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1B365D;color:#fff;padding:10px 18px;border-radius:20px;font-size:12px;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,0.25);z-index:9999;transition:opacity 0.3s;pointer-events:none;';
+        toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1B365D;color:#fff;padding:10px 18px;border-radius:20px;font-size:15px;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,0.25);z-index:9999;transition:opacity 0.3s;pointer-events:none;';
         document.body.appendChild(toast);
       }
       toast.textContent = msg;
@@ -1465,9 +1465,9 @@
       });
     });
   </script>
-<script src="lbl-v3.53-fixes.js"></script>
+<script src="lbl-v3.54-fixes.js"></script>
 <script src="lbl-self-diagnostics.js"></script>
 <script src="lbl-responsive-fixes.js"></script>
-<script src="lbl-v3.53-fixes.js"></script>
+<script src="lbl-v3.54-fixes.js"></script>
 </body>
 </html>

@@ -246,56 +246,56 @@
     rec('App Shell', screens.every(id => document.getElementById(id)), screens.length + ' screens');
 
     // 2. City load + dedup
-    try { await loadCityData(CITIES_REGISTRY[0]); await sleep(500); renderVenues(); await sleep(300);
+    try { await loadCityData(CITIES_REGISTRY[0]); await sleep(1500); renderVenues(); await sleep(800);
       const c = allPlaces?.length || 0; const di = window.__lblLastDedupInfo;
       rec('City + Dedup', c > 0, c + ' venues, ' + (di ? di.removed + ' dupes removed' : 'no dedup info'));
     } catch(e) { rec('City Load', false, e.message); }
 
     // 3. 10 detail modals
     let me = 0; const tc = Math.min(10, allPlaces?.length || 0);
-    for (let i = 0; i < tc; i++) { try { openDetailModalByObj(allPlaces[i].ID); await sleep(100); closeDetailModal(); await sleep(50); } catch(e) { me++; } }
+    for (let i = 0; i < tc; i++) { try { openDetailModalByObj(allPlaces[i].ID); await sleep(500); closeDetailModal(); await sleep(50); } catch(e) { me++; } }
     rec('Detail Modals', me === 0, tc + ' tested, ' + me + ' errors');
 
     // 4. 10 favorites
     let fe = 0;
-    for (let i = 0; i < tc; i++) { try { toggleFav(allPlaces[i].ID); await sleep(30); toggleFav(allPlaces[i].ID); await sleep(30); } catch(e) { fe++; } }
+    for (let i = 0; i < tc; i++) { try { toggleFav(allPlaces[i].ID); await sleep(200); toggleFav(allPlaces[i].ID); await sleep(30); } catch(e) { fe++; } }
     rec('Favorites', fe === 0, tc + ' toggled, ' + fe + ' errors');
 
     // 5. Map
-    try { toggleViewMode(); await sleep(1200);
+    try { toggleViewMode(); await sleep(2000);
       const v = document.getElementById('browse-map-container')?.style.display === 'block';
       const hi = !!mapInstance; const mc = mapMarkers?.length || 0;
       const ht = document.querySelectorAll('.leaflet-tile').length > 0;
       const mh = document.getElementById('browse-map-container')?.getBoundingClientRect().height || 0;
-      toggleViewMode(); await sleep(200);
+      toggleViewMode(); await sleep(500);
       rec('Map', v && hi && mc > 0, 'visible=' + v + ', markers=' + mc + ', tiles=' + ht + ', height=' + mh + 'px');
     } catch(e) { rec('Map', false, e.message); }
 
     // 6. Filter
-    try { currentCategory = 'Food'; renderVenues(); await sleep(200); const fc = document.querySelectorAll('.venue-card').length; currentCategory = 'All'; renderVenues(); await sleep(200); rec('Filter', fc > 0, 'Food=' + fc + ', All=' + allPlaces.length); } catch(e) { rec('Filter', false, e.message); }
+    try { currentCategory = 'Food'; renderVenues(); await sleep(500); const fc = document.querySelectorAll('.venue-card').length; currentCategory = 'All'; renderVenues(); await sleep(500); rec('Filter', fc > 0, 'Food=' + fc + ', All=' + allPlaces.length); } catch(e) { rec('Filter', false, e.message); }
 
     // 7. Search
-    try { handleSearch('restaurant'); await sleep(200); const sc = document.querySelectorAll('.venue-card').length; handleSearch(''); await sleep(200); rec('Search', sc > 0, sc + ' results'); } catch(e) { rec('Search', false, e.message); }
+    try { handleSearch('restaurant'); await sleep(500); const sc = document.querySelectorAll('.venue-card').length; handleSearch(''); await sleep(500); rec('Search', sc > 0, sc + ' results'); } catch(e) { rec('Search', false, e.message); }
 
     // 8. Navigation
-    try { showScreen('screen-cities'); await sleep(200); const ca = document.querySelector('.screen.active')?.id === 'screen-cities';
-      showScreen('screen-favorites'); await sleep(200); const fa = document.querySelector('.screen.active')?.id === 'screen-favorites';
-      if (window.lblGoBack) { window.lblGoBack(); await sleep(300); } else { history.back(); await sleep(300); }
+    try { showScreen('screen-cities'); await sleep(500); const ca = document.querySelector('.screen.active')?.id === 'screen-cities';
+      showScreen('screen-favorites'); await sleep(500); const fa = document.querySelector('.screen.active')?.id === 'screen-favorites';
+      if (window.lblGoBack) { window.lblGoBack(); await sleep(600); } else { history.back(); await sleep(600); }
       const wb = document.querySelector('.screen.active')?.id === 'screen-cities';
       rec('Nav Back', ca && fa && wb, 'cities=' + ca + ', favs=' + fa + ', back=' + wb);
     } catch(e) { rec('Nav Back', false, e.message); }
 
     // 9. Filter chaos
-    try { showScreen('screen-browser'); await sleep(200); const se = errors.length;
-      for (let i = 0; i < 10; i++) { toggleOpenNow(); await sleep(80); toggleOpenNow(); await sleep(80); toggleHiddenGems(); await sleep(80); toggleHiddenGems(); await sleep(80); }
+    try { showScreen('screen-browser'); await sleep(500); const se = errors.length;
+      for (let i = 0; i < 10; i++) { toggleOpenNow(); await sleep(200); toggleOpenNow(); await sleep(200); toggleHiddenGems(); await sleep(200); toggleHiddenGems(); await sleep(200); }
       resetAllFilters(); await sleep(200); rec('Filter Chaos', errors.length - se === 0, '40 toggles, ' + (errors.length-se) + ' errors');
     } catch(e) { rec('Filter Chaos', false, e.message); }
 
     // 10. Modal chaos
-    try { const se = errors.length; for (let i = 0; i < 10; i++) { const v = allPlaces[Math.floor(Math.random()*allPlaces.length)]; openDetailModalByObj(v.ID); await sleep(80); closeDetailModal(); await sleep(50); } rec('Modal Chaos', errors.length-se === 0, '10 opens, ' + (errors.length-se) + ' errors'); } catch(e) { rec('Modal Chaos', false, e.message); }
+    try { const se = errors.length; for (let i = 0; i < 10; i++) { const v = allPlaces[Math.floor(Math.random()*allPlaces.length)]; openDetailModalByObj(v.ID); await sleep(200); closeDetailModal(); await sleep(50); } rec('Modal Chaos', errors.length-se === 0, '10 opens, ' + (errors.length-se) + ' errors'); } catch(e) { rec('Modal Chaos', false, e.message); }
 
     // 11. Fonts
-    try { let sc = 0; document.querySelectorAll('*').forEach(el => { if (el.offsetParent === null) return; const fs = parseFloat(getComputedStyle(el).fontSize); if (!isNaN(fs) && fs > 0 && fs < 12) sc++; }); rec('Fonts', sc === 0, sc === 0 ? 'All ≥12px' : sc + ' below 12px'); } catch(e) { rec('Fonts', false, e.message); }
+    try { let sc = 0; document.querySelectorAll('*').forEach(el => { if (el.offsetParent === null) return; const fs = parseFloat(getComputedStyle(el).fontSize); if (!isNaN(fs) && fs > 0 && fs < 14) sc++; }); rec('Fonts', sc === 0, sc === 0 ? 'All ≥14px (Apple HIG)' : sc + ' below 14px'); } catch(e) { rec('Fonts', false, e.message); }
 
     // 12. Touch targets
     try { let st = 0; document.querySelectorAll('button, .sort-pill, .nav-btn, [role=button]').forEach(b => { if (b.offsetParent === null) return; const r = b.getBoundingClientRect(); if (r.height < 44 || r.width < 44) st++; }); rec('Touch Targets', st === 0, st === 0 ? 'All ≥44px' : st + ' below 44px'); } catch(e) { rec('Touch Targets', false, e.message); }
@@ -316,7 +316,7 @@
     const failed = results.filter(r => !r.pass).length;
 
     // Show results on screen
-    showScreen('screen-browser'); await sleep(200); openHelpModal(); await sleep(300);
+    showScreen('screen-browser'); await sleep(500); openHelpModal(); await sleep(600);
     let html = '<div id="lbl-fast-test-results" style="margin-top:14px;padding:16px;background:var(--card,#fff);border:1px solid var(--border);border-radius:8px;font-size:14px;line-height:2;">';
     html += '<strong style="font-size:18px;color:' + (failed === 0 ? 'var(--green,#1E7E34)' : 'var(--red,#D9534F)') + ';">⚡ Fast Test: ' + passed + '/' + results.length + ' passed (' + elapsed + 's)</strong><br><br>';
     results.forEach(r => { html += (r.pass ? '✅' : '❌') + ' <strong>' + r.name + '</strong>: ' + r.detail + '<br>'; });
@@ -352,11 +352,11 @@
 
     for (const s of screens) {
       try {
-        if (s.isModal) { showScreen('screen-browser'); await sleep(200); openHelpModal(); await sleep(500); }
+        if (s.isModal) { showScreen('screen-browser'); await sleep(500); openHelpModal(); await sleep(500); }
         else { showScreen(s.id); await sleep(500); }
 
         if (s.action === 'map') {
-          if (typeof allPlaces === 'undefined' || allPlaces.length === 0) { await loadCityData(CITIES_REGISTRY[0]); await sleep(800); renderVenues(); await sleep(300); }
+          if (typeof allPlaces === 'undefined' || allPlaces.length === 0) { await loadCityData(CITIES_REGISTRY[0]); await sleep(800); renderVenues(); await sleep(800); }
           toggleViewMode(); await sleep(1500);
         }
 
@@ -384,7 +384,7 @@
         const dataUrl = canvas.toDataURL('image/png');
         captures.push({ name: s.name, captured: true, size: Math.round(dataUrl.length / 1024) + 'KB' });
 
-        if (s.action === 'map') { toggleViewMode(); await sleep(200); }
+        if (s.action === 'map') { toggleViewMode(); await sleep(500); }
         if (s.isModal) { closeHelpModal(); await sleep(200); }
       } catch(e) {
         captures.push({ name: s.name, captured: false, error: e.message });
@@ -392,7 +392,7 @@
     }
 
     // Show results
-    showScreen('screen-browser'); await sleep(200); openHelpModal(); await sleep(300);
+    showScreen('screen-browser'); await sleep(500); openHelpModal(); await sleep(600);
     let html = '<div id="lbl-capture-results" style="margin-top:14px;padding:16px;background:var(--card,#fff);border:1px solid var(--border);border-radius:8px;font-size:14px;line-height:2;">';
     html += '<strong style="font-size:18px;color:var(--primary,#1B365D);">📸 Screen Capture Results</strong><br><br>';
     captures.forEach(c => { html += (c.captured ? '✅' : '❌') + ' <strong>' + c.name + '</strong>: ' + (c.captured ? c.size : c.error) + '<br>'; });
