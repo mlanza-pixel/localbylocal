@@ -1,5 +1,5 @@
-// Local Like a Local - Service Worker (v3.51 Production Release)
-const CACHE_NAME = 'local-like-a-local-v3.51';
+// Local Like a Local - Service Worker (v3.52 Production Release)
+const CACHE_NAME = 'local-like-a-local-v3.52';
 const ASSETS = [
   './',
   './index.html',
@@ -9,9 +9,10 @@ const ASSETS = [
   './vendor/leaflet.js',
   './images/icon-192.png',
   './images/icon-512.png',
-  './lbl-v3.51-fixes.js',
+  './lbl-v3.52-fixes.js',
   './lbl-self-diagnostics.js',
   './lbl-responsive-fixes.js',
+  './lbl-v3.52-fixes.js',
   './cities/palm_springs.json',
   './cities/baltimore.json',
   './cities/madrid.json',
