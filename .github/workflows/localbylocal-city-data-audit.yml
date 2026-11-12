@@ -1,0 +1,42 @@
+name: Local by Local - Published City Data Audit
+on:
+  workflow_dispatch:
+    inputs:
+      websites_per_city:
+        description: "Public website probes per city (0 to 250)"
+        type: choice
+        options: ["0", "25", "100", "250"]
+        default: "25"
+  push:
+    paths:
+      - ".github/workflows/localbylocal-city-data-audit.yml"
+      - "research_diagnostics/city_data_audit.py"
+      - "cities/chicago.json"
+      - "cities/los_angeles.json"
+      - "cities/new_york.json"
+      - "cities/palm_springs.json"
+permissions:
+  contents: read
+jobs:
+  city-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate diagnostic
+        run: python -m py_compile research_diagnostics/city_data_audit.py
+      - name: Audit city records and optionally probe public websites
+        env:
+          LIVE_WEBSITE_CHECK: ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}
+          WEBSITES_PER_CITY: ${{ inputs.websites_per_city || '0' }}
+        run: python -u research_diagnostics/city_data_audit.py
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: city-data-audit
+          path: diagnostic_results/
+          if-no-files-found: warn
