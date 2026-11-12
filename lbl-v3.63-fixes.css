@@ -1,0 +1,22 @@
+/* Local by Local v3.63 responsive accessibility hotfix */
+:root { -webkit-text-size-adjust:100%; text-size-adjust:100%; }
+*,*::before,*::after { box-sizing:border-box; }
+html,body { max-width:100%; overflow-x:hidden; }
+button,select,input[type="button"],input[type="submit"], [role="button"], .nav-btn,.cat-pill,.sort-pill,.toggle-filter-btn,.icon-btn,.venue-fav-btn,.btn-card-action,.btn-header-action,.btn-step-nav,.pwa-install-btn,.modal-close-btn { min-height:44px !important; min-width:44px; touch-action:manipulation; }
+button { white-space:normal; }
+#nav-provider { min-height:44px; min-width:135px; font-size:16px; padding:8px; }
+.venue-action-row > button { flex:1 1 135px !important; }
+.venue-card, .city-card, .modal-dialog { min-width:0; overflow-wrap:anywhere; }
+#venue-list { min-width:0; }
+#leaflet-map { width:100%; min-width:0; }
+@media(max-width:767px) {
+  #venue-list { display:block; width:100%; }
+  .cities-grid { display:grid; grid-template-columns:minmax(0,1fr) !important; }
+  .venue-action-row { display:grid !important; grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .venue-action-row button { width:100%; }
+  .modal-dialog { max-height:100dvh; overflow-y:auto; }
+  .bottom-nav { max-width:100vw; }
+}
+@media(min-width:768px) and (max-width:1024px) { #venue-list { grid-template-columns:repeat(2,minmax(0,1fr)) !important; } }
+@media(min-width:1025px) { #venue-list { grid-template-columns:repeat(3,minmax(0,1fr)) !important; } }
+@media(orientation:landscape) and (max-height:550px) { .modal-dialog { max-height:95dvh; overflow-y:auto; } }
