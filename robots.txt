@@ -1,3 +1,0 @@
-User-agent: *
-Allow: /localbylocal/
-Sitemap: https://mlanza-pixel.github.io/localbylocal/sitemap.xml
