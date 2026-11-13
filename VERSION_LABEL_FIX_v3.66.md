@@ -1,1 +1,0 @@
-v3.66 label correction: index.html app badge, diagnostics service-worker label, and core engine heading updated from 3.60 to 3.66. Existing v3.66 cache identifier preserved. Historical release notes and legacy module comments unchanged. No functional UI changes.
