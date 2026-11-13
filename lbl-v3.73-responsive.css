@@ -1,0 +1,52 @@
+/* Local by Local v3.66: single responsive stylesheet. Replaces v3.63 and v3.65 overrides. */
+:root { -webkit-text-size-adjust:100%; text-size-adjust:100%; }
+*,*::before,*::after { box-sizing:border-box; }
+html,body { max-width:100%; overflow-x:clip; }
+/* The original 600px body cap was forcing three cards into ~180px columns on iPad. */
+body { width:100%; max-width:600px; }
+.bottom-nav { max-width:600px; }
+@media (min-width:768px) {
+  body { max-width:1180px; }
+  .bottom-nav { max-width:1180px; }
+  .screen { padding:20px 24px; }
+}
+button,select,input[type="button"],input[type="submit"],input[type="checkbox"],input[type="radio"],[role="button"],.nav-btn,.cat-pill,.sort-pill,.toggle-filter-btn,.icon-btn,.venue-fav-btn,.btn-card-action,.btn-header-action,.btn-step-nav,.pwa-install-btn,.modal-close-btn {
+  min-height:44px; min-width:44px; touch-action:manipulation;
+}
+button { white-space:normal; }
+input[type="checkbox"],input[type="radio"] { width:44px; height:44px; flex-shrink:0; cursor:pointer; }
+#nav-provider { min-height:44px; min-width:135px; font-size:16px; padding:8px; }
+.venue-card,.city-card,.modal-dialog { min-width:0; overflow-wrap:anywhere; }
+#venue-list { display:grid; grid-template-columns:minmax(0,1fr); gap:12px; width:100%; min-width:0; align-items:stretch; }
+#venue-list > .venue-card { min-width:0; width:100%; height:100%; display:flex; flex-direction:column; margin:0; overflow:hidden; }
+#venue-list .venue-card-header { min-height:72px; flex:0 0 auto; }
+#venue-list .venue-title-box { min-width:0; width:100%; }
+#venue-list .venue-title { overflow-wrap:anywhere; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; line-clamp:2; overflow:hidden; }
+#venue-list .venue-sub { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; line-clamp:2; overflow:hidden; }
+#venue-list .venue-meta-bar { min-width:0; flex-wrap:wrap; align-content:start; min-height:52px; }
+#venue-list .venue-whygo { flex:1 1 auto; min-width:0; overflow-wrap:anywhere; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:4; line-clamp:4; overflow:hidden; min-height:78px; }
+#venue-list .venue-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; align-items:stretch; margin-top:auto; width:100%; }
+#venue-list .btn-card-action { min-width:0; min-height:48px; width:100%; padding:8px 5px; line-height:1.25; overflow-wrap:anywhere; }
+#venue-list .venue-fav-btn { min-width:44px; min-height:44px; }
+#venue-list > :not(.venue-card) { grid-column:1/-1; }
+.venue-action-row > button { flex:1 1 135px; }
+#leaflet-map { width:100%; min-width:0; }
+@media (min-width:768px) and (max-width:1199px) {
+  #screen-browser #venue-list { grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+}
+@media (min-width:1200px) {
+  #screen-browser #venue-list { grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+}
+@media (max-width:767px) {
+  .cities-grid { display:grid; grid-template-columns:minmax(0,1fr); }
+  .venue-action-row { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .venue-action-row button { width:100%; }
+  .modal-dialog { max-height:100dvh; overflow-y:auto; }
+  .bottom-nav { max-width:100vw; }
+}
+@media (min-width:768px) and (max-width:900px) {
+  #venue-list .venue-actions { grid-template-columns:minmax(0,1fr); }
+}
+@media (orientation:landscape) and (max-height:550px) { .modal-dialog { max-height:95dvh; overflow-y:auto; } }
+
+.venue-card-selectable{cursor:pointer}.venue-card-selectable:focus-visible{outline:3px solid #cc5500;outline-offset:3px}.venue-card-hint{text-align:right;font-weight:700;color:var(--primary);margin-top:12px}.modal-close-btn{border:1px solid var(--border);z-index:5}.single-map-close{border-radius:50%;min-width:44px;min-height:44px;font-size:22px}#single-map-venue-card{display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:10px}#single-map-venue-card button{min-height:44px;border-radius:8px;padding:8px 12px;border:1px solid var(--border)}
