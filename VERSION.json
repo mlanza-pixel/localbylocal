@@ -1,9 +1,0 @@
-{
-  "app": "Local by Local",
-  "version": "3.8",
-  "release": "v3.8",
-  "build_utc": "2026-11-13T02:31:51Z",
-  "data_schema_columns": 48,
-  "city_validator_version": "4.0",
-  "previous_version": "3.73.3"
-}
