@@ -1,0 +1,17 @@
+{
+  "chicago": {
+    "venues": 3747,
+    "estimated_durations": 3325,
+    "unknown_durations": 422
+  },
+  "new_york": {
+    "venues": 3944,
+    "estimated_durations": 3407,
+    "unknown_durations": 537
+  },
+  "los_angeles": {
+    "venues": 2835,
+    "estimated_durations": 2402,
+    "unknown_durations": 433
+  }
+}
